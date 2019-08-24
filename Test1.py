@@ -17,6 +17,11 @@ class PipetteType(Enum):
     p10_single = 1
     p50_single = 2
     p300_single = 3
+    p1000_single = 4
+    p10_multi = 5
+    p50_multi = 6
+    p300_multi = 7
+    p1000_multi = 8
 
 
 def run_opentrons_logo(
