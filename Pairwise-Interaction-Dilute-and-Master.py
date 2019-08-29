@@ -29,9 +29,9 @@ water = trough['A1']
 idt_strand_a = idt_rack['A1']
 idt_strand_b = idt_rack['B1']
 evagreen = idt_rack['A6']
+buffer = idt_rack['D6']
 strand_a = eppendorf_rack['A1']
 strand_b = eppendorf_rack['B1']
-buffer = eppendorf_rack['A6']
 master_mix = falcon_rack['A1']
 
 
@@ -52,7 +52,7 @@ p300.transfer(dilution_source, idt_strand_a, strand_a, trash=trash_control, mix_
 p300.transfer(dilution_source, idt_strand_b, strand_b, trash=trash_control, mix_before=(2, dilution_mix), mix_after=(3, dilution_mix))
 
 
-# Create master mix
+# Create master mix : total volume 2956.8 uL
 mm_buffer = 1774.08
 mm_evagreen = 443.52
 mm_common_water = 739.2
