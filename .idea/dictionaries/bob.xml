@@ -1,6 +1,8 @@
 <component name="ProjectDictionaryState">
   <dictionary name="bob">
     <words>
+      <w>aluminumblock</w>
+      <w>biorad</w>
       <w>eppendorf</w>
       <w>evagreen</w>
       <w>labware</w>
@@ -8,8 +10,10 @@
       <w>safelock</w>
       <w>screwcap</w>
       <w>snapcap</w>
+      <w>tiprack</w>
       <w>tuberack</w>
       <w>usascientific</w>
+      <w>wellplate</w>
     </words>
   </dictionary>
 </component>
