@@ -32,7 +32,6 @@ pipette = p1000
 pipette.start_at_tip(tips1000['B5'])
 trash_control = True  # True trashes tips; False will return trip to rack (use for debugging only)
 
-
 # Define labware locations
 temp_module = modules.load('tempdeck', 7)
 screwcap_rack = labware.load('opentrons_24_aluminumblock_generic_2ml_screwcap', 7, label='screwcap_rack', share=True)  # IDT tubes on temp module
@@ -40,7 +39,6 @@ eppendorf_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_sn
 # falcon_rack = labware.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 8, label='falcon_rack')
 # plate = labware.load('biorad_96_wellplate_200ul_pcr', 3, label='plate')
 trough = labware.load('usascientific_12_reservoir_22ml', 6, label='trough')
-
 
 # Name specific places in the labware
 diluent = trough.wells('A1')
