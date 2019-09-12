@@ -19,14 +19,14 @@ metadata = {
 tips300a = labware.load('opentrons_96_tiprack_300ul', 1)
 tips300b = labware.load('opentrons_96_tiprack_300ul', 4)
 tips10 = labware.load('opentrons_96_tiprack_10ul', 7)
-p10 = instruments.P10_Single(mount='left', tip_racks=[tips10])
-# p50 = instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b])
-p300 = instruments.P300_Single(mount='right', tip_racks=[tips300a])
+# p10 = instruments.P10_Single(mount='left', tip_racks=[tips10])
+p50 = instruments.P50_Single(mount='right', tip_racks=[tips300a])
+# p300 = instruments.P300_Single(mount='right', tip_racks=[tips300a])
+pipette = p50
 
 # Control tip usage
-p10.start_at_tip(tips10['A1'])
-p300.start_at_tip(tips300a['A1'])
-trash_control = False  # True trashes tips; False will return trip to rack (use for debugging only)
+pipette.start_at_tip(tips300a['A1'])
+trash_control = True  # True trashes tips; False will return trip to rack (use for debugging only)
 
 # Define labware locations
 temp_slot = 10
@@ -53,15 +53,17 @@ master_mix = falcon_rack['A1']
 ########################################################################################################################
 
 # Parameters for diluting each strand
-dilution_source = 432
-dilution_water = 768
-dilution_mix = 100  # how much to suck and spew for mixing
+dilution_source_vol = 468
+dilution_water_vol = 832
+mix_vol = 50  # how much to suck and spew for mixing
+mix_count = 4
 
 # Parameters for master mix
-mm_buffer = 1774.08
-mm_evagreen = 443.52
-mm_common_water = 739.2
-mm_mix = 100  # how much to suck and spew for mixing
+mm_buffer_vol = 1774.08  # NOTE: this is a LOT. Might have to allow for multiple sources.
+mm_evagreen_vol = 443.52  # NOTE: this is a LOT. Might have to allow for multiple sources.
+mm_common_water_vol = 739.2
+mm_mix_vol = 50  # how much to suck and spew for mixing
+mm_mix_count = 4
 
 
 ########################################################################################################################
@@ -73,20 +75,70 @@ def log(msg: str):
     robot.comment(msg)
 
 
+def done_tip(p):
+    if trash_control:
+        p.drop_tip()
+    else:
+        p.return_tip()
+
+
 ########################################################################################################################
 # Off to the races
 ########################################################################################################################
 
+log('Mixing Strand A')
+pipette.pick_up_tip()
+pipette.mix(mix_count, mix_vol, idt_strand_a)
+done_tip(pipette)
+
+log('Mixing Strand B')
+pipette.pick_up_tip()
+pipette.mix(mix_count, mix_vol, idt_strand_b)
+done_tip(pipette)
+
+
 # Create dilutions of strands
-p300.transfer(dilution_water, water, [diluted_strand_a, diluted_strand_b],
-              new_tip='once',  # can reuse for all diluent dispensing since dest tubes are initially empty
-              trash=trash_control
-              )
-p300.transfer(dilution_source, idt_strand_a, diluted_strand_a, trash=trash_control, mix_before=(3, dilution_mix), mix_after=(3, dilution_mix))
-p300.transfer(dilution_source, idt_strand_b, diluted_strand_b, trash=trash_control, mix_before=(3, dilution_mix), mix_after=(3, dilution_mix))
+log('Moving water for diluting Strands A and B')
+pipette.transfer(dilution_water_vol, water, [diluted_strand_a, diluted_strand_b],
+                 new_tip='once',  # can reuse for all diluent dispensing since dest tubes are initially empty
+                 trash=trash_control
+                 )
+log('Diluting Strand A')
+pipette.transfer(dilution_source_vol, idt_strand_a, diluted_strand_a, trash=trash_control)
+log('Diluting Strand B')
+pipette.transfer(dilution_source_vol, idt_strand_b, diluted_strand_b, trash=trash_control)
+
+
+log('Mixing Diluted Strand A')
+pipette.pick_up_tip()
+pipette.mix(mix_count, mix_vol, diluted_strand_a)
+done_tip(pipette)
+
+log('Mixing Diluted Strand A')
+pipette.pick_up_tip()
+pipette.mix(mix_count, mix_vol, diluted_strand_b)
+done_tip(pipette)
 
 
 # Create master mix
-p300.transfer(mm_buffer, buffer, master_mix, trash=trash_control, mix_before=(3, mm_mix))
-p300.transfer(mm_evagreen, evagreen, master_mix, trash=trash_control, mix_before=(3, mm_mix))
-p300.transfer(mm_common_water, water, master_mix, trash=trash_control, mix_after=(3, mm_mix))
+log('Mixing Buffer')
+pipette.pick_up_tip()
+pipette.mix(mix_count, mix_vol, buffer)
+done_tip(pipette)
+
+# log('Mixing Evagreen')  # Not worth it
+# pipette.pick_up_tip()
+# pipette.mix(mix_count, evagreen, buffer)
+# done_tip(pipette)
+
+log('Creating Master Mix: Water')
+pipette.transfer(mm_common_water_vol, water, master_mix, trash=trash_control)
+log('Creating Master Mix: Buffer')
+pipette.transfer(mm_buffer_vol, buffer, master_mix, trash=trash_control)
+log('Creating Master Mix: EvaGreen')
+pipette.transfer(mm_evagreen_vol, evagreen, master_mix, trash=trash_control, new_tip='always')  # 'always' to avoid contaminating the Evagreen source
+
+log('Mixing Master Mix')
+pipette.pick_up_tip()
+pipette.mix(mm_mix_count, mm_mix_vol, master_mix)
+done_tip(pipette)

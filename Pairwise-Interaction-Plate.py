@@ -105,57 +105,26 @@ def usedWells() -> List[types.Location]:
 
 
 # Figuring out what pipettes should pipette what volumes
-volume_threshold = 10
-def usesP10(vol, allowZero=False):
-    return (allowZero or 0 < vol) and vol <= volume_threshold
-def usesP50(vol, allowZero=False):
-    return (allowZero or 0 < vol) and not usesP10(vol, allowZero)
-def p10Volumes(allowZero=False):
-    return list(filter(lambda vol: usesP10(vol, allowZero), strand_volumes))
-def p50Volumes(allowZero=False):
-    return list(filter(lambda vol: usesP50(vol, allowZero), strand_volumes))
-
-
-# Hack-o-rama: answer whether the indicated pipette has any more tips or not
-def hasMoreTips(p, tips_needed: int) -> bool:
-    if tips_needed <= 0: return True
-    # Remember the current tip and starting tip
-    prev_current_tip = p.current_tip()
-    prev_starting_tip = p.starting_tip
-    try:
-        # Try to pull 'tips_needed' tips. An exception will throw if there's not enough
-        nxt = next(p.tip_rack_iter)      # pull the first tip and remember same
-        for i in range(1, tips_needed):  # pull remaining tips
-            next(p.tip_rack_iter)
-        # Ok, there were enough! Restore to state before the call
-        p.start_at_tip(nxt)  # will call reset_tip_tracking in addition to setting starting tip
-        result = True
-        log('%s has at least %d more tips' % (p.name, tips_needed))
-    except StopIteration:
-        # Subsequent calls to next(p.tip_rack_iter) should *also* throw
-        log("%s doesn't have %d tips left" % (p.name, tips_needed))
-        result = False
-    p.starting_tip = prev_starting_tip  # we might have trashed above
-    p.current_tip(prev_current_tip)  # was trashed by reset_tip_tracking() if that got called
-    return result
-
-
-# see if pipette tips need to be refilled
-def checkForTips(p, tips_needed: int):
-    if not hasMoreTips(p, tips_needed):
-        robot.pause('Please refill the tips for %s' % p.name)
-        p.starting_tip = None
-        p.reset_tip_tracking()
+vol_p10_max = 10
+vol_p50_min = 5
+def usesP10(vol, count, allowZero):
+    return (allowZero or 0 < vol) and (vol < vol_p50_min or vol * count <= vol_p10_max)
 
 
 def log(msg: str):
     robot.comment(msg)
 
 
+def done_tip(p):
+    if trash_control:
+        p.drop_tip()
+    else:
+        p.return_tip()
+
+
 ########################################################################################################################
 # Off to the races
 ########################################################################################################################
-
 
 # Plate master mix
 log('Plating master mix ================================= ')
@@ -170,28 +139,32 @@ for iRow in range(len(per_well_water_volumes)):
     for iCol in range(len(per_well_water_volumes[iRow])):
         vol = per_well_water_volumes[iRow][iCol]
         p50.distribute(vol, water, plate.rows(iRow).wells(iCol*num_replicates, length=num_replicates), new_tip='never')
-if trash_control:
-    p50.drop_tip()
-else:
-    p50.return_tip()
+done_tip(p50)
 
 
 # Plate strand A
+# All plate wells at this point only have water and master mix, so we can't get cross-plate-well
+# contamination. We only need to worry about contaminating the Strand A source, which we accomplish
+# by using new_tip='always'.
 log('Plating Strand A (counts=%s) ================================= ' % (list(map(lambda nSample: len(strandAWells(nSample)), range(len(strand_volumes))))))
-# checkForTips(p10, len(p10Volumes()) * len(list(strandAWells(0))))
-# checkForTips(p50, len(p50Volumes()) * len(list(strandAWells(0))))
 for iVolume in range(0, len(strand_volumes)):
-    if strand_volumes[iVolume] == 0: continue
-    p = p10 if usesP10(strand_volumes[iVolume]) else p50
-    p.transfer(strand_volumes[iVolume], diluted_strand_a, strandAWells(iVolume), new_tip='always', trash=trash_control)  # use distribute?
+    dest_wells = strandAWells(iVolume)
+    vol = strand_volumes[iVolume]
+    if vol == 0: continue
+    p = p10 if usesP10(vol, len(dest_wells), False) else p50
+    log('Plating Strand A: volume %d with %s' % (vol, p.name))
+    p.distribute(vol, diluted_strand_a, dest_wells, new_tip='always', trash=trash_control)
 
 
 # Plate strand B and mix
+# We can't use distribute here as we need to avoid cross contamination from plate well to plate well
 log('Plating Strand B (counts=%s) ================================= ' % (list(map(lambda nSample: len(strandBWells(nSample)), range(len(strand_volumes))))))
-# checkForTips(p10, len(p10Volumes(True)) * len(list(strandBWells(0))))
-# checkForTips(p50, len(p50Volumes(True)) * len(list(strandBWells(0))))
 mix_vol = 10
-for index in range(0, len(strand_volumes)):
+mix_count = 4
+for iVolume in range(0, len(strand_volumes)):
+    dest_wells = strandBWells(iVolume)
+    vol = strand_volumes[iVolume]
     # if strand_volumes[index] == 0: continue  # don't skip: we want to mix
-    p = p10 if usesP10(strand_volumes[index], True) else p50
-    p.transfer(strand_volumes[index], diluted_strand_b, strandBWells(index), new_tip='always', trash=trash_control, mix_after=(4, mix_vol))  # use distribute?
+    p = p10 if usesP10(vol, len(dest_wells), True) else p50
+    log('Plating Strand B: volume %d with %s' % (vol, p.name))
+    p.transfer(vol, diluted_strand_b, dest_wells, new_tip='always', trash=trash_control, mix_after=(mix_count, mix_vol))
