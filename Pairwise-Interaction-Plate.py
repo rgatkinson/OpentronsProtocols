@@ -183,7 +183,7 @@ log('Plating Strand A (counts=%s) ================================= ' % (list(ma
 for iVolume in range(0, len(strand_volumes)):
     if strand_volumes[iVolume] == 0: continue
     p = p10 if usesP10(strand_volumes[iVolume]) else p50
-    p.transfer(strand_volumes[iVolume], diluted_strand_a, strandAWells(iVolume), new_tip='always', trash=trash_control)
+    p.transfer(strand_volumes[iVolume], diluted_strand_a, strandAWells(iVolume), new_tip='always', trash=trash_control)  # use distribute?
 
 
 # Plate strand B and mix
@@ -194,4 +194,4 @@ mix_vol = 10
 for index in range(0, len(strand_volumes)):
     # if strand_volumes[index] == 0: continue  # don't skip: we want to mix
     p = p10 if usesP10(strand_volumes[index], True) else p50
-    p.transfer(strand_volumes[index], diluted_strand_b, strandBWells(index), new_tip='always', trash=trash_control, mix_after=(4, mix_vol))
+    p.transfer(strand_volumes[index], diluted_strand_b, strandBWells(index), new_tip='always', trash=trash_control, mix_after=(4, mix_vol))  # use distribute?
