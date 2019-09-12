@@ -17,21 +17,24 @@ metadata = {
 ########################################################################################################################
 
 # Configure the tips and the pipettes
-tips10 = labware.load('opentrons_96_tiprack_10ul', 4)
-tips300 = labware.load('opentrons_96_tiprack_300ul', 1)
+tips300a = labware.load('opentrons_96_tiprack_300ul', 1)
+tips300b = labware.load('opentrons_96_tiprack_300ul', 4)
+tips10 = labware.load('opentrons_96_tiprack_10ul', 7)
 p10 = instruments.P10_Single(mount='left', tip_racks=[tips10])
-p50 = instruments.P50_Single(mount='right', tip_racks=[tips300])
+p50 = instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b])
+# p300 = instruments.P300_Single(mount='right', tip_racks=[tips300a])
 
 # Control tip usage
 p10.start_at_tip(tips10['A1'])
-p50.start_at_tip(tips300['A1'])
-trash_control = False  # True trashes tips; False will return trip to rack (use for debugging only)
+p50.start_at_tip(tips300a['A1'])
+trash_control = True  # True trashes tips; False will return trip to rack (use for debugging only)
 
 # Define labware locations
-temp_module = modules.load('tempdeck', 7)
-screwcap_rack = labware.load('opentrons_24_aluminumblock_generic_2ml_screwcap', 7, label='screwcap_rack', share=True)  # IDT tubes on temp module
+temp_slot = 10
+temp_module = modules.load('tempdeck', temp_slot)
+screwcap_rack = labware.load('opentrons_24_aluminumblock_generic_2ml_screwcap', temp_slot, label='screwcap_rack', share=True)  # IDT tubes on temp module
 eppendorf_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 2, label='eppendorf_rack')  # Eppendorf tubes
-falcon_rack = labware.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 8, label='falcon_rack')
+falcon_rack = labware.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 5, label='falcon_rack')
 plate = labware.load('biorad_96_wellplate_200ul_pcr', 3, label='plate')
 trough = labware.load('usascientific_12_reservoir_22ml', 6, label='trough')
 
@@ -56,14 +59,14 @@ num_replicates = 3
 columns_per_plate = 12
 nSamples_per_row = columns_per_plate // num_replicates
 per_well_water_volumes = [
-    [63, 61, 48, 55],
-    [51, 59, 56, 53],
+    [63, 61, 58, 55],
+    [61, 59, 56, 53],
     [58, 56, 53, 50],
     [55, 53, 50, 47],
     [39, 35, 31, 23],
     [35, 31, 27, 19],
     [31, 27, 23, 15],
-    [23, 19, 15, 7]]
+    [23, 19, 15,  7]]
 
 
 ########################################################################################################################
@@ -175,8 +178,8 @@ else:
 
 # Plate strand A
 log('Plating Strand A (counts=%s) ================================= ' % (list(map(lambda nSample: len(strandAWells(nSample)), range(len(strand_volumes))))))
-checkForTips(p10, len(p10Volumes()) * len(list(strandAWells(0))))
-checkForTips(p50, len(p50Volumes()) * len(list(strandAWells(0))))
+# checkForTips(p10, len(p10Volumes()) * len(list(strandAWells(0))))
+# checkForTips(p50, len(p50Volumes()) * len(list(strandAWells(0))))
 for iVolume in range(0, len(strand_volumes)):
     if strand_volumes[iVolume] == 0: continue
     p = p10 if usesP10(strand_volumes[iVolume]) else p50
@@ -185,8 +188,8 @@ for iVolume in range(0, len(strand_volumes)):
 
 # Plate strand B and mix
 log('Plating Strand B (counts=%s) ================================= ' % (list(map(lambda nSample: len(strandBWells(nSample)), range(len(strand_volumes))))))
-checkForTips(p10, len(p10Volumes(True)) * len(list(strandBWells(0))))
-checkForTips(p50, len(p50Volumes(True)) * len(list(strandBWells(0))))
+# checkForTips(p10, len(p10Volumes(True)) * len(list(strandBWells(0))))
+# checkForTips(p50, len(p50Volumes(True)) * len(list(strandBWells(0))))
 mix_vol = 10
 for index in range(0, len(strand_volumes)):
     # if strand_volumes[index] == 0: continue  # don't skip: we want to mix
