@@ -3,13 +3,108 @@
 """
 
 from opentrons import labware, instruments, robot, modules, types
+from opentrons.data_storage import database
 from typing import List
+from opentrons.legacy_api.containers import Container, Well  # Hack: not in public Opentrons API
 
 metadata = {
     'protocolName': 'Pairwise Interaction: Dilute & Master',
     'author': 'Robert Atkinson <bob@theatkinsons.org>',
     'description': 'Study the interaction of two DNA strands'
 }
+
+########################################################################################################################
+# Configurable parameters
+########################################################################################################################
+
+# Parameters for diluting each strand
+strand_dilution_source_vol = 468
+strand_dilution_water_vol = 832
+simple_mix_vol = 50  # how much to suck and spew for mixing
+simple_mix_count = 4
+
+# Parameters for master mix
+master_mix_buffer_vol = 1774.08  # NOTE: this is a LOT. Might have to allow for multiple sources.
+master_mix_evagreen_vol = 443.52  # NOTE: this is a LOT. Might have to allow for multiple sources.
+master_mix_common_water_vol = 739.2
+
+# Define the volumes of diluted strands we will use
+strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
+num_replicates = 3
+columns_per_plate = 12
+nSamples_per_row = columns_per_plate // num_replicates
+per_well_water_volumes = [
+    [63, 61, 58, 55],
+    [61, 59, 56, 53],
+    [58, 56, 53, 50],
+    [55, 53, 50, 47],
+    [39, 35, 31, 23],
+    [35, 31, 27, 19],
+    [31, 27, 23, 15],
+    [23, 19, 15,  7]]
+
+
+########################################################################################################################
+# Custom Labware
+########################################################################################################################
+
+# Because we need a richer definition than the public custom-labware API currently allows,
+labware_name_50mL_eppendorf = 'atkinson_6_tuberack_eppendorf_5.0ml'  # this is 'opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical' but with a different payload
+
+def createCustomLabware():
+    if labware_name_50mL_eppendorf in labware.list():
+        database.delete_container(labware_name_50mL_eppendorf)
+
+    if labware_name_50mL_eppendorf not in labware.list():
+        volume = 5000
+        diameter = 14.9    # empirical
+        depth = 55.4       # From https://online-shop.eppendorf.us/US-en/Laboratory-Consumables-44512/Tubes-44515/EppendorfTubes-5.0mL-PF-156668.html
+        z = 0              # WRONG: 15mL falcon = 6.85; 1.5mL Epp = 42.05, 2.0mL Epp = 41.27. What do we really need?
+        wells = {  # locations are taken from opentrons\shared-data\labware\definitions\2\opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical\1.json
+            "A1": {
+                "x": 13.88,
+                "y": 67.75,
+                "z": z
+            },
+            "B1": {
+                "x": 13.88,
+                "y": 42.75,
+                "z": z
+            },
+            "C1": {
+                "x": 13.88,
+                "y": 17.75,
+                "z": z
+            },
+            "A2": {
+                "x": 38.88,
+                "y": 67.75,
+                "z": z
+            },
+            "B2": {
+                "x": 38.88,
+                "y": 42.75,
+                "z": z
+            },
+            "C2": {
+                "x": 38.88,
+                "y": 17.75,
+                "z": z
+            }
+        }
+        custom_container = Container()
+        properties = {
+            'type': 'custom',
+            'diameter': diameter,
+            'height': depth,
+            'total-liquid-volume': volume,
+            "shape": "circular",
+        }
+        for well_name, coordinates in wells.items():
+            well = Well(properties=properties)
+            custom_container.add(well, well_name, (coordinates["x"], coordinates["y"], coordinates["z"]))
+        database.save_new_container(custom_container, labware_name_50mL_eppendorf)
+
 
 ########################################################################################################################
 # Labware
@@ -33,60 +128,30 @@ p10_disposal_vol = 1
 
 
 # Define labware locations
+createCustomLabware()
+
 temp_slot = 10
 temp_module = modules.load('tempdeck', temp_slot)
-screwcap_rack = labware.load('opentrons_24_aluminumblock_generic_2ml_screwcap', temp_slot, label='screwcap_rack', share=True)  # IDT tubes on temp module
-eppendorf_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 2, label='eppendorf_rack')  # Eppendorf tubes
-falcon_rack = labware.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 5, label='falcon_rack')
+screwcap_rack = labware.load('opentrons_24_aluminumblock_generic_2ml_screwcap', temp_slot, label='screwcap_rack', share=True)
+eppendorf_1_5_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 2, label='eppendorf_1_5_rack')
+eppendorf_50_rack = labware.load(labware_name_50mL_eppendorf, 5, label='eppendorf_50_rack')
 plate = labware.load('biorad_96_wellplate_200ul_pcr', 3, label='plate')
 trough = labware.load('usascientific_12_reservoir_22ml', 6, label='trough')
 
 # Name specific places in the labware
 water = trough['A1']
-idt_strand_a = screwcap_rack['A1']
-idt_strand_b = screwcap_rack['B1']
-evagreen = screwcap_rack['A6']
-buffer = screwcap_rack['D6']
-diluted_strand_a = eppendorf_rack['A1']
-diluted_strand_b = eppendorf_rack['B1']
-master_mix = falcon_rack['A1']
-
-
-########################################################################################################################
-# Configurable parameters
-########################################################################################################################
-
-# Parameters for diluting each strand
-dilution_source_vol = 468
-dilution_water_vol = 832
-mix_vol = 50  # how much to suck and spew for mixing
-mix_count = 4
-
-# Parameters for master mix
-mm_buffer_vol = 1774.08  # NOTE: this is a LOT. Might have to allow for multiple sources.
-mm_evagreen_vol = 443.52  # NOTE: this is a LOT. Might have to allow for multiple sources.
-mm_common_water_vol = 739.2
-
-# Define the volumes of diluted strands we will use
-strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
-num_replicates = 3
-columns_per_plate = 12
-nSamples_per_row = columns_per_plate // num_replicates
-per_well_water_volumes = [
-    [63, 61, 58, 55],
-    [61, 59, 56, 53],
-    [58, 56, 53, 50],
-    [55, 53, 50, 47],
-    [39, 35, 31, 23],
-    [35, 31, 27, 19],
-    [31, 27, 23, 15],
-    [23, 19, 15,  7]]
+evagreen = screwcap_rack['A1']
+buffer = screwcap_rack['B1']
+strand_a = eppendorf_1_5_rack['A1']
+strand_b = eppendorf_1_5_rack['B1']
+diluted_strand_a = eppendorf_1_5_rack['A6']
+diluted_strand_b = eppendorf_1_5_rack['B6']
+master_mix = eppendorf_50_rack['A1']
 
 
 ########################################################################################################################
 # Utilities
 ########################################################################################################################
-
 
 def log(msg: str):
     robot.comment("*********** %s ***********" % msg)
@@ -99,20 +164,12 @@ def done_tip(pp):
         pp.return_tip()
 
 
-def simple_mix(well, msg, pp=p50):
-    log(msg)
-    pp.pick_up_tip()
-    pp.mix(mix_count, mix_vol, well)
-    done_tip(pp)
-
-
 ########################################################################################################################
 # Logic
 ########################################################################################################################
 
-
 # Into which wells should we place the n'th sample of strand A
-def strandAWells(iSample: int) -> List[types.Location]:
+def calculateStrandAWells(iSample: int) -> List[types.Location]:
     row_first = 0 if iSample < nSamples_per_row else nSamples_per_row
     col_first = (num_replicates * iSample) % columns_per_plate
     result = []
@@ -123,7 +180,7 @@ def strandAWells(iSample: int) -> List[types.Location]:
 
 
 # Into which wells should we place the n'th sample of strand B
-def strandBWells(iSample: int) -> List[types.Location]:
+def calculateStrandBWells(iSample: int) -> List[types.Location]:
     if iSample < nSamples_per_row:
         col_max = num_replicates * (len(strand_volumes) if len(strand_volumes) < nSamples_per_row else nSamples_per_row)
     else:
@@ -138,7 +195,7 @@ def strandBWells(iSample: int) -> List[types.Location]:
 def usedWells() -> List[types.Location]:
     result = []
     for n in range(0, len(strand_volumes)):
-        result.extend(strandAWells(n))
+        result.extend(calculateStrandAWells(n))
     return result
 
 
@@ -150,106 +207,126 @@ def usesP10(queriedVol, count, allowZero):
 
 
 ########################################################################################################################
+# Making master mix and diluting strands
+########################################################################################################################
+
+def simple_mix(well, msg, pp=p50):
+    log(msg)
+    pp.pick_up_tip()
+    pp.mix(simple_mix_count, simple_mix_vol, well)
+    done_tip(pp)
+
+def diluteStrands():
+    simple_mix(strand_a, 'Mixing Strand A')
+    simple_mix(strand_b, 'Mixing Strand B')
+
+    # Create dilutions of strands
+    log('Moving water for diluting Strands A and B')
+    p50.transfer(strand_dilution_water_vol, water, [diluted_strand_a, diluted_strand_b],
+                 new_tip='once',  # can reuse for all diluent dispensing since dest tubes are initially empty
+                 trash=trash_control
+                 )
+    log('Diluting Strand A')
+    p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=trash_control)
+    log('Diluting Strand B')
+    p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=trash_control)
+
+    simple_mix(diluted_strand_a, 'Mixing Diluted Strand A')
+    simple_mix(diluted_strand_b, 'Mixing Diluted Strand B')
+
+def createMasterMix():
+    # Create master mix
+    simple_mix(buffer, "Mixing Buffer")
+    # simple_mix(evagreen, "Mixing EvaGreen")  # mixing not needed, as EvaGreen doesn't freeze
+
+    log('Creating Master Mix: Water')
+    p50.transfer(master_mix_common_water_vol, water, master_mix, trash=trash_control)
+    log('Creating Master Mix: Buffer')
+    p50.transfer(master_mix_buffer_vol, buffer, master_mix, trash=trash_control)
+    log('Creating Master Mix: EvaGreen')
+    p50.transfer(master_mix_evagreen_vol, evagreen, master_mix, trash=trash_control, new_tip='always')  # 'always' to avoid contaminating the Evagreen source
+
+    simple_mix(master_mix, 'Mixing Master Mix')
+
+
+########################################################################################################################
+# Plating
+########################################################################################################################
+
+def plateEverything():
+    # Plate master mix
+    log('Plating master mix ================================= ')
+    master_mix_per_well = 28
+    p50.distribute(master_mix_per_well, master_mix, usedWells(),
+                   new_tip='once',
+                   disposal_vol=p50_disposal_vol,
+                   trash=trash_control)
+
+    log('Plating per-well water ================================= ')
+    # Plate per-well water. We save tips by being happy to pollute our water trough with a bit of master mix.
+    p50.pick_up_tip()
+    for iRow in range(len(per_well_water_volumes)):
+        for iCol in range(len(per_well_water_volumes[iRow])):
+            volume = per_well_water_volumes[iRow][iCol]
+            p50.distribute(volume, water, plate.rows(iRow).wells(iCol * num_replicates, length=num_replicates),
+                           new_tip='never',
+                           disposal_vol=p50_disposal_vol,
+                           trash=trash_control)
+    done_tip(p50)
+
+    # Plate strand A
+    # All plate wells at this point only have water and master mix, so we can't get cross-plate-well
+    # contamination. We only need to worry about contaminating the Strand A source, which we accomplish
+    # by using new_tip='always'. Update: we don't worry about that pollution, that source is disposable.
+    # So we can minimize tip usage.
+    log('Plating Strand A (counts=%s) ================================= ' % (list(map(lambda nSample: len(calculateStrandAWells(nSample)), range(len(strand_volumes))))))
+    p10.pick_up_tip()
+    p50.pick_up_tip()
+    for iVolume in range(0, len(strand_volumes)):
+        dest_wells = calculateStrandAWells(iVolume)
+        volume = strand_volumes[iVolume]
+        if volume == 0: continue
+        if usesP10(volume, len(dest_wells), False):
+            p = p10
+            disposal_vol = p10_disposal_vol
+        else:
+            p = p50
+            disposal_vol = p50_disposal_vol
+        log('Plating Strand A: volume %d with %s' % (volume, p.name))
+        p.distribute(volume, diluted_strand_a, dest_wells,
+                     new_tip='never',
+                     disposal_vol=disposal_vol,
+                     trash=trash_control)
+    done_tip(p10)
+    done_tip(p50)
+
+    # Plate strand B and mix
+    # We can't use distribute here as we need to avoid cross contamination from plate well to plate well
+    log('Plating Strand B (counts=%s) ================================= ' % (list(map(lambda nSample: len(calculateStrandBWells(nSample)), range(len(strand_volumes))))))
+    mix_vol = 10  # so we can use either pipette
+    mix_count = simple_mix_count
+    for iVolume in range(0, len(strand_volumes)):
+        dest_wells = calculateStrandBWells(iVolume)
+        volume = strand_volumes[iVolume]
+        # if strand_volumes[index] == 0: continue  # don't skip: we want to mix
+        if usesP10(volume, len(dest_wells), True):
+            p = p10
+            disposal_vol = p10_disposal_vol
+        else:
+            p = p50
+            disposal_vol = p50_disposal_vol
+        log('Plating Strand B: volume %d with %s' % (volume, p.name))
+        p.transfer(volume, diluted_strand_b, dest_wells,
+                   new_tip='always',
+                   trash=trash_control,
+                   disposal_vol=disposal_vol,
+                   mix_after=(mix_count, mix_vol))
+
+
+########################################################################################################################
 # Off to the races
 ########################################################################################################################
 
-simple_mix(idt_strand_a, 'Mixing Strand A')
-simple_mix(idt_strand_b, 'Mixing Strand B')
-
-
-# Create dilutions of strands
-log('Moving water for diluting Strands A and B')
-p50.transfer(dilution_water_vol, water, [diluted_strand_a, diluted_strand_b],
-            new_tip='once',  # can reuse for all diluent dispensing since dest tubes are initially empty
-            trash=trash_control
-            )
-log('Diluting Strand A')
-p50.transfer(dilution_source_vol, idt_strand_a, diluted_strand_a, trash=trash_control)
-log('Diluting Strand B')
-p50.transfer(dilution_source_vol, idt_strand_b, diluted_strand_b, trash=trash_control)
-
-
-simple_mix(diluted_strand_a, 'Mixing Diluted Strand A')
-simple_mix(diluted_strand_b, 'Mixing Diluted Strand B')
-
-# Create master mix
-simple_mix(buffer, "Mixing Buffer")
-# simple_mix(evagreen, "Mixing EvaGreen")  # mixing not needed, as it doesn't freeze
-
-
-log('Creating Master Mix: Water')
-p50.transfer(mm_common_water_vol, water, master_mix, trash=trash_control)
-log('Creating Master Mix: Buffer')
-p50.transfer(mm_buffer_vol, buffer, master_mix, trash=trash_control)
-log('Creating Master Mix: EvaGreen')
-p50.transfer(mm_evagreen_vol, evagreen, master_mix, trash=trash_control, new_tip='always')  # 'always' to avoid contaminating the Evagreen source
-
-simple_mix(master_mix, 'Mixing Master Mix')
-
-########################################################################################################################
-
-# Plate master mix
-log('Plating master mix ================================= ')
-master_mix_per_well = 28
-p50.distribute(master_mix_per_well, master_mix, usedWells(),
-               new_tip='once',
-               disposal_vol=p50_disposal_vol,
-               trash=trash_control)
-
-
-log('Plating per-well water ================================= ')
-# Plate per-well water. We save tips by being happy to pollute our water trough with a bit of master mix.
-p50.pick_up_tip()
-for iRow in range(len(per_well_water_volumes)):
-    for iCol in range(len(per_well_water_volumes[iRow])):
-        vol = per_well_water_volumes[iRow][iCol]
-        p50.distribute(vol, water, plate.rows(iRow).wells(iCol*num_replicates, length=num_replicates),
-                       new_tip='never',
-                       disposal_vol=p50_disposal_vol,
-                       trash=trash_control)
-done_tip(p50)
-
-
-# Plate strand A
-# All plate wells at this point only have water and master mix, so we can't get cross-plate-well
-# contamination. We only need to worry about contaminating the Strand A source, which we accomplish
-# by using new_tip='always'.
-log('Plating Strand A (counts=%s) ================================= ' % (list(map(lambda nSample: len(strandAWells(nSample)), range(len(strand_volumes))))))
-for iVolume in range(0, len(strand_volumes)):
-    dest_wells = strandAWells(iVolume)
-    vol = strand_volumes[iVolume]
-    if vol == 0: continue
-    if usesP10(vol, len(dest_wells), False):
-        p = p10
-        disposal_vol = p10_disposal_vol
-    else:
-        p = p50
-        disposal_vol = p50_disposal_vol
-    log('Plating Strand A: volume %d with %s' % (vol, p.name))
-    p.distribute(vol, diluted_strand_a, dest_wells,
-                 new_tip='always',
-                 disposal_vol=disposal_vol,
-                 trash=trash_control)
-
-
-# Plate strand B and mix
-# We can't use distribute here as we need to avoid cross contamination from plate well to plate well
-log('Plating Strand B (counts=%s) ================================= ' % (list(map(lambda nSample: len(strandBWells(nSample)), range(len(strand_volumes))))))
-mix_vol = 10
-mix_count = 4
-for iVolume in range(0, len(strand_volumes)):
-    dest_wells = strandBWells(iVolume)
-    vol = strand_volumes[iVolume]
-    # if strand_volumes[index] == 0: continue  # don't skip: we want to mix
-    if usesP10(vol, len(dest_wells), True):
-        p = p10
-        disposal_vol = p10_disposal_vol
-    else:
-        p = p50
-        disposal_vol = p50_disposal_vol
-    log('Plating Strand B: volume %d with %s' % (vol, p.name))
-    p.transfer(vol, diluted_strand_b, dest_wells,
-               new_tip='always',
-               trash=trash_control,
-               disposal_vol=disposal_vol,
-               mix_after=(mix_count, mix_vol))
+diluteStrands()
+createMasterMix()
+plateEverything()
