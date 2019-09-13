@@ -255,14 +255,14 @@ def createMasterMix():
 
 def plateEverything():
     # Plate master mix
-    log('Plating master mix ================================= ')
+    log('Plating Master Mix')
     master_mix_per_well = 28
     p50.distribute(master_mix_per_well, master_mix, usedWells(),
                    new_tip='once',
                    disposal_vol=p50_disposal_vol,
                    trash=trash_control)
 
-    log('Plating per-well water ================================= ')
+    log('Plating per-well water')
     # Plate per-well water. We save tips by being happy to pollute our water trough with a bit of master mix.
     p50.pick_up_tip()
     for iRow in range(len(per_well_water_volumes)):
@@ -279,7 +279,7 @@ def plateEverything():
     # contamination. We only need to worry about contaminating the Strand A source, which we accomplish
     # by using new_tip='always'. Update: we don't worry about that pollution, that source is disposable.
     # So we can minimize tip usage.
-    log('Plating Strand A (counts=%s) ================================= ' % (list(map(lambda nSample: len(calculateStrandAWells(nSample)), range(len(strand_volumes))))))
+    log('Plating Strand A')
     p10.pick_up_tip()
     p50.pick_up_tip()
     for iVolume in range(0, len(strand_volumes)):
@@ -302,7 +302,7 @@ def plateEverything():
 
     # Plate strand B and mix
     # We can't use distribute here as we need to avoid cross contamination from plate well to plate well
-    log('Plating Strand B (counts=%s) ================================= ' % (list(map(lambda nSample: len(calculateStrandBWells(nSample)), range(len(strand_volumes))))))
+    log('Plating Strand B')
     mix_vol = 10  # so we can use either pipette
     mix_count = simple_mix_count
     for iVolume in range(0, len(strand_volumes)):
