@@ -17,6 +17,15 @@ metadata = {
 # Configurable parameters
 ########################################################################################################################
 
+# Volumes of master mix ingredients
+buffer_volumes = [500, 2000]        # A1, A2, etc in screwcap rack
+evagreen_volumes = [500, 2000]      # B1, B2, etc in screwcap rack
+
+# Control tip usage
+p10_start_tip = 'A1'
+p50_start_tip = 'A1'
+trash_control = True
+
 # Parameters for diluting each strand
 strand_dilution_source_vol = 468
 strand_dilution_water_vol = 832
@@ -131,12 +140,11 @@ p10 = instruments.P10_Single(mount='left', tip_racks=[tips10])
 p50 = instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b])
 
 # Control tip usage
-p10.start_at_tip(tips10['A1'])
-p50.start_at_tip(tips300a['A1'])
-trash_control = False  # True trashes tips; False will return trip to rack (use for debugging only)
+p10.start_at_tip(tips10[p10_start_tip])
+p50.start_at_tip(tips300a[p50_start_tip])
 
 # Custom disposal volumes to minimize reagent usage
-p50_disposal_vol = 2
+p50_disposal_vol = 5
 p10_disposal_vol = 1
 
 
@@ -154,8 +162,8 @@ trough = labware.load('usascientific_12_reservoir_22ml', 6, label='trough')
 
 # Name specific places in the labware
 water = trough['A1']
-buffer = screwcap_rack['A1']
-evagreen = screwcap_rack['B1']
+buffers = list(zip(screwcap_rack.rows(0), buffer_volumes))
+evagreens = list(zip(screwcap_rack.rows(1), evagreen_volumes))
 strand_a = eppendorf_1_5_rack['A1']
 strand_b = eppendorf_1_5_rack['B1']
 diluted_strand_a = eppendorf_1_5_rack['A6']
@@ -214,10 +222,10 @@ def usedWells() -> List[types.Location]:
 
 
 # Figuring out what pipettes should pipette what volumes
-vol_p10_max = 10
-vol_p50_min = 5
+p10_max_vol = 10
+p50_min_vol = 5
 def usesP10(queriedVol, count, allowZero):
-    return (allowZero or 0 < queriedVol) and (queriedVol < vol_p50_min or queriedVol * count <= vol_p10_max)
+    return (allowZero or 0 < queriedVol) and (queriedVol < p50_min_vol or queriedVol * count <= p10_max_vol)
 
 
 ########################################################################################################################
@@ -249,16 +257,31 @@ def diluteStrands():
     simple_mix(diluted_strand_b, 'Mixing Diluted Strand B')
 
 def createMasterMix():
-    # Create master mix
-    simple_mix(buffer, "Mixing Buffer")
-    # simple_mix(evagreen, "Mixing EvaGreen")  # mixing not needed, as EvaGreen doesn't freeze
+    # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
+    for buffer in buffers:
+        simple_mix(buffer[0], "Mixing Buffer")
+
+    # transfer from multiple source wells, each with a current defined volume
+    def transferMultiple(ctx, volume, tuples, dest, new_tip):
+        index = 0
+        cur_loc = tuples[index][0]
+        cur_volume = tuples[index][1]
+        while volume > 0:
+            while cur_volume < p50_min_vol * 2:
+                index = index + 1
+                cur_loc = tuples[index][0]
+                cur_volume = tuples[index][1]
+            this_volume = min(volume, cur_volume)
+            log('%s: xfer %f from %s in %s to %s in %s' % (ctx, this_volume, cur_loc, cur_loc.parent, dest, dest.parent))
+            p50.transfer(this_volume, cur_loc, dest, trash=trash_control, new_tip=new_tip)
+            volume = volume - this_volume
 
     log('Creating Master Mix: Water')
     p50.transfer(master_mix_common_water_vol, water, master_mix, trash=trash_control)
     log('Creating Master Mix: Buffer')
-    p50.transfer(master_mix_buffer_vol, buffer, master_mix, trash=trash_control)
+    transferMultiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once')
     log('Creating Master Mix: EvaGreen')
-    p50.transfer(master_mix_evagreen_vol, evagreen, master_mix, trash=trash_control, new_tip='always')  # 'always' to avoid contaminating the Evagreen source
+    transferMultiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always')  # 'always' to avoid contaminating the Evagreen source
 
     simple_mix(master_mix, 'Mixing Master Mix')
 
