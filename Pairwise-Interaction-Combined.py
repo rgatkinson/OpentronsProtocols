@@ -24,9 +24,9 @@ simple_mix_vol = 50  # how much to suck and spew for mixing
 simple_mix_count = 4
 
 # Parameters for master mix
-master_mix_buffer_vol = 1774.08  # NOTE: this is a LOT. Might have to allow for multiple sources.
-master_mix_evagreen_vol = 443.52  # NOTE: this is a LOT. Might have to allow for multiple sources.
-master_mix_common_water_vol = 739.2
+master_mix_buffer_vol = 1854.72
+master_mix_evagreen_vol = 463.68
+master_mix_common_water_vol = 772.8
 
 # Define the volumes of diluted strands we will use
 strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
@@ -49,61 +49,74 @@ per_well_water_volumes = [
 ########################################################################################################################
 
 # Because we need a richer definition than the public custom-labware API currently allows,
-labware_name_50mL_eppendorf = 'atkinson_6_tuberack_eppendorf_5.0ml'  # this is 'opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical' but with a different payload
+atkinson_50mL_eppendorf = 'atkinson_6_tuberack_eppendorf_5.0ml'  # this is 'opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical' but with a different payload
 
 def createCustomLabware():
-    if labware_name_50mL_eppendorf in labware.list():
-        database.delete_container(labware_name_50mL_eppendorf)
+    if atkinson_50mL_eppendorf in labware.list():
+        database.delete_container(atkinson_50mL_eppendorf)
 
-    if labware_name_50mL_eppendorf not in labware.list():
+    if atkinson_50mL_eppendorf not in labware.list():
         volume = 5000
-        diameter = 14.9    # empirical
+        diameter = 13.3    # after taper (it's 14.8 at lip of tube)
         depth = 55.4       # From https://online-shop.eppendorf.us/US-en/Laboratory-Consumables-44512/Tubes-44515/EppendorfTubes-5.0mL-PF-156668.html
-        z = 0              # WRONG: 15mL falcon = 6.85; 1.5mL Epp = 42.05, 2.0mL Epp = 41.27. What do we really need?
-        wells = {  # locations are taken from opentrons\shared-data\labware\definitions\2\opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical\1.json
-            "A1": {
-                "x": 13.88,
-                "y": 67.75,
-                "z": z
-            },
-            "B1": {
-                "x": 13.88,
-                "y": 42.75,
-                "z": z
-            },
-            "C1": {
-                "x": 13.88,
-                "y": 17.75,
-                "z": z
-            },
-            "A2": {
-                "x": 38.88,
-                "y": 67.75,
-                "z": z
-            },
-            "B2": {
-                "x": 38.88,
-                "y": 42.75,
-                "z": z
-            },
-            "C2": {
-                "x": 38.88,
-                "y": 17.75,
-                "z": z
+        z = 26.2           # empirical, deck surface to inside bottom of tube: 15mL falcon = 6.85 (wrong?); 1.5mL Epp = 42.05, 2.0mL Epp = 41.27
+        dx = 20; dy = 25   # increments in well spacing. Originally from Opentrons sources, verified empirically
+        if False:
+            # Try to do it using public API, but this crashes on fist calibration due to z mishaps
+            labware.create(
+                atkinson_50mL_eppendorf,
+                (2, 3),
+                (dx, dy),
+                diameter,
+                depth,
+                volume
+            )
+        else:
+            # Use the internal API. A maze of twisty little coordinate systems, all different
+            x_offset = 0  # 13.88
+            wells = {  # locations are taken from opentrons\shared-data\labware\definitions\2\opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical\1.json
+                "A1": {
+                    "x": 13.88 - x_offset,
+                    "y": 67.75,  # nb: from lower left
+                    "z": z
+                },
+                "B1": {
+                    "x": 13.88 - x_offset,
+                    "y": 42.75,
+                    "z": z
+                },
+                "C1": {
+                    "x": 13.88 - x_offset,
+                    "y": 17.75,
+                    "z": z
+                },
+                "A2": {
+                    "x": 38.88 - x_offset,
+                    "y": 67.75,
+                    "z": z
+                },
+                "B2": {
+                    "x": 38.88 - x_offset,
+                    "y": 42.75,
+                    "z": z
+                },
+                "C2": {
+                    "x": 38.88 - x_offset,
+                    "y": 17.75,
+                    "z": z
+                }
             }
-        }
-        custom_container = Container()
-        properties = {
-            'type': 'custom',
-            'diameter': diameter,
-            'height': depth,
-            'total-liquid-volume': volume,
-            "shape": "circular",
-        }
-        for well_name, coordinates in wells.items():
-            well = Well(properties=properties)
-            custom_container.add(well, well_name, (coordinates["x"], coordinates["y"], coordinates["z"]))
-        database.save_new_container(custom_container, labware_name_50mL_eppendorf)
+            custom_container = Container()
+            properties = {
+                'type': 'custom',
+                'diameter': diameter,
+                'height': depth,
+                'total-liquid-volume': volume,
+            }
+            for well_name, coordinates in wells.items():
+                well = Well(properties=properties)
+                custom_container.add(well, well_name, (coordinates["x"], coordinates["y"], coordinates["z"]))
+            database.save_new_container(custom_container, atkinson_50mL_eppendorf)
 
 
 ########################################################################################################################
@@ -134,19 +147,20 @@ temp_slot = 10
 temp_module = modules.load('tempdeck', temp_slot)
 screwcap_rack = labware.load('opentrons_24_aluminumblock_generic_2ml_screwcap', temp_slot, label='screwcap_rack', share=True)
 eppendorf_1_5_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 2, label='eppendorf_1_5_rack')
-eppendorf_50_rack = labware.load(labware_name_50mL_eppendorf, 5, label='eppendorf_50_rack')
+# eppendorf_50_rack = labware.load(atkinson_50mL_eppendorf, 5, label='atkinson_50mL_eppendorf')
+falcon_rack = labware.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 5, label='falcon_rack')
 plate = labware.load('biorad_96_wellplate_200ul_pcr', 3, label='plate')
 trough = labware.load('usascientific_12_reservoir_22ml', 6, label='trough')
 
 # Name specific places in the labware
 water = trough['A1']
-evagreen = screwcap_rack['A1']
-buffer = screwcap_rack['B1']
+buffer = screwcap_rack['A1']
+evagreen = screwcap_rack['B1']
 strand_a = eppendorf_1_5_rack['A1']
 strand_b = eppendorf_1_5_rack['B1']
 diluted_strand_a = eppendorf_1_5_rack['A6']
 diluted_strand_b = eppendorf_1_5_rack['B6']
-master_mix = eppendorf_50_rack['A1']
+master_mix = falcon_rack['A1']
 
 
 ########################################################################################################################
