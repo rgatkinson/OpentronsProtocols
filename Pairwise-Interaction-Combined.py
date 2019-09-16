@@ -18,8 +18,8 @@ metadata = {
 ########################################################################################################################
 
 # Volumes of master mix ingredients
-buffer_volumes = [500, 2000]        # A1, A2, etc in screwcap rack
-evagreen_volumes = [500, 2000]      # B1, B2, etc in screwcap rack
+buffer_volumes = [2000]        # A1, A2, etc in screwcap rack
+evagreen_volumes = [2000]      # B1, B2, etc in screwcap rack
 
 # Control tip usage
 p10_start_tip = 'A1'
@@ -144,7 +144,7 @@ p10.start_at_tip(tips10[p10_start_tip])
 p50.start_at_tip(tips300a[p50_start_tip])
 
 # Custom disposal volumes to minimize reagent usage
-p50_disposal_vol = 5
+p50_disposal_vol = 2  # TODO: Make 5
 p10_disposal_vol = 1
 
 
@@ -280,9 +280,9 @@ def createMasterMix():
     p50.transfer(master_mix_common_water_vol, water, master_mix, trash=trash_control)
     log('Creating Master Mix: Buffer')
     transferMultiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once')
+    simple_mix(master_mix, 'Mixing Master Mix')     # help eliminate air bubbles: smaller volume right now
     log('Creating Master Mix: EvaGreen')
     transferMultiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always')  # 'always' to avoid contaminating the Evagreen source
-
     simple_mix(master_mix, 'Mixing Master Mix')
 
 
