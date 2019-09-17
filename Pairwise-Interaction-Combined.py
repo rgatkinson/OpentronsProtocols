@@ -102,6 +102,10 @@ def log(msg: str):
     robot.comment("*********** %s ***********" % msg)
 
 
+def noteLiquid(liquid_name):  # applies to the next aspiration
+    robot.comment("Liquid: %s" % liquid_name)
+
+
 def done_tip(pp):
     if trash_control:
         pp.drop_tip()
@@ -162,7 +166,9 @@ def simple_mix(well, msg, pp=p50):
     done_tip(pp)
 
 def diluteStrands():
+    noteLiquid('Strand A')
     simple_mix(strand_a, 'Mixing Strand A')
+    noteLiquid('Strand B')
     simple_mix(strand_b, 'Mixing Strand B')
 
     # Create dilutions of strands
@@ -172,8 +178,10 @@ def diluteStrands():
                  trash=trash_control
                  )
     log('Diluting Strand A')
+    noteLiquid('Diluted Strand A')
     p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=trash_control)
     log('Diluting Strand B')
+    noteLiquid('Diluted Strand B')
     p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=trash_control)
 
     simple_mix(diluted_strand_a, 'Mixing Diluted Strand A')
@@ -182,6 +190,7 @@ def diluteStrands():
 def createMasterMix():
     # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
     for buffer in buffers:
+        noteLiquid('Buffer')
         simple_mix(buffer[0], "Mixing Buffer")
 
     # transfer from multiple source wells, each with a current defined volume

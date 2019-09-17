@@ -16,6 +16,69 @@ import opentrons.simulate
 from opentrons.legacy_api.containers import Well, Slot
 
 ########################################################################################################################
+# Mixtures
+########################################################################################################################
+
+class IndeterminateVolume():
+    def __init__(self):
+        pass  # NYI
+
+
+class Aliquot(object):
+    def __init__(self, well_monitor, volume):
+        self.well_monitor = well_monitor
+        self.volume = volume
+
+
+class Mixture(object):
+    def __init__(self, initial_aliquot=None):
+        self.aliquots = dict()
+        if initial_aliquot is not None:
+            self.adjust_aliquot(initial_aliquot)
+
+    def get_volume(self):
+        result = 0.0
+        for volume in self.aliquots.values():
+            result += volume
+        return result
+
+    def is_empty(self):
+        return self.get_volume() == 0
+
+    def adjust_aliquot(self, aliquot):
+        assert isinstance(aliquot, Aliquot)
+        existing = self.aliquots.get(aliquot.well_monitor, 0)
+        existing += aliquot.volume
+        assert existing >= 0
+        if existing == 0:
+            self.aliquots.pop(aliquot.well_monitor, None)
+        else:
+            self.aliquots[aliquot.well_monitor] = existing
+
+    def adjust_mixture(self, mixture):
+        assert isinstance(mixture, Mixture)
+        for well_monitor, volume in mixture.aliquots.items():
+            self.adjust_aliquot(Aliquot(well_monitor, volume))
+
+    def clear(self):
+        self.aliquots = dict()
+
+    def slice(self, volume):
+        existing = self.get_volume()
+        assert existing >= 0
+        result = Mixture()
+        ratio = float(volume) / float(existing)
+        for well_monitor, volume in self.aliquots.items():
+            result.adjust_aliquot(Aliquot(well_monitor, volume * ratio))
+        return result
+
+    def negated(self):
+        result = Mixture()
+        for well_monitor, volume in self.aliquots.items():
+            result.adjust_aliquot(Aliquot(well_monitor, -volume))
+        return result
+
+########################################################################################################################
 # Monitors
 ########################################################################################################################
 
@@ -38,17 +101,37 @@ class WellMonitor(Monitor):
         self.net = 0
         self.low_water_mark = 0
         self.high_water_mark = 0
+        self.liquid_name = None
+        self.mixture = Mixture()
 
-    def adjust_volume(self, volume):
+    def track_volume(self, volume, mixture):
         self.net = self.net + volume
         self.low_water_mark = min(self.low_water_mark, self.net)
         self.high_water_mark = max(self.high_water_mark, self.net)
 
-    def aspirate(self, volume):
-        self.adjust_volume(-volume)
+    def aspirate(self, volume, mixture):
+        assert volume >= 0
+        self.track_volume(-volume, mixture)
+        if self.mixture.is_empty():
+            # Assume: aspirating from well of unknown initial volume
+            # delta = Mixture(Aliquot(self, volume))
+            # mixture.adjust_mixture(delta)
+            pass
+        else:
+            # delta = self.mixture.slice(volume)
+            # self.mixture.adjust_mixture(delta.negated())
+            # mixture.adjust_mixture(delta)
+            pass
 
-    def dispense(self, volume):
-        self.adjust_volume(volume)
+    def dispense(self, volume, mixture):
+        assert volume >= 0
+        self.track_volume(volume, mixture)
+        # delta = mixture.slice(volume)
+        # self.mixture.adjust_mixture(delta)
+        # mixture.adjust_mixture(delta.negated())
+
+    def set_liquid_name(self, name):
+        self.liquid_name = name
 
     def formatted(self):
         result = ''
@@ -148,7 +231,9 @@ class MonitorController(object):
 
 def analyzeRunLog(run_log):
 
-    controller = MonitorController();
+    controller = MonitorController()
+    liquid_name = None
+    pipette_contents = Mixture()
 
     def well_from_payload_location(payload):
         if isinstance(payload['location'], Well):
@@ -162,7 +247,6 @@ def analyzeRunLog(run_log):
         #       payload
         #       logs
         payload = log_item['payload']
-        if len(payload) <= 1: continue  # comments have just 'text'
 
         # payload is a dict with string keys:
         #       instrument
@@ -172,17 +256,21 @@ def analyzeRunLog(run_log):
         #       text
         #       rate
         text = payload['text']
-        words = list(map(lambda word: word.lower(), text.split()))
-        if len(words) == 0: continue  # paranoia
-        selector = words[0]
+        words = text.split()
+        lower_words = list(map(lambda word: word.lower(), text.split()))
+        if len(lower_words) == 0: continue  # paranoia
+        selector = lower_words[0]
         if selector == 'aspirating' or selector == 'dispensing':
             well = well_from_payload_location(payload)
             volume = payload['volume']
             monitor = controller.well_monitor(well)
             if selector == 'aspirating':
-                monitor.aspirate(volume)
+                if liquid_name is not None:
+                    monitor.set_liquid_name(liquid_name)
+                    liquid_name = None
+                monitor.aspirate(volume, pipette_contents)
             else:
-                monitor.dispense(volume)
+                monitor.dispense(volume, pipette_contents)
         elif selector == 'picking' or selector == 'dropping':
             well = well_from_payload_location(payload)
             rack = well.parent
@@ -191,6 +279,12 @@ def analyzeRunLog(run_log):
                 monitor.pick_up_tip(well)
             else:
                 monitor.drop_tip(well)
+            pipette_contents.clear()
+        elif selector == 'mixing' or selector == 'transferring' or selector == 'distributing' or selector == 'blowing':
+            pass
+        elif selector == 'liquid:':
+            if len(words) < 2: continue
+            liquid_name = " ".join(words[1:])
         else:
             pass  # nothing to process
 
