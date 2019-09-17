@@ -27,15 +27,15 @@ p50_start_tip = 'A1'
 trash_control = True
 
 # Parameters for diluting each strand
-strand_dilution_source_vol = 468
-strand_dilution_water_vol = 832
+strand_dilution_source_vol = 432
+strand_dilution_water_vol = 768
 simple_mix_vol = 50  # how much to suck and spew for mixing
 simple_mix_count = 4
 
 # Parameters for master mix
-master_mix_buffer_vol = 1854.72
-master_mix_evagreen_vol = 463.68
-master_mix_common_water_vol = 772.8
+master_mix_buffer_vol = 1693.44
+master_mix_evagreen_vol = 423.36
+master_mix_common_water_vol = 705.6
 
 # Define the volumes of diluted strands we will use
 strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
