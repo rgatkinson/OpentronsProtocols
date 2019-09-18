@@ -167,22 +167,23 @@ def usedWells() -> List[types.Location]:
 # Figuring out what pipettes should pipette what volumes
 p10_max_vol = 10
 p50_min_vol = 5
-def usesP10(queriedVol, count, allowZero):
-    return (allowZero or 0 < queriedVol) and (queriedVol < p50_min_vol or queriedVol * count <= p10_max_vol)
+def usesP10(queriedVol, count, allow_zero):
+    return (allow_zero or 0 < queriedVol) and (queriedVol < p50_min_vol or queriedVol * count <= p10_max_vol)
 
 
 ########################################################################################################################
 # Making master mix and diluting strands
 ########################################################################################################################
 
-def simple_mix(well_or_wells, msg, pp=p50):
-    log(msg)
+def simple_mix(well_or_wells, msg=None, count=simple_mix_count, volume=simple_mix_vol, pipette=p50):
+    if msg is not None:
+        log(msg)
     wells = well_or_wells if isinstance(well_or_wells, (tuple, list)) else [well_or_wells]
-    assert not pp.has_tip
-    pp.pick_up_tip()
+    assert not pipette.has_tip
+    pipette.pick_up_tip()
     for well in wells:
-        pp.mix(simple_mix_count, simple_mix_vol, well)
-    done_tip(pp)
+        pipette.mix(count, volume, well)
+    done_tip(pipette)
 
 def diluteStrands():
     log('Liquid Names')
@@ -287,7 +288,7 @@ def plateEverything():
         dest_wells = calculateStrandAWells(iVolume)
         volume = strand_volumes[iVolume]
         if volume == 0: continue
-        if usesP10(volume, len(dest_wells), False):
+        if usesP10(volume, len(dest_wells), allow_zero=False):
             p = p10
             disposal_vol = p10_disposal_vol
         else:
@@ -302,26 +303,30 @@ def plateEverything():
     done_tip(p50)
 
     # Plate strand B and mix
-    # We can't use distribute here as we need to avoid cross contamination from plate well to plate well
+    # Mixing always needs the p50, but plating may need either; optimize tip usage
     log('Plating Strand B')
-    mix_vol = 10  # so we can use either pipette
-    mix_count = simple_mix_count
+    plate_mix_vol = 50  # total plated volume is some 84uL; we need to use a substantial fraction of that to get good mixing
+    plate_mix_count = simple_mix_count
     for iVolume in range(0, len(strand_volumes)):
         dest_wells = calculateStrandBWells(iVolume)
         volume = strand_volumes[iVolume]
         # if strand_volumes[index] == 0: continue  # don't skip: we want to mix
-        if usesP10(volume, len(dest_wells), True):
+        if usesP10(volume, len(dest_wells), allow_zero=True):
             p = p10
-            disposal_vol = p10_disposal_vol
         else:
             p = p50
-            disposal_vol = p50_disposal_vol
-        log('Plating Strand B: volume %d with %s' % (volume, p.name))
-        p.transfer(volume, diluted_strand_b, dest_wells,
-                   new_tip='always',
-                   trash=trash_control,
-                   disposal_vol=disposal_vol,
-                   mix_after=(mix_count, mix_vol))
+
+        if volume != 0 or p is p50:
+            log('Plating Strand B: volume %d with %s' % (volume, p.name))
+            # We can't use distribute here as we need to avoid cross contamination from plate well to plate well
+            p.transfer(volume, diluted_strand_b, dest_wells,
+                       new_tip='always',
+                       trash=trash_control,
+                       mix_after=(plate_mix_count if p is p50 else 0, plate_mix_vol))  # always use p50 to mix
+
+        if p is not p50:  # mix plate wells that we didn't already
+            for well in dest_wells:
+                simple_mix(well, 'Explicitly Mixing',  pipette=p50, volume=plate_mix_vol, count=plate_mix_count)  # new tip each well
 
 
 ########################################################################################################################
