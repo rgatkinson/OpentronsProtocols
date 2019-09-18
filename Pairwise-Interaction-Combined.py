@@ -4,9 +4,7 @@
 
 import json
 from opentrons import labware, instruments, robot, modules, types
-from opentrons.data_storage import database
 from typing import List
-from opentrons.legacy_api.containers import Container, Well  # Hack: not in public Opentrons API
 
 metadata = {
     'protocolName': 'Pairwise Interaction: Dilute & Master',
@@ -22,20 +20,16 @@ metadata = {
 buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
 evagreen_volumes = [1000]           # B1, B2, etc in screwcap rack
 
-# Control tip usage
+# Tip usage
 p10_start_tip = 'A1'
 p50_start_tip = 'A1'
-trash_control = False  # WRONG - test only
+trash_control = True
 
-# Parameters for diluting each strand
+# Diluting each strand
 strand_dilution_factor = 25.0 / 9.0  # per Excel worksheet
-strand_dilution_vol = 1250
-strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
-strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
-simple_mix_vol = 50  # how much to suck and spew for mixing
-simple_mix_count = 4
+strand_dilution_vol = 1275
 
-# Parameters for master mix
+# Master mix
 master_mix_buffer_vol = 1693.44
 master_mix_evagreen_vol = 423.36
 master_mix_common_water_vol = 705.6
@@ -44,7 +38,6 @@ master_mix_common_water_vol = 705.6
 strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
 num_replicates = 3
 columns_per_plate = 12
-nSamples_per_row = columns_per_plate // num_replicates
 per_well_water_volumes = [
     [56, 54, 51, 48],
     [54, 52, 49, 46],
@@ -55,6 +48,9 @@ per_well_water_volumes = [
     [24, 20, 16, 8],
     [16, 12, 8, 0]]
 
+# Mixing
+simple_mix_vol = 50  # how much to suck and spew for mixing
+simple_mix_count = 4
 
 ########################################################################################################################
 # Labware
@@ -130,26 +126,28 @@ def done_tip(pp):
 
 
 ########################################################################################################################
-# Logic
+# Well & Pipettes
 ########################################################################################################################
 
-# Into which wells should we place the n'th sample of strand A
+num_samples_per_row = columns_per_plate // num_replicates
+
+# Into which wells should we place the n'th sample size of strand A
 def calculateStrandAWells(iSample: int) -> List[types.Location]:
-    row_first = 0 if iSample < nSamples_per_row else nSamples_per_row
+    row_first = 0 if iSample < num_samples_per_row else num_samples_per_row
     col_first = (num_replicates * iSample) % columns_per_plate
     result = []
-    for row in range(row_first, row_first + min(nSamples_per_row, len(strand_volumes))):
+    for row in range(row_first, row_first + min(num_samples_per_row, len(strand_volumes))):
         for col in range(col_first, col_first + num_replicates):
             result.append(plate.rows(row).wells(col))
     return result
 
 
-# Into which wells should we place the n'th sample of strand B
+# Into which wells should we place the n'th sample size of strand B
 def calculateStrandBWells(iSample: int) -> List[types.Location]:
-    if iSample < nSamples_per_row:
-        col_max = num_replicates * (len(strand_volumes) if len(strand_volumes) < nSamples_per_row else nSamples_per_row)
+    if iSample < num_samples_per_row:
+        col_max = num_replicates * (len(strand_volumes) if len(strand_volumes) < num_samples_per_row else num_samples_per_row)
     else:
-        col_max = num_replicates * (0 if len(strand_volumes) < nSamples_per_row else len(strand_volumes)-nSamples_per_row)
+        col_max = num_replicates * (0 if len(strand_volumes) < num_samples_per_row else len(strand_volumes) - num_samples_per_row)
     result = []
     for col in range(0, col_max):
         result.append(plate.rows(iSample).wells(col))
@@ -174,6 +172,9 @@ def usesP10(queriedVol, count, allow_zero):
 ########################################################################################################################
 # Making master mix and diluting strands
 ########################################################################################################################
+
+strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
+strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
 
 def simple_mix(well_or_wells, msg=None, count=simple_mix_count, volume=simple_mix_vol, pipette=p50):
     if msg is not None:
@@ -203,13 +204,14 @@ def diluteStrands():
                  )
     log('Diluting Strand A')
     p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=trash_control)
+    simple_mix(diluted_strand_a, 'Mixing Diluted Strand A')
+
     log('Diluting Strand B')
     p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=trash_control)
-
-    simple_mix(diluted_strand_a, 'Mixing Diluted Strand A')
     simple_mix(diluted_strand_b, 'Mixing Diluted Strand B')
 
 def createMasterMix():
+    noteLiquid('Master Mix', location=master_mix)
     for buffer in buffers:
         noteLiquid('Buffer', location=buffer[0], volume=buffer[1])
     for evagreen in evagreens:
@@ -270,10 +272,11 @@ def plateEverything():
     for iRow in range(len(per_well_water_volumes)):
         for iCol in range(len(per_well_water_volumes[iRow])):
             volume = per_well_water_volumes[iRow][iCol]
-            p50.distribute(volume, water, plate.rows(iRow).wells(iCol * num_replicates, length=num_replicates),
-                           new_tip='never',
-                           disposal_vol=p50_disposal_vol,
-                           trash=trash_control)
+            if volume != 0:
+                p50.distribute(volume, water, plate.rows(iRow).wells(iCol * num_replicates, length=num_replicates),
+                               new_tip='never',
+                               disposal_vol=p50_disposal_vol,
+                               trash=trash_control)
     done_tip(p50)
 
     # Plate strand A
@@ -333,6 +336,7 @@ def plateEverything():
 # Off to the races
 ########################################################################################################################
 
+noteLiquid('Water', location=water)
 diluteStrands()
 createMasterMix()
 plateEverything()
