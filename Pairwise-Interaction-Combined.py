@@ -5,6 +5,7 @@
 import json
 from opentrons import labware, instruments, robot, modules, types
 from typing import List
+from opentrons.config import pipette_config
 
 metadata = {
     'protocolName': 'Pairwise Interaction: Dilute & Master',
@@ -53,15 +54,57 @@ simple_mix_vol = 50  # how much to suck and spew for mixing
 simple_mix_count = 4
 
 ########################################################################################################################
+# Custom Pipette objects (see http://code.activestate.com/recipes/577555-object-wrapper-class/)
+########################################################################################################################
+
+class Wrapper(object):
+    def __init__(self, obj):
+        self.target = obj
+
+    def __getattr__(self, attr):
+        if attr in self.__dict__:
+            return getattr(self, attr)
+        return getattr(self.target, attr)
+
+class PipetteWrapper(Wrapper):
+    def __init__(self, obj):
+        super(PipetteWrapper, self).__init__(obj)
+
+    def _get_speed(self, func):
+        return self.target.speeds[func]
+
+    def get_speeds(self):
+        return {'aspirate': self._get_speed('aspirate'),
+                'dispense': self._get_speed('dispense'),
+                'blow_out': self._get_speed('blow_out')}
+
+    def get_flow_rates(self):
+        return {'aspirate': self._get_speed('aspirate') * self._get_ul_per_mm('aspirate'),
+                'dispense': self._get_speed('dispense') * self._get_ul_per_mm('dispense'),
+                'blow_out': self._get_speed('blow_out') * self._get_ul_per_mm('dispense')}
+
+    def _get_ul_per_mm(self, func):  # hack, but there seems no public way
+        ul = self.target.max_volume
+        sequence = self.ul_per_mm[func]
+        return pipette_config.piecewise_volume_conversion(ul, sequence)
+
+
+########################################################################################################################
 # Labware
 ########################################################################################################################
 
-# Configure the tips and the pipettes
+# Configure the tips
 tips300a = labware.load('opentrons_96_tiprack_300ul', 1)
 tips300b = labware.load('opentrons_96_tiprack_300ul', 4)
 tips10 = labware.load('opentrons_96_tiprack_10ul', 7)
-p10 = instruments.P10_Single(mount='left', tip_racks=[tips10])
-p50 = instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b])
+
+# Configure the pipettes. Blow out faster than default in an attempt to avoid hanging droplets on the pipettes after blowout
+p10 = PipetteWrapper(instruments.P10_Single(mount='left', tip_racks=[tips10], blow_out_flow_rate=None))
+p50 = PipetteWrapper(instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b], blow_out_flow_rate=None))
+print(p50.get_speeds())
+p10.set_flow_rate(blow_out=p10.get_flow_rates()['blow_out'] * 2)
+p50.set_flow_rate(blow_out=p50.get_flow_rates()['blow_out'] * 2)
+print(p50.get_speeds())
 
 # Control tip usage
 p10.start_at_tip(tips10[p10_start_tip])
