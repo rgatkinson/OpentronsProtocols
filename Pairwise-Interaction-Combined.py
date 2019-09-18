@@ -18,13 +18,13 @@ metadata = {
 ########################################################################################################################
 
 # Volumes of master mix ingredients
-buffer_volumes = [2000]        # A1, A2, etc in screwcap rack
-evagreen_volumes = [2000]      # B1, B2, etc in screwcap rack
+buffer_volumes = [1000, 1000]        # A1, A2, etc in screwcap rack
+evagreen_volumes = [1000, 1000]      # B1, B2, etc in screwcap rack
 
 # Control tip usage
 p10_start_tip = 'A1'
 p50_start_tip = 'A1'
-trash_control = True
+trash_control = False  # WRONG - test only
 
 # Parameters for diluting each strand
 strand_dilution_factor = 25.0 / 9.0  # per Excel worksheet
@@ -100,6 +100,10 @@ master_mix = falcon_rack['A1']
 
 def log(msg: str):
     robot.comment("*********** %s ***********" % msg)
+
+
+def warn(msg: str):
+    robot.comment("*********** WARNING: %s ***********" % msg)
 
 
 def noteLiquid(liquid_name):  # applies to the next aspiration
@@ -194,27 +198,35 @@ def createMasterMix():
         simple_mix(buffer[0], "Mixing Buffer")
 
     # transfer from multiple source wells, each with a current defined volume
-    def transferMultiple(ctx, volume, tuples, dest, new_tip):
-        index = 0
-        cur_loc = tuples[index][0]
-        cur_volume = tuples[index][1]
-        while volume > 0:
-            while cur_volume < p50_min_vol * 2:
-                index = index + 1
-                cur_loc = tuples[index][0]
-                cur_volume = tuples[index][1]
-            this_volume = min(volume, cur_volume)
-            log('%s: xfer %f from %s in %s to %s in %s' % (ctx, this_volume, cur_loc, cur_loc.parent, dest, dest.parent))
-            p50.transfer(this_volume, cur_loc, dest, trash=trash_control, new_tip=new_tip)
-            volume = volume - this_volume
+    def transferMultiple(ctx, xfer_vol_remaining, tubes, dest, new_tip):
+        tube_index = 0
+        cur_loc = None
+        cur_vol = 0
+        min_vol = 0
+        while xfer_vol_remaining > 0:
+            if xfer_vol_remaining < p50_min_vol:
+                warn("remaining transfer volume of %f too small; ignored" % xfer_vol_remaining)
+                return
+            # advance to next tube if there's not enough in this tube
+            while cur_loc is None or cur_vol <= min_vol:
+                cur_loc = tubes[tube_index][0]
+                cur_vol = tubes[tube_index][1]
+                min_vol = max(p50_min_vol, cur_vol / 15.0)  # tolerance is proportional to specification of volume. can probably make better guess
+                tube_index = tube_index + 1
+            this_vol = min(xfer_vol_remaining, cur_vol - min_vol)
+            assert this_vol >= p50_min_vol  # TODO: is this always the case?
+            log('%s: xfer %f from %s in %s to %s in %s' % (ctx, this_vol, cur_loc, cur_loc.parent, dest, dest.parent))
+            p50.transfer(this_vol, cur_loc, dest, trash=trash_control, new_tip=new_tip)
+            xfer_vol_remaining -= this_vol
+            cur_vol -= this_vol
 
     log('Creating Master Mix: Water')
     p50.transfer(master_mix_common_water_vol, water, master_mix, trash=trash_control)
     log('Creating Master Mix: Buffer')
-    transferMultiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once')
+    transferMultiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once')  # 'once' because we've only got water & buffer in context
     simple_mix(master_mix, 'Mixing Master Mix')     # help eliminate air bubbles: smaller volume right now
     log('Creating Master Mix: EvaGreen')
-    transferMultiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always')  # 'always' to avoid contaminating the Evagreen source
+    transferMultiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always')  # 'always' to avoid contaminating the Evagreen source w/ buffer
     simple_mix(master_mix, 'Mixing Master Mix')
 
 
