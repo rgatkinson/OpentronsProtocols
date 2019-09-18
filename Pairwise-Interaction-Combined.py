@@ -2,6 +2,7 @@
 @author Robert Atkinson
 """
 
+import json
 from opentrons import labware, instruments, robot, modules, types
 from opentrons.data_storage import database
 from typing import List
@@ -18,8 +19,8 @@ metadata = {
 ########################################################################################################################
 
 # Volumes of master mix ingredients
-buffer_volumes = [1000, 1000]        # A1, A2, etc in screwcap rack
-evagreen_volumes = [1000, 1000]      # B1, B2, etc in screwcap rack
+buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
+evagreen_volumes = [1000]           # B1, B2, etc in screwcap rack
 
 # Control tip usage
 p10_start_tip = 'A1'
@@ -98,6 +99,13 @@ master_mix = falcon_rack['A1']
 # Utilities
 ########################################################################################################################
 
+# Returns a unique name for the given location. Must track in Opentrons-Analyze.
+def get_location_path(location):
+    return '/'.join(list(reversed([str(item)
+                                   for item in location.get_trace(None)
+                                   if str(item) is not None])))
+
+
 def log(msg: str):
     robot.comment("*********** %s ***********" % msg)
 
@@ -106,8 +114,12 @@ def warn(msg: str):
     robot.comment("*********** WARNING: %s ***********" % msg)
 
 
-def noteLiquid(liquid_name):  # applies to the next aspiration
-    robot.comment("Liquid: %s" % liquid_name)
+def noteLiquid(name, location, volume=None):
+    d = {'name': name, 'location': get_location_path(location)}
+    if volume is not None:
+        d['volume'] = volume
+    serialized = json.dumps(d).replace("{", "{{").replace("}", "}}")  # runtime calls comment.format(...) on our comment; avoid issues therewith
+    robot.comment('Liquid: %s' % serialized)
 
 
 def done_tip(pp):
@@ -163,16 +175,23 @@ def usesP10(queriedVol, count, allowZero):
 # Making master mix and diluting strands
 ########################################################################################################################
 
-def simple_mix(well, msg, pp=p50):
+def simple_mix(well_or_wells, msg, pp=p50):
     log(msg)
+    wells = well_or_wells if isinstance(well_or_wells, (tuple, list)) else [well_or_wells]
+    assert not pp.has_tip
     pp.pick_up_tip()
-    pp.mix(simple_mix_count, simple_mix_vol, well)
+    for well in wells:
+        pp.mix(simple_mix_count, simple_mix_vol, well)
     done_tip(pp)
 
 def diluteStrands():
-    noteLiquid('Strand A')
+    log('Liquid Names')
+    noteLiquid('Strand A', location=strand_a)
+    noteLiquid('Strand B', location=strand_b)
+    noteLiquid('Diluted Strand A', location=diluted_strand_a)
+    noteLiquid('Diluted Strand B', location=diluted_strand_b)
+
     simple_mix(strand_a, 'Mixing Strand A')
-    noteLiquid('Strand B')
     simple_mix(strand_b, 'Mixing Strand B')
 
     # Create dilutions of strands
@@ -182,20 +201,21 @@ def diluteStrands():
                  trash=trash_control
                  )
     log('Diluting Strand A')
-    noteLiquid('Diluted Strand A')
     p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=trash_control)
     log('Diluting Strand B')
-    noteLiquid('Diluted Strand B')
     p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=trash_control)
 
     simple_mix(diluted_strand_a, 'Mixing Diluted Strand A')
     simple_mix(diluted_strand_b, 'Mixing Diluted Strand B')
 
 def createMasterMix():
-    # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
     for buffer in buffers:
-        noteLiquid('Buffer')
-        simple_mix(buffer[0], "Mixing Buffer")
+        noteLiquid('Buffer', location=buffer[0], volume=buffer[1])
+    for evagreen in evagreens:
+        noteLiquid('Evagreen', location=evagreen[0], volume=evagreen[1])
+
+    # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
+    simple_mix([buffer for buffer, _ in buffers], "Mixing Buffers")
 
     # transfer from multiple source wells, each with a current defined volume
     def transferMultiple(ctx, xfer_vol_remaining, tubes, dest, new_tip):
