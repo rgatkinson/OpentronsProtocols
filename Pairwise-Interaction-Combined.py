@@ -56,6 +56,10 @@ per_well_water_volumes = [
 simple_mix_vol = 50  # how much to suck and spew for mixing
 simple_mix_count = 4
 
+# Optimization control
+use_blow_elision = True
+use_carryover = True
+
 ########################################################################################################################
 # Custom Pipette objects
 #   see http://code.activestate.com/recipes/577555-object-wrapper-class/
@@ -93,16 +97,37 @@ class MyPipette(Pipette):
     def _get_ul_per_mm(self, func):  # hack, but there seems no public way
         return self._ul_per_mm(self.max_volume, func)
 
-    def _get_next_ops(self, plan, i, max_count):
+    def _get_next_ops(self, plan, step_index, max_count):
         result = []
-        while i < len(plan) and len(result) < max_count:
-            step = plan[i]
+        while step_index < len(plan) and len(result) < max_count:
+            step = plan[step_index]
             if step.get('aspirate'):
                 result.append('aspirate')
             if step.get('dispense'):
                 result.append('dispense')
-            i += 1
+            step_index += 1
         return result
+
+    def has_disposal_vol(self, plan, step_index, **kwargs):
+        if kwargs.get('mode', 'transfer') != 'distribute':
+            return False
+        if kwargs.get('disposal_vol', 0) <= 0:
+            return False
+        check_has_disposal_vol = False
+        next_steps = self._get_next_ops(plan, step_index, 3)
+        assert next_steps[0] == 'aspirate'
+        if len(next_steps) >= 2:
+            if next_steps[1] == 'dispense':
+                if len(next_steps) >= 3:
+                    if next_steps[2] == 'dispense':
+                        check_has_disposal_vol = True
+                    else:
+                        silent_log('aspirate-dispense-aspirate')
+                else:
+                    quiet_log('aspirate-dispense is entire remaining plan')
+            else:
+                quiet_log('unexpected aspirate-aspirate sequence')
+        return check_has_disposal_vol
 
     # Copied and overridden
     def _run_transfer_plan(self, tips, plan, **kwargs):
@@ -112,7 +137,9 @@ class MyPipette(Pipette):
 
         total_transfers = len(plan)
         seen_aspirate = False
-        for i, step in enumerate(plan):
+        assert len(plan) == 0 or plan[0].get('aspirate')  # first step must be an aspirate
+
+        for step_index, step in enumerate(plan):
 
             aspirate = step.get('aspirate')
             dispense = step.get('dispense')
@@ -123,31 +150,13 @@ class MyPipette(Pipette):
                     quiet_log('carried over %s uL from prev operation' % format_number(self.current_volume))
 
                 if not seen_aspirate:
-                    # first aspirate in a sequence
+                    assert step_index == 0
+
                     if kwargs.get('allow_carryover', False) and zeroify(self.current_volume) > 0:
                         this_aspirated_location, __ = unpack_location(aspirate['location'])
                         if self.prev_aspirated_location is this_aspirated_location:
-                            # Are we at the start of a aspirate-dispense-dispense-... sequence
-                            has_disposal_vol = False
-                            next_steps = self._get_next_ops(plan, i, 3)
-                            assert next_steps[0] == 'aspirate'
-                            if len(next_steps) >= 2:
-                                if next_steps[1] == 'dispense':
-                                    if len(next_steps) >= 3:
-                                        if next_steps[2] == 'dispense':
-                                            if kwargs.get('disposal_vol', 0) > 0:
-                                                has_disposal_vol = True
-                                            else:
-                                                quiet_log('no disposal vol')
-                                        else:
-                                            quiet_log('aspirate-dispense-aspirate')
-                                    else:
-                                        quiet_log('aspirate-dispense at end of plan')
-                                else:
-                                    quiet_log('unexpected aspirate-aspirate sequence')
-
-                            if has_disposal_vol:
-                                # try to remove current volume from next aspirate
+                            if self.has_disposal_vol(plan, step_index, **kwargs):
+                                # try to remove current volume from this aspirate
                                 new_aspirate_vol = zeroify(aspirate.get('volume') - self.current_volume)
                                 if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
                                     aspirate['volume'] = new_aspirate_vol
@@ -181,12 +190,13 @@ class MyPipette(Pipette):
 
                 do_touch = touch_tip or touch_tip is 0
                 is_last_step = step is plan[-1]
-                if is_last_step or plan[i + 1].get('aspirate'):
+                if is_last_step or plan[step_index + 1].get('aspirate'):
                     do_drop = not is_last_step or not kwargs.get('retain_tip', False)
-                    # there are several reasons we could be forced to blow
+                    # original always blew here. there are several reasons we could still be forced to blow
                     do_blow = not is_distribute  # other modes (are there any?) we're not sure about
                     do_blow = do_blow or kwargs.get('blow_out', False)  # for compatibility
                     do_blow = do_blow or do_touch  # for compatibility
+                    do_blow = do_blow or not kwargs.get('allow_blow_elision', False)
                     if not do_blow:
                         if is_last_step:
                             if self.current_volume > 0:
@@ -198,23 +208,32 @@ class MyPipette(Pipette):
                                     quiet_log('carried over %s uL to next operation' % format_number(self.current_volume))
                         else:
                             # if we can, account for any carryover in the next aspirate
-                            next_aspirate = plan[i + 1].get('aspirate'); assert next_aspirate
-                            next_aspirated_location, __ = unpack_location(next_aspirate['location'])
-                            if self.prev_aspirated_location is next_aspirated_location and self.current_volume > 0:
-                                new_aspirate_vol = zeroify(next_aspirate.get('volume') - self.current_volume)
-                                if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
-                                    next_aspirate['volume'] = new_aspirate_vol
-                                    quiet_log('reduced next aspirate by %s uL' % format_number(self.current_volume))
+                            if self.current_volume > 0:
+                                if self.has_disposal_vol(plan, step_index + 1, **kwargs):
+                                    next_aspirate = plan[step_index + 1].get('aspirate'); assert next_aspirate
+                                    next_aspirated_location, __ = unpack_location(next_aspirate['location'])
+                                    if self.prev_aspirated_location is next_aspirated_location:
+                                        new_aspirate_vol = zeroify(next_aspirate.get('volume') - self.current_volume)
+                                        if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
+                                            next_aspirate['volume'] = new_aspirate_vol
+                                            quiet_log('reduced next aspirate by %s uL' % format_number(self.current_volume))
+                                        else:
+                                            do_blow = True
+                                    else:
+                                        do_blow = True  # different aspirate locations
                                 else:
-                                    do_blow = True
+                                    # Next aspirate doesn't *want* our carryover, so we don't reduce his
+                                    # volume. But it's harmless to just leave the carryover present; might
+                                    # be useful down the line
+                                    pass
                             else:
-                                do_blow = True  # different locations
+                                pass  # currently empty
                     if do_blow:
                         self._blowout_during_transfer(dispense['location'], **kwargs)
                     if do_touch:
                         self.touch_tip(touch_tip)
                     if do_drop:
-                        tips = self._drop_tip_during_transfer(tips, i, total_transfers, **kwargs)
+                        tips = self._drop_tip_during_transfer(tips, step_index, total_transfers, **kwargs)
                 else:
                     if air_gap:
                         self.air_gap(air_gap)
@@ -297,6 +316,9 @@ def log(msg: str):
 
 def quiet_log(msg):
     info(msg, prefix='info:', suffix='')
+
+def silent_log(msg):
+    pass
 
 def info(msg: str, prefix="***********", suffix=' ***********'):
     robot.comment("%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix))
@@ -487,8 +509,6 @@ def createMasterMix():
 # Plating
 ########################################################################################################################
 
-use_carryover = True
-
 def plateEverything():
     # Plate master mix
     log('Plating Master Mix')
@@ -509,6 +529,7 @@ def plateEverything():
                                new_tip='never',
                                disposal_vol=p50_disposal_vol,
                                trash=trash_control,
+                               allow_blow_elision=use_blow_elision,
                                allow_carryover=use_carryover)
     done_tip(p50)
 
@@ -536,7 +557,8 @@ def plateEverything():
                      new_tip='never',
                      disposal_vol=disposal_vol,
                      trash=trash_control,
-                     allow_carryover=use_carryover)  # allow tip to be non-empty on exit (WRONG)
+                     allow_blow_elision=use_blow_elision,
+                     allow_carryover=use_carryover)
     done_tip(p10)
     done_tip(p50)
 
