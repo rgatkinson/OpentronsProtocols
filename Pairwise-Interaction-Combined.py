@@ -93,6 +93,17 @@ class MyPipette(Pipette):
     def _get_ul_per_mm(self, func):  # hack, but there seems no public way
         return self._ul_per_mm(self.max_volume, func)
 
+    def _get_next_ops(self, plan, i, max_count):
+        result = []
+        while i < len(plan) and len(result) < max_count:
+            step = plan[i]
+            if step.get('aspirate'):
+                result.append('aspirate')
+            if step.get('dispense'):
+                result.append('dispense')
+            i += 1
+        return result
+
     # Copied and overridden
     def _run_transfer_plan(self, tips, plan, **kwargs):
         air_gap = kwargs.get('air_gap', 0)
@@ -111,28 +122,54 @@ class MyPipette(Pipette):
                 if self.current_volume > 0:
                     quiet_log('carried over %s uL from prev operation' % format_number(self.current_volume))
 
-                if kwargs.get('allow_carryover', False) and not seen_aspirate and zeroify(self.current_volume) > 0:
-                    this_aspirated_location, __ = unpack_location(aspirate['location'])
-                    if self.prev_aspirated_location is this_aspirated_location:
-                        # try to remove current volume from next aspirate
-                        new_aspirate_vol = zeroify(aspirate.get('volume') - self.current_volume)
-                        if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
-                            aspirate['volume'] = new_aspirate_vol
-                            quiet_log('reduced this aspirate by %s uL' % format_number(self.current_volume))
-                            extra = 0  # can't blow out since we're relying on it
-                        else:
-                            extra = self.current_volume - aspirate['volume']
-                            assert zeroify(extra) > 0
-                    else:
-                        # different locations; can't re-use
-                        extra = self.current_volume
-                    if zeroify(extra) > 0:
-                        quiet_log('blowing out carryover of %s uL' % format_number(self.current_volume))
-                        self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
+                if not seen_aspirate:
+                    # first aspirate in a sequence
+                    if kwargs.get('allow_carryover', False) and zeroify(self.current_volume) > 0:
+                        this_aspirated_location, __ = unpack_location(aspirate['location'])
+                        if self.prev_aspirated_location is this_aspirated_location:
+                            # Are we at the start of a aspirate-dispense-dispense-... sequence
+                            has_disposal_vol = False
+                            next_steps = self._get_next_ops(plan, i, 3)
+                            assert next_steps[0] == 'aspirate'
+                            if len(next_steps) >= 2:
+                                if next_steps[1] == 'dispense':
+                                    if len(next_steps) >= 3:
+                                        if next_steps[2] == 'dispense':
+                                            if kwargs.get('disposal_vol', 0) > 0:
+                                                has_disposal_vol = True
+                                            else:
+                                                quiet_log('no disposal vol')
+                                        else:
+                                            quiet_log('aspirate-dispense-aspirate')
+                                    else:
+                                        quiet_log('aspirate-dispense at end of plan')
+                                else:
+                                    quiet_log('unexpected aspirate-aspirate sequence')
 
-                elif not seen_aspirate and zeroify(self.current_volume) > 0:
-                    warn('blowing out unexpected carryover of %s uL' % format_number(self.current_volume))
-                    self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
+                            if has_disposal_vol:
+                                # try to remove current volume from next aspirate
+                                new_aspirate_vol = zeroify(aspirate.get('volume') - self.current_volume)
+                                if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
+                                    aspirate['volume'] = new_aspirate_vol
+                                    quiet_log('reduced this aspirate by %s uL' % format_number(self.current_volume))
+                                    extra = 0  # can't blow out since we're relying on its presence in pipette
+                                else:
+                                    extra = self.current_volume - aspirate['volume']
+                                    assert zeroify(extra) > 0
+                            else:
+                                quiet_log("carryover of %s uL isn't for disposal" % format_number(self.current_volume))
+                                extra = self.current_volume
+                        else:
+                            # different locations; can't re-use
+                            quiet_log('this aspirate is from location different than current pipette contents')
+                            extra = self.current_volume
+                        if zeroify(extra) > 0:
+                            # quiet_log('blowing out carryover of %s uL' % format_number(self.current_volume))
+                            self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
+
+                    elif zeroify(self.current_volume) > 0:
+                        warn('blowing out unexpected carryover of %s uL' % format_number(self.current_volume))
+                        self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
 
                 seen_aspirate = True
 
@@ -259,7 +296,7 @@ def log(msg: str):
     robot.comment("*********** %s ***********" % msg)
 
 def quiet_log(msg):
-    info(msg, prefix='', suffix='')
+    info(msg, prefix='info:', suffix='')
 
 def info(msg: str, prefix="***********", suffix=' ***********'):
     robot.comment("%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix))
