@@ -5,8 +5,6 @@
 import json
 from typing import List
 from opentrons import labware, instruments, robot, modules, types
-from opentrons.config import pipette_config
-from opentrons.legacy_api.containers.placeable import Placeable
 from opentrons.legacy_api.instruments import Pipette
 
 metadata = {
@@ -90,9 +88,7 @@ class MyPipette(Pipette):
                 'blow_out': self._get_speed('blow_out') * self._get_ul_per_mm('dispense')}
 
     def _get_ul_per_mm(self, func):  # hack, but there seems no public way
-        ul = self.max_volume
-        sequence = self.ul_per_mm[func]
-        return pipette_config.piecewise_volume_conversion(ul, sequence)
+        return self._ul_per_mm(self.max_volume, func)
 
     # Copied and overridden
     def _run_transfer_plan(self, tips, plan, **kwargs):
