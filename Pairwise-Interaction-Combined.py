@@ -3,9 +3,11 @@
 """
 
 import json
-from opentrons import labware, instruments, robot, modules, types
 from typing import List
+from opentrons import labware, instruments, robot, modules, types
 from opentrons.config import pipette_config
+from opentrons.legacy_api.containers.placeable import Placeable
+from opentrons.legacy_api.instruments import Pipette
 
 metadata = {
     'protocolName': 'Pairwise Interaction: Dilute & Master',
@@ -54,24 +56,28 @@ simple_mix_vol = 50  # how much to suck and spew for mixing
 simple_mix_count = 4
 
 ########################################################################################################################
-# Custom Pipette objects (see http://code.activestate.com/recipes/577555-object-wrapper-class/)
+# Custom Pipette objects
+#   see http://code.activestate.com/recipes/577555-object-wrapper-class/
+#   see https://stackoverflow.com/questions/1081253/inheriting-from-instance-in-python
+#
+# Goals:
+#   * avoid blowout before trashing tip (that's useless, just creates aerosols)
+#   * support speed and flow rate retrieval
+#   * support option to leave tip attached at end of transfer
 ########################################################################################################################
 
-class Wrapper(object):
-    def __init__(self, obj):
-        self.target = obj
+class MyPipette(Pipette):
+    def __new__(cls, parentInst):
+        parentInst.__class__ = MyPipette
+        return parentInst
 
-    def __getattr__(self, attr):
-        if attr in self.__dict__:
-            return getattr(self, attr)
-        return getattr(self.target, attr)
-
-class PipetteWrapper(Wrapper):
-    def __init__(self, obj):
-        super(PipetteWrapper, self).__init__(obj)
+    # noinspection PyMissingConstructor
+    def __init__(self, parentInst):
+        # Don't call the Parent's init method
+        pass
 
     def _get_speed(self, func):
-        return self.target.speeds[func]
+        return self.speeds[func]
 
     def get_speeds(self):
         return {'aspirate': self._get_speed('aspirate'),
@@ -84,9 +90,45 @@ class PipetteWrapper(Wrapper):
                 'blow_out': self._get_speed('blow_out') * self._get_ul_per_mm('dispense')}
 
     def _get_ul_per_mm(self, func):  # hack, but there seems no public way
-        ul = self.target.max_volume
+        ul = self.max_volume
         sequence = self.ul_per_mm[func]
         return pipette_config.piecewise_volume_conversion(ul, sequence)
+
+    # Copied and overridden
+    def _run_transfer_plan(self, tips, plan, **kwargs):
+        air_gap = kwargs.get('air_gap', 0)
+        touch_tip = kwargs.get('touch_tip', False)
+
+        total_transfers = len(plan)
+        for i, step in enumerate(plan):
+
+            aspirate = step.get('aspirate')
+            dispense = step.get('dispense')
+
+            if aspirate:
+                self._add_tip_during_transfer(tips, **kwargs)
+                self._aspirate_during_transfer(aspirate['volume'], aspirate['location'], **kwargs)
+
+            if dispense:
+                self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
+                is_last_step = step is plan[-1]
+                do_touch = touch_tip or touch_tip is 0
+                do_drop = not is_last_step or not kwargs.get('retain_tip', False)
+                if is_last_step or plan[i + 1].get('aspirate'):
+                    do_blow = not do_drop or kwargs.get('blow_out', False) or do_touch  # do the blowout if we'll do touch for compatibility
+                    if do_blow:
+                        self._blowout_during_transfer(dispense['location'], **kwargs)
+                    elif self.current_volume > 0:
+                        self.current_volume = 0  # ignore non-blown-out volume
+                    if do_touch:
+                        self.touch_tip(touch_tip)
+                    if do_drop:
+                        tips = self._drop_tip_during_transfer(tips, i, total_transfers, **kwargs)
+                else:
+                    if air_gap:
+                        self.air_gap(air_gap)
+                    if touch_tip or touch_tip is 0:
+                        self.touch_tip(touch_tip)
 
 
 ########################################################################################################################
@@ -99,12 +141,10 @@ tips300b = labware.load('opentrons_96_tiprack_300ul', 4)
 tips10 = labware.load('opentrons_96_tiprack_10ul', 7)
 
 # Configure the pipettes. Blow out faster than default in an attempt to avoid hanging droplets on the pipettes after blowout
-p10 = PipetteWrapper(instruments.P10_Single(mount='left', tip_racks=[tips10], blow_out_flow_rate=None))
-p50 = PipetteWrapper(instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b], blow_out_flow_rate=None))
-print(p50.get_speeds())
-p10.set_flow_rate(blow_out=p10.get_flow_rates()['blow_out'] * 2)
-p50.set_flow_rate(blow_out=p50.get_flow_rates()['blow_out'] * 2)
-print(p50.get_speeds())
+p10 = MyPipette(instruments.P10_Single(mount='left', tip_racks=[tips10], blow_out_flow_rate=None))
+p50 = MyPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b], blow_out_flow_rate=None))
+# p10.set_flow_rate(blow_out=p10.get_flow_rates()['blow_out'] * 2)  # not needed since we avoid blowing at end of dispense
+# p50.set_flow_rate(blow_out=p50.get_flow_rates()['blow_out'] * 2)  # not needed since we avoid blowing at end of dispense
 
 # Control tip usage
 p10.start_at_tip(tips10[p10_start_tip])
@@ -219,15 +259,17 @@ def usesP10(queriedVol, count, allow_zero):
 strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
 strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
 
-def simple_mix(well_or_wells, msg=None, count=simple_mix_count, volume=simple_mix_vol, pipette=p50):
+def simple_mix(well_or_wells, msg=None, count=simple_mix_count, volume=simple_mix_vol, pipette=p50, pick_tip=True, drop_tip=True):
     if msg is not None:
         log(msg)
     wells = well_or_wells if isinstance(well_or_wells, (tuple, list)) else [well_or_wells]
-    assert not pipette.has_tip
-    pipette.pick_up_tip()
+    assert pipette.has_tip != pick_tip  # if we have one, don't pick, and visa versa
+    if pick_tip:
+        pipette.pick_up_tip()
     for well in wells:
         pipette.mix(count, volume, well)
-    done_tip(pipette)
+    if drop_tip:
+        done_tip(pipette)
 
 def diluteStrands():
     log('Liquid Names')
@@ -246,12 +288,12 @@ def diluteStrands():
                  trash=trash_control
                  )
     log('Diluting Strand A')
-    p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=trash_control)
-    simple_mix(diluted_strand_a, 'Mixing Diluted Strand A')
+    p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=trash_control, retain_tip=True)
+    simple_mix(diluted_strand_a, 'Mixing Diluted Strand A', pick_tip=False)
 
     log('Diluting Strand B')
-    p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=trash_control)
-    simple_mix(diluted_strand_b, 'Mixing Diluted Strand B')
+    p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=trash_control, retain_tip=True)
+    simple_mix(diluted_strand_b, 'Mixing Diluted Strand B', pick_tip=False)
 
 def createMasterMix():
     noteLiquid('Master Mix', location=master_mix)
