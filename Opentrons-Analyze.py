@@ -6,10 +6,6 @@
 import argparse
 import json
 import sys
-import os
-import logging
-import queue
-from typing import Any, List, Mapping
 
 import opentrons
 import opentrons.simulate
@@ -277,6 +273,20 @@ class MonitorController(object):
 
 
 ########################################################################################################################
+# Utility
+########################################################################################################################
+
+def log(msg: str):
+    print("*********** %s ***********" % msg)
+
+def info(msg: str, prefix="***********", suffix=' ***********'):
+    print("%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix))
+
+def warn(msg: str, prefix="***********", suffix=' ***********'):
+    print("%s%sWARNING: %s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix))
+
+
+########################################################################################################################
 # Analyzing
 ########################################################################################################################
 
@@ -307,37 +317,42 @@ def analyzeRunLog(run_log):
         #       text
         #       rate
         text = payload['text']
-        words = text.split()
         lower_words = list(map(lambda word: word.lower(), text.split()))
         if len(lower_words) == 0: continue  # paranoia
         selector = lower_words[0]
-        if selector == 'aspirating' or selector == 'dispensing':
-            well = placeable_from_location(payload['location'])
-            volume = payload['volume']
-            monitor = controller.well_monitor(well)
-            if selector == 'aspirating':
-                monitor.aspirate(volume, pipette_contents)
+        if len(payload) > 1:
+            # a non-comment
+            if selector == 'aspirating' or selector == 'dispensing':
+                well = placeable_from_location(payload['location'])
+                volume = payload['volume']
+                monitor = controller.well_monitor(well)
+                if selector == 'aspirating':
+                    monitor.aspirate(volume, pipette_contents)
+                else:
+                    monitor.dispense(volume, pipette_contents)
+            elif selector == 'picking' or selector == 'dropping':
+                well = placeable_from_location(payload['location'])
+                rack = well.parent
+                monitor = controller.tip_rack_monitor(rack)
+                if selector == 'picking':
+                    monitor.pick_up_tip(well)
+                else:
+                    monitor.drop_tip(well)
+                pipette_contents.clear()
+            elif selector == 'mixing' or selector == 'transferring' or selector == 'distributing' or selector == 'blowing':
+                pass
             else:
-                monitor.dispense(volume, pipette_contents)
-        elif selector == 'picking' or selector == 'dropping':
-            well = placeable_from_location(payload['location'])
-            rack = well.parent
-            monitor = controller.tip_rack_monitor(rack)
-            if selector == 'picking':
-                monitor.pick_up_tip(well)
-            else:
-                monitor.drop_tip(well)
-            pipette_contents.clear()
-        elif selector == 'mixing' or selector == 'transferring' or selector == 'distributing' or selector == 'blowing':
-            pass
-        elif selector == 'liquid:':
-            # Remainder after selector is json dictionary
-            serialized = text[len(selector):]  # will include initial white space, but that's ok
-            serialized = serialized.replace("}}", "}").replace("{{", "{")
-            d = json.loads(serialized)
-            controller.note_liquid_name(d['name'], d['location'], volume=d.get('volume', None))
+                warn('unexpected run item: %s' % text)
         else:
-            pass  # nothing to process
+            # a comment
+            if selector == 'liquid:':
+                # Remainder after selector is json dictionary
+                serialized = text[len(selector):]  # will include initial white space, but that's ok
+                serialized = serialized.replace("}}", "}").replace("{{", "{")
+                d = json.loads(serialized)
+                controller.note_liquid_name(d['name'], d['location'], volume=d.get('volume', None))
+            else:
+                pass  # nothing to process
 
     return controller
 
