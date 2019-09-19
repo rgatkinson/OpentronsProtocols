@@ -24,7 +24,7 @@ evagreen_volumes = [1000]           # B1, B2, etc in screwcap rack
 # Tip usage
 p10_start_tip = 'A1'
 p50_start_tip = 'A1'
-trash_control = True
+trash_control = False  # WRONG
 
 # Diluting each strand
 strand_dilution_factor = 25.0 / 9.0  # per Excel worksheet
@@ -137,8 +137,8 @@ tips300b = labware.load('opentrons_96_tiprack_300ul', 4)
 tips10 = labware.load('opentrons_96_tiprack_10ul', 7)
 
 # Configure the pipettes. Blow out faster than default in an attempt to avoid hanging droplets on the pipettes after blowout
-p10 = MyPipette(instruments.P10_Single(mount='left', tip_racks=[tips10], blow_out_flow_rate=None))
-p50 = MyPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b], blow_out_flow_rate=None))
+p10 = MyPipette(instruments.P10_Single(mount='left', tip_racks=[tips10]))
+p50 = MyPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b]))
 # p10.set_flow_rate(blow_out=p10.get_flow_rates()['blow_out'] * 2)  # not needed since we avoid blowing at end of dispense
 # p50.set_flow_rate(blow_out=p50.get_flow_rates()['blow_out'] * 2)  # not needed since we avoid blowing at end of dispense
 
@@ -150,7 +150,7 @@ p50.start_at_tip(tips300a[p50_start_tip])
 p50_disposal_vol = 5
 p10_disposal_vol = 1
 
-
+# All the labware containers
 temp_slot = 10
 temp_module = modules.load('tempdeck', temp_slot)
 screwcap_rack = labware.load('opentrons_24_aluminumblock_generic_2ml_screwcap', temp_slot, label='screwcap_rack', share=True)
@@ -159,7 +159,7 @@ falcon_rack = labware.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical',
 plate = labware.load('biorad_96_wellplate_200ul_pcr', 3, label='plate')
 trough = labware.load('usascientific_12_reservoir_22ml', 6, label='trough')
 
-# Name specific places in the labware
+# Name specific places in the labware containers
 water = trough['A1']
 buffers = list(zip(screwcap_rack.rows(0), buffer_volumes))
 evagreens = list(zip(screwcap_rack.rows(1), evagreen_volumes))
@@ -302,7 +302,7 @@ def createMasterMix():
     simple_mix([buffer for buffer, _ in buffers], "Mixing Buffers")
 
     # transfer from multiple source wells, each with a current defined volume
-    def transferMultiple(ctx, xfer_vol_remaining, tubes, dest, new_tip):
+    def transferMultiple(ctx, xfer_vol_remaining, tubes, dest, new_tip, *args, **kwargs):
         tube_index = 0
         cur_loc = None
         cur_vol = 0
@@ -320,18 +320,23 @@ def createMasterMix():
             this_vol = min(xfer_vol_remaining, cur_vol - min_vol)
             assert this_vol >= p50_min_vol  # TODO: is this always the case?
             log('%s: xfer %f from %s in %s to %s in %s' % (ctx, this_vol, cur_loc, cur_loc.parent, dest, dest.parent))
-            p50.transfer(this_vol, cur_loc, dest, trash=trash_control, new_tip=new_tip)
+            p50.transfer(this_vol, cur_loc, dest, trash=trash_control, new_tip=new_tip, **kwargs)
             xfer_vol_remaining -= this_vol
             cur_vol -= this_vol
 
+    def mix_master_mix(pick_tip=True):
+        simple_mix(master_mix, 'Mixing Master Mix', pick_tip=pick_tip)
+
     log('Creating Master Mix: Water')
     p50.transfer(master_mix_common_water_vol, water, master_mix, trash=trash_control)
+
     log('Creating Master Mix: Buffer')
-    transferMultiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once')  # 'once' because we've only got water & buffer in context
-    simple_mix(master_mix, 'Mixing Master Mix')     # help eliminate air bubbles: smaller volume right now
+    transferMultiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', retain_tip=True)  # 'once' because we've only got water & buffer in context
+    mix_master_mix(pick_tip=False)  # help eliminate air bubbles: smaller volume right now
+
     log('Creating Master Mix: EvaGreen')
-    transferMultiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always')  # 'always' to avoid contaminating the Evagreen source w/ buffer
-    simple_mix(master_mix, 'Mixing Master Mix')
+    transferMultiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always', retain_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
+    mix_master_mix(pick_tip=False)
 
 
 ########################################################################################################################
