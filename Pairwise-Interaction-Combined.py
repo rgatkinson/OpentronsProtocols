@@ -3,9 +3,12 @@
 """
 
 import json
+import math
 from typing import List
 from opentrons import labware, instruments, robot, modules, types
+from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
+from opentrons.legacy_api.containers.placeable import unpack_location
 
 metadata = {
     'protocolName': 'Pairwise Interaction: Dilute & Master',
@@ -71,7 +74,7 @@ class MyPipette(Pipette):
 
     # noinspection PyMissingConstructor
     def __init__(self, parentInst):
-        # Don't call the Parent's init method
+        self.aspirated_location = None
         pass
 
     def _get_speed(self, func):
@@ -94,6 +97,7 @@ class MyPipette(Pipette):
     def _run_transfer_plan(self, tips, plan, **kwargs):
         air_gap = kwargs.get('air_gap', 0)
         touch_tip = kwargs.get('touch_tip', False)
+        is_distribute = kwargs.get('mode', 'transfer') == 'distribute'
 
         total_transfers = len(plan)
         for i, step in enumerate(plan):
@@ -107,15 +111,33 @@ class MyPipette(Pipette):
 
             if dispense:
                 self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
-                is_last_step = step is plan[-1]
+
                 do_touch = touch_tip or touch_tip is 0
-                do_drop = not is_last_step or not kwargs.get('retain_tip', False)
+                is_last_step = step is plan[-1]
                 if is_last_step or plan[i + 1].get('aspirate'):
-                    do_blow = not do_drop or kwargs.get('blow_out', False) or do_touch  # do the blowout if we'll do touch for compatibility
+                    do_drop = not is_last_step or not kwargs.get('retain_tip', False)
+                    # there are several reasons we're forced to blow
+                    do_blow = not is_distribute  # other modes (are there any?) we're not sure about
+                    do_blow = do_blow or kwargs.get('blow_out', False)  # for compatibility
+                    do_blow = do_blow or do_touch  # for compatibility
+                    if not do_blow:
+                        if is_last_step:
+                            if self.current_volume > 0:
+                                do_blow = True  # for consistency
+                        else:
+                            # if we can, account for it in the next aspirate
+                            aspirate = plan[i + 1].get('aspirate'); assert aspirate
+                            placeable, __ = unpack_location(aspirate['location'])
+                            if self.aspirated_location is placeable:
+                                carryover_volume = self.current_volume
+                                if aspirate.get('volume') >= carryover_volume:
+                                    aspirate['volume'] = aspirate['volume'] - carryover_volume
+                                else:
+                                    do_blow = True  # not enough for the accounting
+                            else:
+                                do_blow = True  # different locations
                     if do_blow:
                         self._blowout_during_transfer(dispense['location'], **kwargs)
-                    elif self.current_volume > 0:
-                        self.current_volume = 0  # ignore non-blown-out volume
                     if do_touch:
                         self.touch_tip(touch_tip)
                     if do_drop:
@@ -123,8 +145,24 @@ class MyPipette(Pipette):
                 else:
                     if air_gap:
                         self.air_gap(air_gap)
-                    if touch_tip or touch_tip is 0:
+                    if do_touch:
                         self.touch_tip(touch_tip)
+
+    def aspirate(self, volume=None, location=None, rate=1.0):
+        # save so super sees actual original parameters
+        saved_volume = volume
+        saved_location = location
+        # recapitulate super
+        if not helpers.is_number(volume):
+            if volume and not location:
+                location = volume
+            volume = self._working_volume - self.current_volume
+        display_location = location if location else self.previous_placeable
+        # call super
+        super(MyPipette, self).aspirate(volume=saved_volume, location=saved_location, rate=rate)
+        # keep track of where we aspirated from
+        if volume != 0:
+            self.aspirated_location, __ = unpack_location(display_location)
 
 
 ########################################################################################################################
@@ -139,8 +177,8 @@ tips10 = labware.load('opentrons_96_tiprack_10ul', 7)
 # Configure the pipettes. Blow out faster than default in an attempt to avoid hanging droplets on the pipettes after blowout
 p10 = MyPipette(instruments.P10_Single(mount='left', tip_racks=[tips10]))
 p50 = MyPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b]))
-# p10.set_flow_rate(blow_out=p10.get_flow_rates()['blow_out'] * 2)  # not needed since we avoid blowing at end of dispense
-# p50.set_flow_rate(blow_out=p50.get_flow_rates()['blow_out'] * 2)  # not needed since we avoid blowing at end of dispense
+p10.set_flow_rate(blow_out=p10.get_flow_rates()['blow_out'] * 2)
+p50.set_flow_rate(blow_out=p50.get_flow_rates()['blow_out'] * 2)
 
 # Control tip usage
 p10.start_at_tip(tips10[p10_start_tip])
@@ -204,6 +242,16 @@ def done_tip(pp):
         pp.return_tip()
 
 
+def format_number(value, precision=2):
+    factor = 1
+    for i in range(precision):
+        if value * factor == int(value * factor):
+            precision = i
+            break
+        factor *= 10
+    return "{:.{}f}".format(value, precision)
+
+
 ########################################################################################################################
 # Well & Pipettes
 ########################################################################################################################
@@ -255,10 +303,9 @@ def usesP10(queriedVol, count, allow_zero):
 strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
 strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
 
-def simple_mix(well_or_wells, msg=None, count=simple_mix_count, volume=simple_mix_vol, pipette=p50, pick_tip=True, drop_tip=True):
+def simple_mix(wells, msg=None, count=simple_mix_count, volume=simple_mix_vol, pipette=p50, pick_tip=True, drop_tip=True):
     if msg is not None:
         log(msg)
-    wells = well_or_wells if isinstance(well_or_wells, (tuple, list)) else [well_or_wells]
     assert pipette.has_tip != pick_tip  # if we have one, don't pick, and visa versa
     if pick_tip:
         pipette.pick_up_tip()
@@ -274,8 +321,8 @@ def diluteStrands():
     noteLiquid('Diluted Strand A', location=diluted_strand_a)
     noteLiquid('Diluted Strand B', location=diluted_strand_b)
 
-    simple_mix(strand_a, 'Mixing Strand A')
-    simple_mix(strand_b, 'Mixing Strand B')
+    simple_mix([strand_a], 'Mixing Strand A')
+    simple_mix([strand_b], 'Mixing Strand B')
 
     # Create dilutions of strands
     log('Moving water for diluting Strands A and B')
@@ -285,11 +332,11 @@ def diluteStrands():
                  )
     log('Diluting Strand A')
     p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=trash_control, retain_tip=True)
-    simple_mix(diluted_strand_a, 'Mixing Diluted Strand A', pick_tip=False)
+    simple_mix([diluted_strand_a], 'Mixing Diluted Strand A', pick_tip=False)
 
     log('Diluting Strand B')
     p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=trash_control, retain_tip=True)
-    simple_mix(diluted_strand_b, 'Mixing Diluted Strand B', pick_tip=False)
+    simple_mix([diluted_strand_b], 'Mixing Diluted Strand B', pick_tip=False)
 
 def createMasterMix():
     noteLiquid('Master Mix', location=master_mix)
@@ -324,19 +371,31 @@ def createMasterMix():
             xfer_vol_remaining -= this_vol
             cur_vol -= this_vol
 
-    def mix_master_mix(pick_tip=True):
-        simple_mix(master_mix, 'Mixing Master Mix', pick_tip=pick_tip)
+    # Mixes possibly several times, at different levels
+    def mix_master_mix(current_volume, pick_tip=True, pipette=p50):
+        radius = master_mix.x_size() / 2.0
+        area = math.pi * radius * radius  # area is square mm, current_volume is uL
+        # We'll assume tube is cylindrical, which it isn't, but that's conservative
+        current_height = current_volume / area  # in mm (that's how the units work out)
+        step = 5.0  # mm
+        clearance = 1.0  # mm, as in _position_for_aspirate
+        height = min(master_mix.z_size(), clearance)  # as in _position_for_aspirate
+        while height < current_height - 5.0:
+            simple_mix([master_mix.bottom(height)], 'Mixing Master Mix @ %s' % format_number(height), pick_tip=pick_tip, drop_tip=False, pipette=pipette)  # WRONG
+            height += step
+        if pipette.has_tip:
+            done_tip(p50)
 
     log('Creating Master Mix: Water')
     p50.transfer(master_mix_common_water_vol, water, master_mix, trash=trash_control)
 
     log('Creating Master Mix: Buffer')
     transferMultiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', retain_tip=True)  # 'once' because we've only got water & buffer in context
-    mix_master_mix(pick_tip=False)  # help eliminate air bubbles: smaller volume right now
+    mix_master_mix(current_volume=master_mix_common_water_vol + master_mix_buffer_vol, pick_tip=False)  # help eliminate air bubbles: smaller volume right now
 
     log('Creating Master Mix: EvaGreen')
     transferMultiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always', retain_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
-    mix_master_mix(pick_tip=False)
+    mix_master_mix(current_volume=master_mix_common_water_vol + master_mix_buffer_vol + master_mix_evagreen_vol, pick_tip=False)
 
 
 ########################################################################################################################
@@ -415,7 +474,7 @@ def plateEverything():
 
         if p is not p50:  # mix plate wells that we didn't already
             for well in dest_wells:
-                simple_mix(well, 'Explicitly Mixing',  pipette=p50, volume=plate_mix_vol, count=plate_mix_count)  # new tip each well
+                simple_mix([well], 'Explicitly Mixing',  pipette=p50, volume=plate_mix_vol, count=plate_mix_count)  # new tip each well
 
 
 ########################################################################################################################
