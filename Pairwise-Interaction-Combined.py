@@ -187,11 +187,17 @@ class MyPipette(Pipette):
                 seen_aspirate = True
 
                 self._add_tip_during_transfer(tips, **kwargs)
-                # Hack: we can't seem to fully analyze when we can really do carryover and when we can't, so
-                # we double check here: if we're about to overflow the capacity of the tip, then we assume
-                # that we've messed up, and blow the wad
+                # Previous blow-out elisions that don't reduce their adjacent aspirates (because they're not
+                # carrying disposal_vols) might eventually catch up with us in the form of blowing the capacity
+                # of the pipette. When they do, we give in, and carry out the blow-out. This still can be a net
+                # win, in that we reduce the overall number of blow-outs. We might be tempted here to reduce
+                # the capacity of the overflowing aspirate, but that would reduce precision (we still *could*
+                # do that if it has disposal_vol, but that doesn't seem worth it).
                 if self.current_volume + aspirate['volume'] > self._working_volume:
-                    info('current %s uL with aspirate of %s uL would overflow capacity' % (format_number(self.current_volume), format_number(aspirate['volume'])))
+                    info('current %s uL with aspirate(has_disposal=%s) of %s uL would overflow capacity' % (
+                          format_number(self.current_volume),
+                          self.has_disposal_vol(plan, step_index, **kwargs),
+                          format_number(aspirate['volume'])))
                     self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
                 self._aspirate_during_transfer(aspirate['volume'], aspirate['location'], **kwargs)
 
