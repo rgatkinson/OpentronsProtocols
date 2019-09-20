@@ -42,6 +42,7 @@ master_mix_common_water_vol = 705.6
 strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
 num_replicates = 3
 columns_per_plate = 12
+rows_per_plate = 8
 per_well_water_volumes = [
     [56, 54, 51, 48],
     [54, 52, 49, 46],
@@ -51,6 +52,8 @@ per_well_water_volumes = [
     [28, 24, 20, 12],
     [24, 20, 16, 8],
     [16, 12, 8, 0]]
+assert len(per_well_water_volumes) == rows_per_plate
+assert len(per_well_water_volumes[0]) * num_replicates == columns_per_plate
 
 # Mixing
 simple_mix_vol = 50  # how much to suck and spew for mixing
@@ -58,7 +61,7 @@ simple_mix_count = 4
 
 # Optimization control
 use_blow_elision = True
-use_carryover = True
+use_carryover = use_blow_elision
 
 ########################################################################################################################
 # Custom Pipette objects
@@ -124,9 +127,9 @@ class MyPipette(Pipette):
                     else:
                         silent_log('aspirate-dispense-aspirate')
                 else:
-                    quiet_log('aspirate-dispense is entire remaining plan')
+                    info('aspirate-dispense is entire remaining plan')
             else:
-                quiet_log('unexpected aspirate-aspirate sequence')
+                info('unexpected aspirate-aspirate sequence')
         return check_has_disposal_vol
 
     # Copied and overridden
@@ -140,6 +143,7 @@ class MyPipette(Pipette):
         assert len(plan) == 0 or plan[0].get('aspirate')  # first step must be an aspirate
 
         for step_index, step in enumerate(plan):
+            # print('cur=%s index=%s step=%s' % (format_number(self.current_volume), step_index, step))
 
             aspirate = step.get('aspirate')
             dispense = step.get('dispense')
@@ -147,7 +151,7 @@ class MyPipette(Pipette):
             if aspirate:
                 # we might have carryover from a previous transfer.
                 if self.current_volume > 0:
-                    quiet_log('carried over %s uL from prev operation' % format_number(self.current_volume))
+                    info('carried over %s uL from prev operation' % format_number(self.current_volume))
 
                 if not seen_aspirate:
                     assert step_index == 0
@@ -160,32 +164,40 @@ class MyPipette(Pipette):
                                 new_aspirate_vol = zeroify(aspirate.get('volume') - self.current_volume)
                                 if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
                                     aspirate['volume'] = new_aspirate_vol
-                                    quiet_log('reduced this aspirate by %s uL' % format_number(self.current_volume))
+                                    info('reduced this aspirate by %s uL' % format_number(self.current_volume))
                                     extra = 0  # can't blow out since we're relying on its presence in pipette
                                 else:
                                     extra = self.current_volume - aspirate['volume']
                                     assert zeroify(extra) > 0
                             else:
-                                quiet_log("carryover of %s uL isn't for disposal" % format_number(self.current_volume))
+                                info("carryover of %s uL isn't for disposal" % format_number(self.current_volume))
                                 extra = self.current_volume
                         else:
                             # different locations; can't re-use
-                            quiet_log('this aspirate is from location different than current pipette contents')
+                            info('this aspirate is from location different than current pipette contents')
                             extra = self.current_volume
                         if zeroify(extra) > 0:
                             # quiet_log('blowing out carryover of %s uL' % format_number(self.current_volume))
                             self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
 
                     elif zeroify(self.current_volume) > 0:
-                        warn('blowing out unexpected carryover of %s uL' % format_number(self.current_volume))
+                        info('blowing out unexpected carryover of %s uL' % format_number(self.current_volume))
                         self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
 
                 seen_aspirate = True
 
                 self._add_tip_during_transfer(tips, **kwargs)
+                # Hack: we can't seem to fully analyze when we can really do carryover and when we can't, so
+                # we double check here: if we're about to overflow the capacity of the tip, then we assume
+                # that we've messed up, and blow the wad
+                if self.current_volume + aspirate['volume'] > self._working_volume:
+                    info('current %s uL with aspirate of %s uL would overflow capacity' % (format_number(self.current_volume), format_number(aspirate['volume'])))
+                    self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
                 self._aspirate_during_transfer(aspirate['volume'], aspirate['location'], **kwargs)
 
             if dispense:
+                if self.current_volume < dispense['volume']:
+                    warn('current %s uL will truncate dispense of %s uL' %(format_number(self.current_volume), format_number(dispense['volume'])))
                 self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
 
                 do_touch = touch_tip or touch_tip is 0
@@ -205,7 +217,7 @@ class MyPipette(Pipette):
                                 elif self.current_volume > kwargs.get('disposal_vol', 0):
                                     warn('carried over %s uL to next operation' % format_number(self.current_volume))
                                 else:
-                                    quiet_log('carried over %s uL to next operation' % format_number(self.current_volume))
+                                    info('carried over %s uL to next operation' % format_number(self.current_volume))
                         else:
                             # if we can, account for any carryover in the next aspirate
                             if self.current_volume > 0:
@@ -216,7 +228,7 @@ class MyPipette(Pipette):
                                         new_aspirate_vol = zeroify(next_aspirate.get('volume') - self.current_volume)
                                         if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
                                             next_aspirate['volume'] = new_aspirate_vol
-                                            quiet_log('reduced next aspirate by %s uL' % format_number(self.current_volume))
+                                            info('reduced next aspirate by %s uL' % format_number(self.current_volume))
                                         else:
                                             do_blow = True
                                     else:
@@ -311,20 +323,17 @@ def get_location_path(location):
                                    if str(item) is not None])))
 
 
-def log(msg: str):
-    robot.comment("*********** %s ***********" % msg)
+def log(msg: str, prefix="***********", suffix=' ***********'):
+    robot.comment("%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix))
 
-def quiet_log(msg):
-    info(msg, prefix='info:', suffix='')
+def info(msg):
+    log(msg, prefix='info:', suffix='')
+
+def warn(msg: str, prefix="***********", suffix=' ***********'):
+    log(msg, prefix=prefix + " WARNING:", suffix=suffix)
 
 def silent_log(msg):
     pass
-
-def info(msg: str, prefix="***********", suffix=' ***********'):
-    robot.comment("%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix))
-
-def warn(msg: str, prefix="***********", suffix=' ***********'):
-    robot.comment("%s%sWARNING: %s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix))
 
 
 def noteLiquid(name, location, volume=None):
@@ -337,7 +346,7 @@ def noteLiquid(name, location, volume=None):
 
 def done_tip(pp):
     if pp.current_volume > 0:
-        quiet_log('%s has %s uL remaining' % (pp.name, format_number(pp.current_volume)))
+        info('%s has %s uL remaining' % (pp.name, format_number(pp.current_volume)))
     if trash_control:
         pp.drop_tip()
     else:
@@ -520,18 +529,21 @@ def plateEverything():
 
     log('Plating per-well water')
     # Plate per-well water. We save tips by being happy to pollute our water trough with a bit of master mix.
-    p50.pick_up_tip()
-    for iRow in range(len(per_well_water_volumes)):
+    # We begin by flattening per_well_water_volumes into a column-major array
+    water_volumes = [0] * (columns_per_plate * rows_per_plate)
+    for iRow in range(rows_per_plate):
         for iCol in range(len(per_well_water_volumes[iRow])):
             volume = per_well_water_volumes[iRow][iCol]
-            if volume != 0:
-                p50.distribute(volume, water, plate.rows(iRow).wells(iCol * num_replicates, length=num_replicates),
-                               new_tip='never',
-                               disposal_vol=p50_disposal_vol,
-                               trash=trash_control,
-                               allow_blow_elision=use_blow_elision,
-                               allow_carryover=use_carryover)
-    done_tip(p50)
+            for iReplicate in range(num_replicates):
+                index = (iCol * num_replicates + iReplicate) * rows_per_plate + iRow
+                water_volumes[index] = volume
+
+    p50.distribute(water_volumes, water, plate.wells(),
+                   new_tip='once',
+                   disposal_vol=p50_disposal_vol,
+                   trash=trash_control,
+                   allow_blow_elision=use_blow_elision,
+                   allow_carryover=use_carryover)
 
     # Plate strand A
     # All plate wells at this point only have water and master mix, so we can't get cross-plate-well
