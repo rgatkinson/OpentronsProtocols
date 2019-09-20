@@ -339,7 +339,16 @@ def analyzeRunLog(run_log):
                 else:
                     monitor.drop_tip(well)
                 pipette_contents.clear()
-            elif selector == 'mixing' or selector == 'transferring' or selector == 'distributing' or selector == 'blowing':
+            elif selector == 'mixing' \
+                    or selector == 'transferring' \
+                    or selector == 'distributing' \
+                    or selector == 'blowing' \
+                    or selector == 'touching' \
+                    or selector == 'homing'\
+                    or selector == 'setting' \
+                    or selector == 'thermocycler' \
+                    or selector == 'delaying' \
+                    or selector == 'consolidating':
                 pass
             else:
                 warn('unexpected run item: %s' % text)
@@ -351,6 +360,19 @@ def analyzeRunLog(run_log):
                 serialized = serialized.replace("}}", "}").replace("{{", "{")
                 d = json.loads(serialized)
                 controller.note_liquid_name(d['name'], d['location'], volume=d.get('volume', None))
+            elif selector == 'air' \
+                    or selector == 'returning' \
+                    or selector == 'engaging' \
+                    or selector == 'disengaging' \
+                    or selector == 'calibrating' \
+                    or selector == 'deactivating' \
+                    or selector == 'waiting' \
+                    or selector == 'setting' \
+                    or selector == 'opening' \
+                    or selector == 'closing' \
+                    or selector == 'pausing' \
+                    or selector == 'resuming':
+                pass
             else:
                 pass  # nothing to process
 
