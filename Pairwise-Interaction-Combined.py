@@ -59,9 +59,119 @@ assert len(per_well_water_volumes[0]) * num_replicates == columns_per_plate
 simple_mix_vol = 50  # how much to suck and spew for mixing
 simple_mix_count = 4
 
-# Optimization control
-use_blow_elision = True
-use_carryover = use_blow_elision
+# Optimization Control
+allow_blow_elision = True
+allow_carryover = allow_blow_elision
+
+
+########################################################################################################################
+########################################################################################################################
+##                                                                                                                    ##
+## Extensions : this section can be reused across protocols                                                           ##
+##                                                                                                                    ##
+########################################################################################################################
+########################################################################################################################
+
+########################################################################################################################
+# Well enhancements
+########################################################################################################################
+
+class PrimitiveUnknownNumber(object):
+    def __init__(self):
+        pass
+
+    def __str__(self):
+        return 'unk(%s)' % hash(self)
+
+
+class UnknownNumber(object):
+    def __init__(self, offset=0, unknowns=None):
+        if unknowns is None:
+            unknowns = [PrimitiveUnknownNumber()]
+        self.offset = offset
+        self.unknowns = unknowns
+
+    def __copy__(self):
+        return UnknownNumber(self.offset, self.unknowns.copy())
+
+    def __add__(self, other):
+        result = self.__copy__()
+        if isinstance(other, UnknownNumber):
+            result.unknowns.extend(other.unknowns)
+            result.offset += other.offset
+        else:
+            result.offset += other
+        return result
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    def formatted(self, *args, **kwargs):
+        result = '('
+        for i, unknown in enumerate(self.unknowns):
+            if i != 0:
+                result += ', '
+            result += str(unknown)
+        result += '+'
+        result += format_number(self.offset, *args, **kwargs)
+        result += ')'
+        return result
+
+
+# If we aspirate from
+class WellVolume(object):
+    def __init__(self, well):
+        self.well = well
+        self.initial_known = False
+        self.initial = UnknownNumber()
+        self.cum_delta = 0
+        self.low_water_mark = 0
+        self.high_water_mark = 0
+
+    def current(self):
+        return self.initial + self.cum_delta
+
+    def aspirate(self, volume):
+        if not self.initial_known:
+            self.initial = UnknownNumber()
+            self.initial_known = True
+        self._track_volume(-volume)
+
+    def dispense(self, volume):
+        if not self.initial_known:
+            self.initial = 0
+            self.initial_known = True
+        self._track_volume(volume)
+
+    def _track_volume(self, delta):
+        self.cum_delta = self.cum_delta + delta
+        self.low_water_mark = min(self.low_water_mark, self.cum_delta)
+        self.high_water_mark = max(self.high_water_mark, self.cum_delta)
+
+
+def isWell(location):
+    return isinstance(location, Well)
+
+
+def get_well_volume(well):
+    assert isWell(well)
+    try:
+        return well.contents
+    except AttributeError:
+        well.contents = WellVolume(well)
+        return well.contents
+
+
+# Must keep in sync with Opentrons-Analyze
+def noteLiquid(name, location, initial_volume=None):
+    well, __ = unpack_location(location)
+    assert isWell(well)
+    d = {'name': name, 'location': get_location_path(well)}
+    if initial_volume is not None:
+        d['volume'] = initial_volume
+    serialized = json.dumps(d).replace("{", "{{").replace("}", "}}")  # runtime calls comment.format(...) on our comment; avoid issues therewith
+    robot.comment('Liquid: %s' % serialized)
+
 
 ########################################################################################################################
 # Custom Pipette objects
@@ -133,6 +243,10 @@ class MyPipette(Pipette):
         return check_has_disposal_vol
 
     # Copied and overridden
+    # New kw args:
+    #   'retain_tip'
+    #   'allow_carryover'
+    #   'allow_blow_elision'
     def _run_transfer_plan(self, tips, plan, **kwargs):
         air_gap = kwargs.get('air_gap', 0)
         touch_tip = kwargs.get('touch_tip', False)
@@ -271,10 +385,10 @@ class MyPipette(Pipette):
         # call super
         super(MyPipette, self).aspirate(volume=saved_volume, location=saved_location, rate=rate)
         # keep track of where we aspirated from and keep track of volume in wells
+        well, __ = unpack_location(display_location)
+        get_well_volume(well).aspirate(volume)
         if volume != 0:
-            well, __ = unpack_location(display_location)
             self.prev_aspirated_location = well
-            self._track_volume(well, -volume)
 
     def dispense(self, volume=None, location=None, rate=1.0):
         # save so super sees actual original parameters
@@ -289,21 +403,68 @@ class MyPipette(Pipette):
         # call super
         super(MyPipette, self).dispense(volume=saved_volume, location=saved_location, rate=rate)
         # keep track of volume in wells
-        if volume != 0:
-            well, __ = unpack_location(display_location)
-            self._track_volume(well, volume)
+        well, __ = unpack_location(display_location)
+        get_well_volume(well).dispense(volume)
 
-    def _track_volume(self, location, delta_volume):
-        assert isinstance(location, Well)  # we're not expecting any other Placeables
-        volume = self._get_volume(location)
-        volume += delta_volume
-        self._set_volume(location, volume)
 
-    def _get_volume(self, location):
-        return getattr(location, 'current_volume', 0)
+########################################################################################################################
+# Utilities
+########################################################################################################################
 
-    def _set_volume(self, location, volume):
-        setattr(location, 'current_volume', volume)
+# Returns a unique name for the given location. Must track in Opentrons-Analyze.
+def get_location_path(location):
+    return '/'.join(list(reversed([str(item)
+                                   for item in location.get_trace(None)
+                                   if str(item) is not None])))
+
+
+def log(msg: str, prefix="***********", suffix=' ***********'):
+    robot.comment("%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix))
+
+def info(msg):
+    log(msg, prefix='info:', suffix='')
+
+def warn(msg: str, prefix="***********", suffix=' ***********'):
+    log(msg, prefix=prefix + " WARNING:", suffix=suffix)
+
+def silent_log(msg):
+    pass
+
+
+def done_tip(pp):
+    if pp.has_tip:
+        if pp.current_volume > 0:
+            info('%s has %s uL remaining' % (pp.name, format_number(pp.current_volume)))
+        if trash_control:
+            pp.drop_tip()
+        else:
+            pp.return_tip()
+
+
+def format_number(value, precision=2):
+    if isinstance(value, UnknownNumber):
+        return value.formatted(precision=precision)
+    factor = 1
+    for i in range(precision):
+        if value * factor == int(value * factor):
+            precision = i
+            break
+        factor *= 10
+    return "{:.{}f}".format(value, precision)
+
+
+def zeroify(value, digits=2):  # clamps small values to zero, leaves others alone
+    rounded = round(value, digits)
+    return rounded if rounded == 0 else value
+
+
+########################################################################################################################
+########################################################################################################################
+##                                                                                                                    ##
+## Protocol                                                                                                           ##
+##                                                                                                                    ##
+########################################################################################################################
+########################################################################################################################
 
 
 ########################################################################################################################
@@ -347,62 +508,6 @@ strand_b = eppendorf_1_5_rack['B1']
 diluted_strand_a = eppendorf_1_5_rack['A6']
 diluted_strand_b = eppendorf_1_5_rack['B6']
 master_mix = falcon_rack['A1']
-
-
-########################################################################################################################
-# Utilities
-########################################################################################################################
-
-# Returns a unique name for the given location. Must track in Opentrons-Analyze.
-def get_location_path(location):
-    return '/'.join(list(reversed([str(item)
-                                   for item in location.get_trace(None)
-                                   if str(item) is not None])))
-
-
-def log(msg: str, prefix="***********", suffix=' ***********'):
-    robot.comment("%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix))
-
-def info(msg):
-    log(msg, prefix='info:', suffix='')
-
-def warn(msg: str, prefix="***********", suffix=' ***********'):
-    log(msg, prefix=prefix + " WARNING:", suffix=suffix)
-
-def silent_log(msg):
-    pass
-
-
-def noteLiquid(name, location, volume=None):
-    d = {'name': name, 'location': get_location_path(location)}
-    if volume is not None:
-        d['volume'] = volume
-    serialized = json.dumps(d).replace("{", "{{").replace("}", "}}")  # runtime calls comment.format(...) on our comment; avoid issues therewith
-    robot.comment('Liquid: %s' % serialized)
-
-
-def done_tip(pp):
-    if pp.current_volume > 0:
-        info('%s has %s uL remaining' % (pp.name, format_number(pp.current_volume)))
-    if trash_control:
-        pp.drop_tip()
-    else:
-        pp.return_tip()
-
-
-def format_number(value, precision=2):
-    factor = 1
-    for i in range(precision):
-        if value * factor == int(value * factor):
-            precision = i
-            break
-        factor *= 10
-    return "{:.{}f}".format(value, precision)
-
-
-def zeroify(value, digits=2):  # clamps small values to zero, leaves others alone
-    rounded = round(value, digits)
-    return rounded if rounded == 0 else value
 
 
 ########################################################################################################################
@@ -456,16 +561,17 @@ def usesP10(queriedVol, count, allow_zero):
 strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
 strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
 
-def simple_mix(wells, msg=None, count=simple_mix_count, volume=simple_mix_vol, pipette=p50, pick_tip=True, drop_tip=True):
+
+def simple_mix(wells, msg=None, count=simple_mix_count, volume=simple_mix_vol, pipette=p50, drop_tip=True):
     if msg is not None:
         log(msg)
-    assert pipette.has_tip != pick_tip  # if we have one, don't pick, and visa versa
-    if pick_tip:
+    if not pipette.has_tip:
         pipette.pick_up_tip()
     for well in wells:
         pipette.mix(count, volume, well)
     if drop_tip:
         done_tip(pipette)
+
 
 def diluteStrands():
     log('Liquid Names')
@@ -485,18 +591,19 @@ def diluteStrands():
                  )
     log('Diluting Strand A')
     p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=trash_control, retain_tip=True)
-    simple_mix([diluted_strand_a], 'Mixing Diluted Strand A', pick_tip=False)
+    simple_mix([diluted_strand_a], 'Mixing Diluted Strand A')
 
     log('Diluting Strand B')
     p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=trash_control, retain_tip=True)
-    simple_mix([diluted_strand_b], 'Mixing Diluted Strand B', pick_tip=False)
+    simple_mix([diluted_strand_b], 'Mixing Diluted Strand B')
+
 
 def createMasterMix():
     noteLiquid('Master Mix', location=master_mix)
     for buffer in buffers:
-        noteLiquid('Buffer', location=buffer[0], volume=buffer[1])
+        noteLiquid('Buffer', location=buffer[0], initial_volume=buffer[1])
     for evagreen in evagreens:
-        noteLiquid('Evagreen', location=evagreen[0], volume=evagreen[1])
+        noteLiquid('Evagreen', location=evagreen[0], initial_volume=evagreen[1])
 
     # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
     simple_mix([buffer for buffer, _ in buffers], "Mixing Buffers")
@@ -525,7 +632,7 @@ def createMasterMix():
             cur_vol -= this_vol
 
     # Mixes possibly several times, at different levels
-    def mix_master_mix(current_volume, pick_tip=True, pipette=p50):
+    def mix_master_mix(current_volume, pipette=p50):
         radius = master_mix.x_size() / 2.0
         area = math.pi * radius * radius  # area is square mm, current_volume is uL
         # We'll assume tube is cylindrical, which it isn't, but that's conservative
@@ -534,7 +641,7 @@ def createMasterMix():
         clearance = 1.0  # mm, as in _position_for_aspirate
         height = min(master_mix.z_size(), clearance)  # as in _position_for_aspirate
         while height < current_height - 5.0:
-            simple_mix([master_mix.bottom(height)], 'Mixing Master Mix @ %s' % format_number(height), pick_tip=pick_tip, drop_tip=False, pipette=pipette)  # WRONG
+            simple_mix([master_mix.bottom(height)], 'Mixing Master Mix @ %s' % format_number(height), drop_tip=False, pipette=pipette)  # WRONG
             height += step
         if pipette.has_tip:
             done_tip(p50)
@@ -544,11 +651,11 @@ def createMasterMix():
 
     log('Creating Master Mix: Buffer')
     transferMultiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', retain_tip=True)  # 'once' because we've only got water & buffer in context
-    mix_master_mix(current_volume=master_mix_common_water_vol + master_mix_buffer_vol, pick_tip=False)  # help eliminate air bubbles: smaller volume right now
+    mix_master_mix(current_volume=master_mix_common_water_vol + master_mix_buffer_vol)  # help eliminate air bubbles: smaller volume right now
 
     log('Creating Master Mix: EvaGreen')
     transferMultiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always', retain_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
-    mix_master_mix(current_volume=master_mix_common_water_vol + master_mix_buffer_vol + master_mix_evagreen_vol, pick_tip=False)
+    mix_master_mix(current_volume=master_mix_common_water_vol + master_mix_buffer_vol + master_mix_evagreen_vol)
 
 
 ########################################################################################################################
@@ -579,8 +686,8 @@ def plateEverything():
                    new_tip='once',
                    disposal_vol=p50_disposal_vol,
                    trash=trash_control,
-                   allow_blow_elision=use_blow_elision,
-                   allow_carryover=use_carryover)
+                   allow_blow_elision=allow_blow_elision,
+                   allow_carryover=allow_carryover)
 
     # Plate strand A
     # All plate wells at this point only have water and master mix, so we can't get cross-plate-well
@@ -606,16 +713,14 @@ def plateEverything():
                      new_tip='never',
                      disposal_vol=disposal_vol,
                      trash=trash_control,
-                     allow_blow_elision=use_blow_elision,
-                     allow_carryover=use_carryover)
+                     allow_blow_elision=allow_blow_elision,
+                     allow_carryover=allow_carryover)
     done_tip(p10)
     done_tip(p50)
 
     # Plate strand B and mix
     # Mixing always needs the p50, but plating may need either; optimize tip usage
     log('Plating Strand B')
-    plate_mix_vol = 50  # total plated volume is some 84uL; we need to use a substantial fraction of that to get good mixing
-    plate_mix_count = simple_mix_count
     for iVolume in range(0, len(strand_volumes)):
         dest_wells = calculateStrandBWells(iVolume)
         volume = strand_volumes[iVolume]
@@ -625,17 +730,31 @@ def plateEverything():
         else:
             p = p50
 
-        if volume != 0 or p is p50:
-            log('Plating Strand B: volume %d with %s' % (volume, p.name))
-            # We can't use distribute here as we need to avoid cross contamination from plate well to plate well
-            p.transfer(volume, diluted_strand_b, dest_wells,
-                       new_tip='always',
-                       trash=trash_control,
-                       mix_after=(plate_mix_count if p is p50 else 0, plate_mix_vol))  # always use p50 to mix
+        # We can't use distribute here as we need to avoid cross contamination from plate well to plate well
+        for well in dest_wells:
+            if volume != 0:
+                log("Plating Strand B: well='%s' vol=%d pipette=%s" % (well.get_name(), volume, p.name))
+                p.pick_up_tip()
+                p.transfer(volume, diluted_strand_b, well, new_tip='never')
+            if not p50.has_tip:
+                p50.pick_up_tip()
+            mix_plate_well(well, pipette=p50)
+            done_tip(p10)
+            done_tip(p50)
 
-        if p is not p50:  # mix plate wells that we didn't already
-            for well in dest_wells:
-                simple_mix([well], 'Explicitly Mixing',  pipette=p50, volume=plate_mix_vol, count=plate_mix_count)  # new tip each well
+
+def mix_plate_well(well, pipette=p50):
+    msg = "Mixing well='%s' cur_vol=%s" % (well.get_name(), format_number(get_well_volume(well).current()))
+    plate_mix_vol = 50  # total plated volume is some 84uL; we need to use a substantial fraction of that to get good mixing
+    plate_mix_count = 4
+    if True:  # temporary
+        simple_mix([well], msg, count=plate_mix_count, volume=plate_mix_vol, pipette=pipette)
+    else:
+        # Not yet finished
+        if msg is not None:
+            log(msg)
+        if not pipette.has_tip:
+            pipette.pick_up_tip()
 
 
 ########################################################################################################################
