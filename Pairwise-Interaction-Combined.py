@@ -4,6 +4,8 @@
 
 import json
 import math
+from abc import abstractmethod
+from numbers import Number
 from typing import List
 from opentrons import labware, instruments, robot, modules, types
 from opentrons.helpers import helpers
@@ -84,7 +86,7 @@ class PrimitiveUnknownNumber(object):
         return 'unk(%s)' % hash(self)
 
 
-class UnknownNumber(object):
+class UnknownNumber(Number):
     def __init__(self, offset=0, unknowns=None):
         if unknowns is None:
             unknowns = [PrimitiveUnknownNumber()]
@@ -171,6 +173,46 @@ def noteLiquid(name, location, initial_volume=None):
         d['volume'] = initial_volume
     serialized = json.dumps(d).replace("{", "{{").replace("}", "}}")  # runtime calls comment.format(...) on our comment; avoid issues therewith
     robot.comment('Liquid: %s' % serialized)
+
+########################################################################################################################
+
+class WellGeometry(object):
+    def __init__(self, well):
+        self.well = well
+
+    @abstractmethod
+    def depthFromVolume(self, volume: Number) -> Number:
+        pass
+
+
+class UnknownWellGeometry(WellGeometry):
+    def __init__(self, well):
+        super().__init__(well)
+
+    def depthFromVolume(self, volume):
+        return UnknownNumber()
+
+
+class Biorad96WellPlateWellGeometry(WellGeometry):
+    def __init__(self, well):
+        super().__init__(well)
+
+    def depthFromVolume(self, volume: Number) -> Number:
+        # Calculated from Mathematica models
+        if volume <= 0.0:
+            return 0.0
+        if volume <= 60.7779:
+            return -13.7243 + 4.24819 * pow(33.7175 + 1.34645 * volume, 1.0/3.0)
+        return 14.66 - 0.0427095 * (196.488 - volume)
+
+
+def get_well_geometry(well):
+    assert isWell(well)
+    try:
+        return well.geometry
+    except AttributeError:
+        well.geometry = UnknownWellGeometry(well)
+        return well.geometry
 
 
 ########################################################################################################################
@@ -509,6 +551,9 @@ diluted_strand_a = eppendorf_1_5_rack['A6']
 diluted_strand_b = eppendorf_1_5_rack['B6']
 master_mix = falcon_rack['A1']
 
+for well in plate.wells():
+    well.geometry = Biorad96WellPlateWellGeometry(well)
+
 
 ########################################################################################################################
 # Well & Pipettes
@@ -738,23 +783,36 @@ def plateEverything():
                 p.transfer(volume, diluted_strand_b, well, new_tip='never')
             if not p50.has_tip:
                 p50.pick_up_tip()
-            mix_plate_well(well, pipette=p50)
+            # total plated volume is some 84uL; we need to use a substantial fraction of that to get good mixing
+            mix_plate_well(well, volume=50, pipette=p50)
             done_tip(p10)
             done_tip(p50)
 
 
-def mix_plate_well(well, pipette=p50):
-    msg = "Mixing well='%s' cur_vol=%s" % (well.get_name(), format_number(get_well_volume(well).current()))
-    plate_mix_vol = 50  # total plated volume is some 84uL; we need to use a substantial fraction of that to get good mixing
-    plate_mix_count = 4
-    if True:  # temporary
-        simple_mix([well], msg, count=plate_mix_count, volume=plate_mix_vol, pipette=pipette)
+def mix_plate_well(well, count=4, volume=50, pipette=p50, drop_tip=True):
+    mix_vol = volume
+    mix_count = count
+    vol = get_well_volume(well).current()
+    depth = get_well_geometry(well).depthFromVolume(vol)
+    after_asp = get_well_geometry(well).depthFromVolume(vol - mix_vol)
+    msg = "Mixing well='%s' cur_vol=%s depth=%s after_asp=%s" % (well.get_name(), format_number(vol), format_number(depth), format_number(after_asp))
+    if False:  # temporary
+        simple_mix([well], msg, count=mix_count, volume=mix_vol, pipette=pipette)
     else:
-        # Not yet finished
         if msg is not None:
             log(msg)
         if not pipette.has_tip:
             pipette.pick_up_tip()
+        y_min = y = 1
+        y_max = after_asp-1
+        y_incr = (y_max - y_min) / mix_count
+        while y <= y_max:
+            log('asp=%s disp=%s' % (format_number(y), format_number(y_max)))
+            pipette.aspirate(mix_vol, well.bottom(y))
+            pipette.dispense(mix_vol, well.bottom(y_max))
+            y += y_incr
+    if drop_tip:
+        done_tip(pipette)
 
 
 ########################################################################################################################
