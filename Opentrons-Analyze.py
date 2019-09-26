@@ -104,16 +104,16 @@ class Monitor(object):
 class WellMonitor(Monitor):
     def __init__(self, controller, location_path):
         super(WellMonitor, self).__init__(controller, location_path)
-        self.end = 0
+        self.current = 0
         self.low_water_mark = 0
         self.high_water_mark = 0
         self.liquid_name = None
         self.mixture = Mixture()
 
     def _track_volume(self, volume, mixture):
-        self.end = self.end + volume
-        self.low_water_mark = min(self.low_water_mark, self.end)
-        self.high_water_mark = max(self.high_water_mark, self.end)
+        self.current = self.current + volume
+        self.low_water_mark = min(self.low_water_mark, self.current)
+        self.high_water_mark = max(self.high_water_mark, self.current)
 
     def aspirate(self, volume, mixture):
         assert volume >= 0
@@ -145,10 +145,10 @@ class WellMonitor(Monitor):
         if self.liquid_name is not None:
             result += ' ("{0:s}")'.format(self.liquid_name)
         result += ':'
-        result += ' lo=%s hi=%s end=%s\n' % (
+        result += ' lo=%s hi=%s cur=%s\n' % (
             self._format_number(self.low_water_mark),
             self._format_number(self.high_water_mark),
-            self._format_number(self.end))
+            self._format_number(self.current))
         return result
 
     @staticmethod
@@ -217,7 +217,7 @@ class MonitorController(object):
     def __init__(self):
         self._monitors = dict()  # maps location path to monitor
 
-    def note_liquid_name(self, liquid_name, location_path, volume=None):
+    def note_liquid_name(self, liquid_name, location_path, initial_volume=None):
         well_monitor = self._monitor_from_location_path(WellMonitor, location_path)
         well_monitor.set_liquid_name(liquid_name)
 
@@ -362,7 +362,7 @@ def analyzeRunLog(run_log):
                 serialized = text[len(selector):]  # will include initial white space, but that's ok
                 serialized = serialized.replace("}}", "}").replace("{{", "{")
                 d = json.loads(serialized)
-                controller.note_liquid_name(d['name'], d['location'], volume=d.get('volume', None))
+                controller.note_liquid_name(d['name'], d['location'], initial_volume=d.get('initial_volume', None))
             elif selector == 'air' \
                     or selector == 'returning' \
                     or selector == 'engaging' \
