@@ -8,7 +8,7 @@ from typing import List
 from opentrons import labware, instruments, robot, modules, types
 from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
-from opentrons.legacy_api.containers.placeable import unpack_location
+from opentrons.legacy_api.containers.placeable import unpack_location, Well
 
 metadata = {
     'protocolName': 'Pairwise Interaction: Dilute & Master',
@@ -270,9 +270,40 @@ class MyPipette(Pipette):
         display_location = location if location else self.previous_placeable
         # call super
         super(MyPipette, self).aspirate(volume=saved_volume, location=saved_location, rate=rate)
-        # keep track of where we aspirated from
+        # keep track of where we aspirated from and keep track of volume in wells
         if volume != 0:
-            self.prev_aspirated_location, __ = unpack_location(display_location)
+            well, __ = unpack_location(display_location)
+            self.prev_aspirated_location = well
+            self._track_volume(well, -volume)
+
+    def dispense(self, volume=None, location=None, rate=1.0):
+        # save so super sees actual original parameters
+        saved_volume = volume
+        saved_location = location
+        # recapitulate super
+        if not helpers.is_number(volume):
+            if volume and not location:
+                location = volume
+            volume = self._working_volume - self.current_volume
+        display_location = location if location else self.previous_placeable
+        # call super
+        super(MyPipette, self).dispense(volume=saved_volume, location=saved_location, rate=rate)
+        # keep track of volume in wells
+        if volume != 0:
+            well, __ = unpack_location(display_location)
+            self._track_volume(well, volume)
+
+    def _track_volume(self, location, delta_volume):
+        assert isinstance(location, Well)  # we're not expecting any other Placeables
+        volume = self._get_volume(location)
+        volume += delta_volume
+        self._set_volume(location, volume)
+
+    def _get_volume(self, location):
+        return getattr(location, 'current_volume', 0)
+
+    def _set_volume(self, location, volume):
+        setattr(location, 'current_volume', volume)
 
 
 ########################################################################################################################
