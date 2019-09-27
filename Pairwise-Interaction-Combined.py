@@ -714,13 +714,13 @@ def simple_mix(wells, msg=None, count=simple_mix_count, volume=None, pipette=p50
 # By default, we layer every 1.0 mm
 # If count is provided, we do (at most) that many asp/disp cycles, clamped to an increment of min_incr
 # If volume is not provided, then maximum volume of hte pipette is used
-def layered_mix(wells, msg='Mixing', count=None, min_incr=0.5, incr=1.0, volume=None, pipette=p50, drop_tip=True, delay=500, rate=3.0):
+def layered_mix(wells, msg='Mixing', count=None, min_incr=0.5, incr=1.0, count_per_incr=2, volume=None, pipette=p50, drop_tip=True, delay=500, rate=3.0):
     for well in wells:
-        _layered_mix_one(well, msg=msg, count=count, min_incr=min_incr, incr=incr, volume=volume, pipette=pipette, delay=delay, rate=rate)
+        _layered_mix_one(well, msg=msg, count=count, min_incr=min_incr, incr=incr, count_per_incr=count_per_incr, volume=volume, pipette=pipette, delay=delay, rate=rate)
     if drop_tip:
         done_tip(pipette)
 
-def _layered_mix_one(well, msg, count, min_incr, incr, volume, pipette, delay, rate):
+def _layered_mix_one(well, msg, count, min_incr, incr, count_per_incr, volume, pipette, delay, rate):
     if volume is None:
         volume = pipette.max_volume
     well_vol = get_well_volume(well).current()
@@ -750,13 +750,9 @@ def _layered_mix_one(well, msg, count, min_incr, incr, volume, pipette, delay, r
             pipette.delay(delay / 1000.0)
         log('asp=%s incr=%s disp=%s' % (format_number(y), format_number(y_incr), format_number(y_max)))
         #
-        # Twice at every level, for thoroughness
-        #
-        pipette.aspirate(volume, well.bottom(y))
-        pipette.dispense(volume, well.bottom(y_max), rate=rate)
-        #
-        pipette.aspirate(volume, well.bottom(y))
-        pipette.dispense(volume, well.bottom(y_max), rate=rate)
+        for i in range(count_per_incr):
+            pipette.aspirate(volume, well.bottom(y))
+            pipette.dispense(volume, well.bottom(y_max), rate=rate)
         #
         y += y_incr
         first = False
@@ -783,7 +779,7 @@ def diluteStrands():
 
 def createMasterMix():
     # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
-    layered_mix([buffer for buffer, __ in buffers], "Mixing Buffers", incr=2)
+    layered_mix([buffer for buffer, __ in buffers], "Mixing Buffers", incr=4)
 
     # transfer from multiple source wells, each with a current defined volume
     def transferMultiple(ctx, xfer_vol_remaining, tubes, dest, new_tip, *args, **kwargs):
@@ -808,8 +804,7 @@ def createMasterMix():
             xfer_vol_remaining -= this_vol
             cur_vol -= this_vol
 
-    # Mixes possibly several times, at different levels
-    def mix_master_mix(current_volume, pipette=p50):
+    def mix_master_mix(pipette=p50):
         log('Mixing Master Mix')
         layered_mix([master_mix], pipette=pipette, incr=2)
 
@@ -818,11 +813,11 @@ def createMasterMix():
 
     log('Creating Master Mix: Buffer')
     transferMultiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', retain_tip=True)  # 'once' because we've only got water & buffer in context
-    mix_master_mix(current_volume=master_mix_common_water_vol + master_mix_buffer_vol)  # help eliminate air bubbles: smaller volume right now
+    mix_master_mix()  # help eliminate air bubbles: smaller volume right now
 
     log('Creating Master Mix: EvaGreen')
     transferMultiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always', retain_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
-    mix_master_mix(current_volume=master_mix_common_water_vol + master_mix_buffer_vol + master_mix_evagreen_vol)
+    mix_master_mix()
 
 
 ########################################################################################################################
@@ -906,7 +901,7 @@ def plateEverythingAndMix():
             if not p50.has_tip:
                 p50.pick_up_tip()
             # total plated volume is some 84uL; we need to use a substantial fraction of that to get good mixing
-            layered_mix([well], pipette=p50, incr=0.5)
+            layered_mix([well], pipette=p50, incr=0.75)
             done_tip(p10)
             done_tip(p50)
 
@@ -920,7 +915,7 @@ def debug_mix_plate():
 
 def debug_test_blow():
     p50.pick_up_tip()
-    p50.aspirate(5, location=plate.wells('B1'))
+    p50.aspirate(5, location=plate.wells('A2'))
     p50.blow_out(p50.trash_container)
     done_tip(p50)
 
@@ -929,8 +924,8 @@ def debug_test_blow():
 # Off to the races
 ########################################################################################################################
 
-# diluteStrands()
-# createMasterMix()
-# plateEverythingAndMix()
-debug_mix_plate()
+diluteStrands()
+createMasterMix()
+plateEverythingAndMix()
+# debug_mix_plate()
 # debug_test_blow()
