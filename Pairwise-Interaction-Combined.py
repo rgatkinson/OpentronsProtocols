@@ -11,6 +11,7 @@ from typing import List
 from opentrons import labware, instruments, robot, modules, types
 from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
+from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DISTANCE, SHAKE_OFF_TIPS_SPEED
 from opentrons.legacy_api.containers.placeable import unpack_location, Well
 
 metadata = {
@@ -34,7 +35,7 @@ trash_control = True
 
 # Diluting each strand
 strand_dilution_factor = 25.0 / 9.0  # per Excel worksheet
-strand_dilution_vol = 1175
+strand_dilution_vol = 1225
 
 # Master mix
 master_mix_buffer_vol = 1693.44
@@ -455,7 +456,7 @@ class MyPipette(Pipette):
             volume = self._working_volume - self.current_volume
         display_location = location if location else self.previous_placeable
         # call super
-        super(MyPipette, self).aspirate(volume=saved_volume, location=saved_location, rate=rate)
+        super().aspirate(volume=saved_volume, location=saved_location, rate=rate)
         # keep track of where we aspirated from and keep track of volume in wells
         well, __ = unpack_location(display_location)
         get_well_volume(well).aspirate(volume)
@@ -473,10 +474,30 @@ class MyPipette(Pipette):
             volume = self._working_volume - self.current_volume
         display_location = location if location else self.previous_placeable
         # call super
-        super(MyPipette, self).dispense(volume=saved_volume, location=saved_location, rate=rate)
+        super().dispense(volume=saved_volume, location=saved_location, rate=rate)
         # keep track of volume in wells
         well, __ = unpack_location(display_location)
         get_well_volume(well).dispense(volume)
+
+    def blow_out(self, location=None):
+        super().blow_out(location)
+        self._shake_tip(location)  # try to get rid of pesky retentive drops
+
+    def _shake_tip(self, location):
+        # Modelled after Pipette._shake_off_tips()
+        shake_off_distance = SHAKE_OFF_TIPS_DISTANCE / 2  # less distance than shaking off tips
+        if location:
+            placeable, _ = unpack_location(location)
+            # ensure the distance is not >25% the diameter of placeable
+            x = placeable.x_size()
+            if x != 0:  # trash well has size zero
+                shake_off_distance = max(min(shake_off_distance, x / 4), 1.0)
+        self.robot.gantry.push_speed()
+        self.robot.gantry.set_speed(SHAKE_OFF_TIPS_SPEED / 2)  # less fast than shaking off tips
+        self.robot.poses = self._jog(self.robot.poses, 'x', -shake_off_distance)  # move left
+        self.robot.poses = self._jog(self.robot.poses, 'x', shake_off_distance * 2)  # move right
+        self.robot.poses = self._jog(self.robot.poses, 'x', -shake_off_distance)  # move left
+        self.robot.gantry.pop_speed()
 
 
 ########################################################################################################################
