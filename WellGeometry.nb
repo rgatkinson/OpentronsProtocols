@@ -141,13 +141,18 @@ Cell[BoxData[{
     RowBox[{"30", "!"}], "]"}]}], 
   ";"}]}], "Input",ExpressionUUID->"440d00c8-54b5-4b08-bfe8-ae5feb69d532"],
 
-Cell[BoxData[
+Cell[BoxData[{
  RowBox[{
   RowBox[{"toDeg", "[", "rad_", "]"}], " ", ":=", " ", 
   RowBox[{
    RowBox[{"rad", " ", "/", " ", "Pi"}], " ", "*", " ", 
-   "180"}]}]], "Input",ExpressionUUID->"2bbc42e7-5161-4850-a96b-3fb814745a8d"]
-}, Open  ]],
+   "180"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"toRadian", "[", "deg_", "]"}], " ", ":=", " ", 
+  RowBox[{
+   RowBox[{"deg", " ", "/", " ", "180"}], " ", "*", " ", 
+   "Pi"}]}]}], "Input",ExpressionUUID->"2bbc42e7-5161-4850-a96b-3fb814745a8d"]
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -1493,6 +1498,10 @@ Cell[BoxData[
 
 Cell[BoxData[{
  RowBox[{
+  RowBox[{"emptyCylinder", "[", "]"}], " ", ":=", " ", 
+  RowBox[{"cylinder", "[", 
+   RowBox[{"0", ",", "0"}], "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
   RowBox[{"height", "[", 
    RowBox[{"c", ":", 
     RowBox[{"cylinder", "[", 
@@ -1504,7 +1513,7 @@ Cell[BoxData[{
     RowBox[{"cylinder", "[", 
      RowBox[{"h_", ",", " ", "r_"}], "]"}]}], "]"}], ":=", " ", 
   "r"}]}], "Input",ExpressionUUID->"544c155e-c8c3-4072-aef6-30d6d63db032"]
-}, Closed]],
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -1523,9 +1532,13 @@ Cell[BoxData[{
   RowBox[{"test", " ", "@", " ", 
    RowBox[{"volume", "[", 
     RowBox[{"cylinder", "[", 
-     RowBox[{"h", ",", "r"}], "]"}], "]"}]}], 
+     RowBox[{"h", ",", "r"}], "]"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volume", " ", "@", " ", 
+    RowBox[{"emptyCylinder", "[", "]"}]}]}], 
   ";"}]}], "Input",ExpressionUUID->"5b3bb265-2276-4272-92b2-e591c51ea43e"]
-}, Closed]],
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -1538,6 +1551,20 @@ Cell["Final", \
 "Subsubsection",ExpressionUUID->"1056974d-0cd6-40cf-b2d3-4b034b017002"],
 
 Cell[BoxData[{
+ RowBox[{
+  RowBox[{"depthFromVolume", "[", 
+   RowBox[{
+    RowBox[{"c", ":", 
+     RowBox[{"cylinder", "[", 
+      RowBox[{"_", ",", "0"}], "]"}]}], ",", " ", "v_"}], "]"}], " ", ":=", 
+  " ", "0"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"depthFromVolume", "[", 
+   RowBox[{
+    RowBox[{"c", ":", 
+     RowBox[{"cylinder", "[", 
+      RowBox[{"0", ",", "_"}], "]"}]}], ",", " ", "v_"}], "]"}], " ", ":=", 
+  " ", "0"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"depthFromVolume", "[", 
    RowBox[{
@@ -1563,6 +1590,19 @@ Cell[BoxData[{
     RowBox[{
      RowBox[{"cylinder", "[", 
       RowBox[{"ignored", ",", "r"}], "]"}], ",", " ", "volume"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"depthFromVolume", "[", 
+    RowBox[{
+     RowBox[{"cylinder", "[", 
+      RowBox[{"1", ",", "2"}], "]"}], ",", " ", "volume"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"depthFromVolume", "[", 
+    RowBox[{
+     RowBox[{"emptyCylinder", "[", "]"}], ",", " ", "volume"}], "]"}]}], 
   ";"}]}], "Input",ExpressionUUID->"ef46489a-deb5-41fa-888c-f96402496143"]
 }, Open  ]],
 
@@ -1686,8 +1726,7 @@ Cell[BoxData[{
    RowBox[{"apexangle", "[", 
     RowBox[{"f", ":", 
      RowBox[{"frustum", "[", 
-      RowBox[{"h_", ",", "rbig_", ",", " ", "rsmall_"}], "]"}]}], "]"}], ":=",
-    
+      RowBox[{"h_", ",", "rbig_", ",", " ", "rsmall_"}], "]"}]}], "]"}], ":=", 
    RowBox[{"Assuming", "[", 
     RowBox[{
      RowBox[{"assumptions", "[", "f", "]"}], ",", " ", 
@@ -2029,7 +2068,7 @@ Cell[BoxData[{
   RowBox[{"test", " ", "@", " ", 
    RowBox[{"toCartesian", " ", "@", " ", "%"}]}], 
   ";"}]}], "Input",ExpressionUUID->"368feb84-cda9-4cb8-80f4-ae631e545ed3"]
-}, Closed]],
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -3333,7 +3372,7 @@ Cell[BoxData[{
     RowBox[{"invertedFrustum", "[", 
      RowBox[{"h", ",", "rbig", ",", "rsmall"}], "]"}], "]"}]}], 
   ";"}]}], "Input",ExpressionUUID->"4e013663-8fe4-4fb2-998f-23685bb7b498"]
-}, Closed]],
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -4034,7 +4073,9 @@ Cell[BoxData[{
     RowBox[{"toCartesian", " ", "@", " ", 
      RowBox[{"invertedSphericalCap", "[", 
       RowBox[{"r", ",", " ", "\[Alpha]", ",", " ", "angled"}], "]"}]}]}]}], 
-  ";"}]}], "Input",ExpressionUUID->"859f4ea1-c099-4765-816d-194b0a8cea71"]
+  ";"}]}], "Input",
+ EmphasizeSyntaxErrors->
+  True,ExpressionUUID->"859f4ea1-c099-4765-816d-194b0a8cea71"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -4301,7 +4342,7 @@ Cell[BoxData[{
   "]"}]}], "Input",ExpressionUUID->"53fd61fa-d164-4f12-a815-97b811c98e57"]
 }, Open  ]]
 }, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -4370,9 +4411,14 @@ Cell[BoxData[{
     RowBox[{"conicalTestTube", "[", 
      RowBox[{"cylindrical_", ",", " ", "conical_", ",", " ", "cap_"}], 
      "]"}]}], "]"}], " ", ":=", " ", 
-  RowBox[{"{", 
-   RowBox[{"cylindrical", ",", " ", "conical", ",", "cap"}], 
-   "}"}]}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"\"\<cylindrical\>\"", " ", "\[Rule]", " ", "cylindrical"}], ",",
+      " ", 
+     RowBox[{"\"\<conical\>\"", " ", "\[Rule]", " ", "conical"}], ",", 
+     RowBox[{"\"\<cap\>\"", " ", "\[Rule]", " ", "cap"}]}], "}"}], " ", "//", 
+   " ", "Association"}]}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"parts", "[", 
    RowBox[{"c", ":", " ", 
@@ -4429,6 +4475,107 @@ Cell[CellGroupData[{
 
 Cell["Examples", \
 "Subsection",ExpressionUUID->"757c4c08-1c37-4bdb-b35b-58e02165cea9"],
+
+Cell["\<\
+The Bio-rad specs aren\[CloseCurlyQuote]t internally consistent: there\
+\[CloseCurlyQuote]s a conflict between the well diameters and height vs the \
+well angle.\
+\>", "Text",ExpressionUUID->"2a9f73b4-c02a-40c1-869c-ac93770c855b"],
+
+Cell[BoxData[{
+ RowBox[{"example", " ", "=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+     "cone", ",", " ", "\[Alpha]", ",", " ", "rsmall", ",", " ", "rbig", ",", 
+      " ", "hOverall", ",", " ", "h"}], "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"\[Alpha]", " ", "=", " ", 
+      RowBox[{
+       RowBox[{"toRadian", "[", "17.5", "]"}], "/", "2"}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"rsmall", "=", 
+      RowBox[{"2.64", " ", "/", " ", "2"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"rbig", " ", "=", " ", 
+      RowBox[{"5.46", " ", "/", " ", "2"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"hOverall", " ", "=", " ", "14.81"}], ";", "\[IndentingNewLine]", 
+     RowBox[{"h", " ", "=", " ", "14.66"}], ";", " ", 
+     RowBox[{"(*", " ", 
+      RowBox[{
+      "from", " ", "a", " ", "previous", " ", "call", " ", "to", " ", 
+       "Solve"}], " ", "*)"}], "\[IndentingNewLine]", 
+     RowBox[{"conicalTestTube", "[", 
+      RowBox[{
+       RowBox[{"cylinder", "[", 
+        RowBox[{
+         RowBox[{"hOverall", " ", "-", " ", "h"}], ",", " ", "rbig"}], "]"}], 
+       ",", 
+       RowBox[{"invertedFrustum", "[", 
+        RowBox[{"h", ",", " ", "rbig", ",", " ", "rsmall"}], "]"}], ",", 
+       RowBox[{"emptyCylinder", "[", "]"}]}], "]"}]}]}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{"volume", " ", "@", " ", "example"}], "\[IndentingNewLine]", 
+ RowBox[{"Solve", "[", 
+  RowBox[{
+   RowBox[{"%", " ", "\[Equal]", " ", "200"}], ",", " ", "h"}], 
+  "]"}]}], "Input",ExpressionUUID->"06246661-95db-4c13-bfeb-5eefb8c38b8c"],
+
+Cell["\<\
+If we honor the well angle, then the well diameter at opening is too small. \
+Maybe we can\[CloseCurlyQuote]t ignore the cap?\
+\>", "Text",ExpressionUUID->"160ae24a-9335-450c-891e-4596f5643228"],
+
+Cell[BoxData[{
+ RowBox[{"example", " ", "=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", "f", "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"f", " ", "=", 
+      RowBox[{"invertedFrustum", "[", 
+       RowBox[{"h", ",", " ", "rbig", ",", " ", 
+        RowBox[{
+         RowBox[{"toRadian", "[", "17.5", "]"}], "/", "2"}], ",", " ", 
+        "apexangle"}], "]"}]}], ";", " ", "\[IndentingNewLine]", " ", 
+     RowBox[{"conicalTestTube", "[", "\[IndentingNewLine]", 
+      RowBox[{
+       RowBox[{"cylinder", "[", 
+        RowBox[{
+         RowBox[{"14.81", " ", "-", "h"}], ",", " ", "rbig"}], "]"}], ",", 
+       "\[IndentingNewLine]", "f", ",", "\[IndentingNewLine]", 
+       RowBox[{"emptyCylinder", "[", "]"}]}], "]"}]}]}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"volume", " ", "@", " ", "example"}], " ", "\[Equal]", " ", 
+  "200"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"rsmall", "[", 
+   RowBox[{
+    RowBox[{"parts", "[", "example", "]"}], "[", "\"\<conical\>\"", "]"}], 
+   "]"}], " ", "\[Equal]", " ", 
+  RowBox[{"2.64", "/", "2"}]}], "\[IndentingNewLine]", 
+ RowBox[{"Solve", "[", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{"%%", ",", " ", "%"}], "}"}], ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"rbig", ",", "h"}], "}"}]}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{"%", "[", 
+  RowBox[{"[", "2", "]"}], "]"}], "\[IndentingNewLine]", 
+ RowBox[{"example", " ", "=", " ", 
+  RowBox[{"example", " ", "/.", " ", "%"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"rbig", "[", 
+   RowBox[{
+    RowBox[{"parts", "[", "example", "]"}], "[", "\"\<conical\>\"", "]"}], 
+   "]"}], " ", "*", " ", "2"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"radius", "[", 
+   RowBox[{
+    RowBox[{"parts", "[", "example", "]"}], "[", "\"\<cylindrical\>\"", "]"}],
+    "]"}], " ", "*", " ", 
+  "2"}]}], "Input",ExpressionUUID->"cc359633-ac13-471f-98cd-b4e627c9935a"],
 
 Cell[BoxData[{
  RowBox[{
@@ -4500,6 +4647,23 @@ Cell[BoxData[{
            "mixure", " ", "of", " ", "measurements", " ", "and", " ", 
             "values", " ", "from", " ", "spec", " ", "drawing"}], " ", "*)"}],
            "\[IndentingNewLine]", 
+          RowBox[{"(*", " ", 
+           RowBox[{"FWIW", ",", " ", 
+            RowBox[{
+             RowBox[{"Opentrons", " ", "uses", " ", "idTop"}], "=", "14.9"}], 
+            ",", " ", 
+            RowBox[{"depth", "=", 
+             RowBox[{
+              RowBox[{"117.5", ".", " ", "The"}], " ", "latter", " ", "is", 
+              " ", "pretty", " ", "good"}]}], ",", " ", 
+            RowBox[{
+             RowBox[{"given", " ", "'"}], 
+             RowBox[{"a", "'"}], " ", 
+             RowBox[{"and", " ", "'"}], 
+             RowBox[{"wall", "'"}], " ", "defined", " ", "here"}], ",", " ", 
+            RowBox[{"so", " ", "our", " ", "depth", " ", 
+             RowBox[{"calc", "'"}], "s", " ", "should", " ", "be", " ", 
+             "good"}]}], " ", "*)"}], "\[IndentingNewLine]", 
           RowBox[{
            RowBox[{"{", 
             RowBox[{
@@ -4522,10 +4686,6 @@ Cell[BoxData[{
             "\[IndentingNewLine]", 
             RowBox[{"wallCap", " ", "=", " ", "1.75"}], ";", 
             "\[IndentingNewLine]", 
-            RowBox[{"Print", "[", 
-             RowBox[{"{", 
-              RowBox[{"wall14", ",", " ", "wall", ",", " ", "wallCap"}], 
-              "}"}], "]"}], ";", "\[IndentingNewLine]", 
             RowBox[{"a", " ", "=", " ", "118.8"}], ";", "\[IndentingNewLine]", 
             RowBox[{"b", " ", "=", " ", "17.37"}], ";", "\[IndentingNewLine]", 
             RowBox[{"a14", " ", "=", " ", "106.3"}], ";", 
@@ -4544,6 +4704,17 @@ Cell[BoxData[{
             RowBox[{"hBottomAndCap", " ", "=", " ", 
              RowBox[{"d", " ", "-", " ", "wallCap"}]}], ";", 
             "\[IndentingNewLine]", 
+            RowBox[{"(*", " ", 
+             RowBox[{
+              RowBox[{"note", ":", " ", 
+               RowBox[{"as", " ", "defined", " ", "here"}]}], ",", " ", 
+              RowBox[{
+              "we", " ", "only", " ", "have", " ", "14", "mL", " ", 
+               "capacity"}], ",", " ", 
+              RowBox[{"not", " ", "15", 
+               RowBox[{"mL", ".", " ", "Will"}], " ", "affect", " ", "volume",
+                " ", "calc", " ", "but", " ", "not", " ", "depth", " ", 
+               RowBox[{"calc", "."}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
             RowBox[{"toCanonical", " ", "@", " ", 
              RowBox[{"conicalTestTube", "[", 
               RowBox[{
@@ -4575,7 +4746,59 @@ Cell[BoxData[{
              RowBox[{"idTop", ",", " ", "idHip", ",", " ", "idBottom"}], 
              "}"}], ",", " ", 
             RowBox[{"{", 
-             RowBox[{"hTop", ",", " ", "hBottom"}], "}"}]}], "]"}]}]}]}], 
+             RowBox[{"hTop", ",", " ", "hBottom"}], "}"}]}], "]"}]}]}], ",", 
+        "\[IndentingNewLine]", "\[IndentingNewLine]", 
+        RowBox[{"(*", " ", 
+         RowBox[{
+          RowBox[{
+          "this", " ", "hacks", " ", "in", " ", "the", " ", "slightly", " ", 
+           "shallower", " ", "taper", " ", "at", " ", "the", " ", "top"}], 
+          ",", " ", 
+          RowBox[{"which", " ", 
+           RowBox[{"isn", "'"}], "t", " ", "sized", " ", "on", " ", "the", 
+           " ", "spec", " ", "drawing"}]}], " ", "*)"}], 
+        "\[IndentingNewLine]", 
+        RowBox[{"bioradPlateWell", " ", "\[Rule]", " ", 
+         RowBox[{"Module", "[", 
+          RowBox[{
+           RowBox[{"{", 
+            RowBox[{
+             RowBox[{"hCyl", "=", "0.15"}], ",", 
+             RowBox[{"rbig", "=", 
+              RowBox[{"5.46", "/", "2"}]}], ",", " ", 
+             RowBox[{"rsmall", "=", 
+              RowBox[{"2.64", "/", "2"}]}], ",", " ", "cyl", ",", " ", "con", 
+             ",", " ", "cap"}], "}"}], ",", "\[IndentingNewLine]", 
+           RowBox[{
+            RowBox[{"cyl", " ", "=", " ", 
+             RowBox[{"cylinder", "[", 
+              RowBox[{"hCyl", ",", " ", "rbig"}], "]"}]}], ";", 
+            "\[IndentingNewLine]", 
+            RowBox[{"con", " ", "=", " ", 
+             RowBox[{"invertedFrustum", "[", 
+              RowBox[{
+               RowBox[{"14.81", " ", "-", " ", "hCyl"}], ",", " ", "rbig", 
+               ",", " ", "rsmall"}], "]"}]}], ";", "\[IndentingNewLine]", 
+            RowBox[{"cap", " ", "=", " ", 
+             RowBox[{"emptyCylinder", "[", "]"}]}], ";", 
+            "\[IndentingNewLine]", 
+            RowBox[{"conicalTestTube", "[", 
+             RowBox[{"cyl", ",", " ", "con", ",", " ", "cap"}], "]"}]}]}], 
+          "]"}]}], ",", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+        RowBox[{"(*", " ", 
+         RowBox[{"see", " ", "above"}], " ", "*)"}], "\[IndentingNewLine]", 
+        RowBox[{"bioradPlateWell2", " ", "\[Rule]", " ", 
+         RowBox[{"conicalTestTube", "[", 
+          RowBox[{
+           RowBox[{"cylinder", "[", 
+            RowBox[{"8.835453539401207`", ",", "2.239570651942052`"}], "]"}], 
+           ",", 
+           RowBox[{"invertedFrustum", "[", 
+            RowBox[{
+            "5.974546460598792`", ",", "2.239570651942052`", ",", 
+             "0.15271630954950383`", ",", "apexangle"}], "]"}], ",", 
+           RowBox[{"cylinder", "[", 
+            RowBox[{"0", ",", "0"}], "]"}]}], "]"}]}]}], 
        "\[IndentingNewLine]", "}"}], " ", "//", " ", "Association"}]}], ")"}],
     " ", "//", " ", "Normal"}], " ", "//", " ", 
   "ColumnForm"}], "\[IndentingNewLine]", 
@@ -4675,7 +4898,7 @@ Cell[BoxData[{
          RowBox[{"dOther", ",", " ", "True"}], "}"}]}], "\[IndentingNewLine]",
         "}"}], "\[IndentingNewLine]", "]"}]}]}], "\[IndentingNewLine]", 
    "]"}]}]}], "Input",ExpressionUUID->"822c7c9a-45a1-4985-9e6a-a5d25a917edd"]
-}, Closed]],
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -4748,7 +4971,63 @@ Cell[BoxData[{
         RowBox[{"tubes", "[", "falcon15ml", "]"}], ",", "2000"}], "]"}]}], 
      RowBox[{"(*", " ", 
       RowBox[{"measured", " ", "at", " ", "76.5"}], "*)"}], ")"}]}], ";"}], 
-  " "}]}], "Input",ExpressionUUID->"1dafda41-3b9a-4e11-bcdc-76bfefdd03ac"]
+  " "}]}], "Input",ExpressionUUID->"1dafda41-3b9a-4e11-bcdc-76bfefdd03ac"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"tubes", "[", "bioradPlateWell", "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"depthFromVolume", "[", 
+    RowBox[{
+     RowBox[{"tubes", "[", "bioradPlateWell", "]"}], ",", " ", "84"}], 
+    "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"depthFromVolume", "[", 
+    RowBox[{
+     RowBox[{"tubes", "[", "bioradPlateWell", "]"}], ",", " ", 
+     RowBox[{"84", " ", "-", " ", "50"}]}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"toDeg", " ", "@", " ", 
+    RowBox[{"apexangle", " ", "@", " ", 
+     RowBox[{
+      RowBox[{"parts", "[", 
+       RowBox[{"tubes", "[", "bioradPlateWell", "]"}], "]"}], "[", 
+      "\"\<conical\>\"", "]"}]}]}]}], 
+  ";"}]}], "Input",ExpressionUUID->"48132d5d-dfa0-4724-9629-c5d9263b8358"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"tubes", "[", "bioradPlateWell2", "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"depthFromVolume", "[", 
+    RowBox[{
+     RowBox[{"tubes", "[", "bioradPlateWell2", "]"}], ",", " ", "84"}], 
+    "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"depthFromVolume", "[", 
+    RowBox[{
+     RowBox[{"tubes", "[", "bioradPlateWell2", "]"}], ",", " ", 
+     RowBox[{"84", " ", "-", " ", "50"}]}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"toDeg", " ", "@", " ", 
+    RowBox[{"apexangle", " ", "@", " ", 
+     RowBox[{
+      RowBox[{"parts", "[", 
+       RowBox[{"tubes", "[", "bioradPlateWell2", "]"}], "]"}], "[", 
+      "\"\<conical\>\"", "]"}]}]}]}], 
+  ";"}]}], "Input",ExpressionUUID->"04336e53-6dae-4656-98a9-19a5f60d5f23"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -4773,17 +5052,65 @@ Cell[BoxData[{
      "]"}]}]}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"test", " ", "@", " ", 
+   RowBox[{"N", " ", "@", " ", 
+    RowBox[{"depthFromVolume", "[", 
+     RowBox[{
+      RowBox[{"tubes", "[", "falcon15ml", "]"}], ",", " ", "volume"}], 
+     "]"}]}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"N", " ", "@", " ", 
+    RowBox[{"depthFromVolume", "[", 
+     RowBox[{
+      RowBox[{"tubes", "[", "bioradPlateWell", "]"}], ",", " ", "volume"}], 
+     "]"}]}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"N", " ", "@", " ", 
+    RowBox[{"depthFromVolume", "[", 
+     RowBox[{
+      RowBox[{"tubes", "[", "bioradPlateWell2", "]"}], ",", " ", "volume"}], 
+     "]"}]}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
    RowBox[{"depthFromVolume", "[", 
     RowBox[{
      RowBox[{"tubes", "[", "generic", "]"}], ",", " ", "volume"}], "]"}]}], 
-  ";"}]}], "Input",ExpressionUUID->"e50b6553-4c21-4b3c-80c8-500d6764e5e7"]
+  ";"}]}], "Input",ExpressionUUID->"e50b6553-4c21-4b3c-80c8-500d6764e5e7"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"example1", " ", "=", " ", 
+   RowBox[{"tubes", "[", "bioradPlateWell", "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"example2", " ", "=", " ", 
+   RowBox[{"tubes", "[", "bioradPlateWell2", "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"expr1", " ", "=", " ", 
+  RowBox[{"depthFromVolume", "[", 
+   RowBox[{"example1", ",", " ", "v"}], "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{"expr2", " ", "=", " ", 
+  RowBox[{"depthFromVolume", "[", 
+   RowBox[{"example2", ",", " ", "v"}], "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{"Plot", "[", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{"expr1", ",", " ", "expr2"}], "}"}], ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"v", ",", " ", "0", ",", " ", 
+     RowBox[{"volume", "[", "example1", "]"}]}], "}"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}]}], 
+  "]"}]}], "Input",ExpressionUUID->"9219ffb6-41dc-4617-b29e-4ccafdd6cad4"]
 }, Open  ]]
 }, Open  ]]
 }, Open  ]]
 }, Open  ]]
 },
-WindowSize->{1684, 1548},
-WindowMargins->{{Automatic, 404}, {Automatic, 0}},
+WindowSize->{1296, 1541},
+WindowMargins->{{9, Automatic}, {Automatic, 7}},
 PrintingCopies->1,
 PrintingPageRange->{32000, 32000},
 PrintingOptions->{"Magnification"->1.,
