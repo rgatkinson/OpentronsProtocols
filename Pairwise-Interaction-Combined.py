@@ -62,7 +62,6 @@ assert len(per_well_water_volumes[0]) * num_replicates == columns_per_plate
 
 # Mixing
 simple_mix_count = 6
-layered_mix_count = 10
 
 # Optimization Control
 allow_blow_elision = True
@@ -712,38 +711,55 @@ def simple_mix(wells, msg=None, count=simple_mix_count, volume=None, pipette=p50
     if drop_tip:
         done_tip(pipette)
 
-def layered_mix(wells, msg='Mixing', count=layered_mix_count, min_incr=0.5, volume=None, pipette=p50, drop_tip=True):
+# By default, we layer every 1.0 mm
+# If count is provided, we do (at most) that many asp/disp cycles, clamped to an increment of min_incr
+# If volume is not provided, then maximum volume of hte pipette is used
+def layered_mix(wells, msg='Mixing', count=None, min_incr=0.5, incr=1.0, volume=None, pipette=p50, drop_tip=True, delay=500, rate=3.0):
     for well in wells:
-        _layered_mix_one(well, msg=msg, count=count, min_incr=min_incr, volume=volume, pipette=pipette)
+        _layered_mix_one(well, msg=msg, count=count, min_incr=min_incr, incr=incr, volume=volume, pipette=pipette, delay=delay, rate=rate)
     if drop_tip:
         done_tip(pipette)
 
-def _layered_mix_one(well, msg, count, min_incr, volume, pipette):
+def _layered_mix_one(well, msg, count, min_incr, incr, volume, pipette, delay, rate):
     if volume is None:
         volume = pipette.max_volume
-    mix_vol = volume
-    incr_count = count-1
     well_vol = get_well_volume(well).current()
     well_depth = get_well_geometry(well).depthFromVolume(well_vol)
-    well_depth_after_asp = get_well_geometry(well).depthFromVolume(well_vol - mix_vol)
+    well_depth_after_asp = get_well_geometry(well).depthFromVolume(well_vol - volume)
     msg = "%s well='%s' cur_vol=%s well_depth=%s after_asp=%s" % (msg, well.get_name(), format_number(well_vol), format_number(well_depth), format_number(well_depth_after_asp))
     if msg is not None:
         log(msg)
     if not pipette.has_tip:
         pipette.pick_up_tip()
     y_min = y = 1.0  # 1.0 is default aspiration position from bottom
-    if incr_count <= 0:
-        y_max = y_min
-        y_incr = 1 # just so we only go one time through the loop
+    y_max = well_depth_after_asp - max(1.0, well_depth_after_asp / 10)  # 1.0 here is
+    if count is not None:
+        if count <= 1:
+            y_max = y_min
+            y_incr = 1  # just so we only go one time through the loop
+        else:
+            y_incr = (y_max - y_min) / (count-1)
+            y_incr = max(y_incr, min_incr)
     else:
-        y_max = well_depth_after_asp-max(1.0, well_depth_after_asp/10)  # 1.0 here is
-        y_incr = (y_max - y_min) / incr_count
-        y_incr = max(y_incr, min_incr)
+        assert incr is not None
+        y_incr = incr
+
+    first = True
     while y <= y_max or numpy.isclose(y, y_max):
+        if not first:
+            pipette.delay(delay / 1000.0)
         log('asp=%s incr=%s disp=%s' % (format_number(y), format_number(y_incr), format_number(y_max)))
-        pipette.aspirate(mix_vol, well.bottom(y))
-        pipette.dispense(mix_vol, well.bottom(y_max), rate=2.0)
+        #
+        # Twice at every level, for thoroughness
+        #
+        pipette.aspirate(volume, well.bottom(y))
+        pipette.dispense(volume, well.bottom(y_max), rate=rate)
+        #
+        pipette.aspirate(volume, well.bottom(y))
+        pipette.dispense(volume, well.bottom(y_max), rate=rate)
+        #
         y += y_incr
+        first = False
 
 
 def diluteStrands():
@@ -758,16 +774,16 @@ def diluteStrands():
                  )
     log('Diluting Strand A')
     p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=trash_control, retain_tip=True)
-    layered_mix([diluted_strand_a], 'Mixing Diluted Strand A')
+    layered_mix([diluted_strand_a], 'Mixing Diluted Strand A', incr=2)
 
     log('Diluting Strand B')
     p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=trash_control, retain_tip=True)
-    layered_mix([diluted_strand_b], 'Mixing Diluted Strand B')
+    layered_mix([diluted_strand_b], 'Mixing Diluted Strand B', incr=2)
 
 
 def createMasterMix():
     # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
-    layered_mix([buffer for buffer, __ in buffers], "Mixing Buffers")
+    layered_mix([buffer for buffer, __ in buffers], "Mixing Buffers", incr=2)
 
     # transfer from multiple source wells, each with a current defined volume
     def transferMultiple(ctx, xfer_vol_remaining, tubes, dest, new_tip, *args, **kwargs):
@@ -795,7 +811,7 @@ def createMasterMix():
     # Mixes possibly several times, at different levels
     def mix_master_mix(current_volume, pipette=p50):
         log('Mixing Master Mix')
-        layered_mix([master_mix], pipette=pipette)
+        layered_mix([master_mix], pipette=pipette, incr=2)
 
     log('Creating Master Mix: Water')
     p50.transfer(master_mix_common_water_vol, water, master_mix, trash=trash_control)
@@ -890,17 +906,23 @@ def plateEverythingAndMix():
             if not p50.has_tip:
                 p50.pick_up_tip()
             # total plated volume is some 84uL; we need to use a substantial fraction of that to get good mixing
-            layered_mix([well], volume=50, pipette=p50)
+            layered_mix([well], pipette=p50, incr=0.5)
             done_tip(p10)
             done_tip(p50)
 
 
 def debug_mix_plate():
-    wells = plate.cols(0)
+    wells = plate.cols(0)[0:2]
     for well in wells:
         get_well_volume(well).set_initial(84)
     for well in wells:
-        layered_mix([well], volume=50, pipette=p50)
+        layered_mix([well], pipette=p50, incr=0.75)
+
+def debug_test_blow():
+    p50.pick_up_tip()
+    p50.aspirate(5, location=plate.wells('B1'))
+    p50.blow_out(p50.trash_container)
+    done_tip(p50)
 
 
 ########################################################################################################################
@@ -911,3 +933,4 @@ def debug_mix_plate():
 # createMasterMix()
 # plateEverythingAndMix()
 debug_mix_plate()
+# debug_test_blow()
