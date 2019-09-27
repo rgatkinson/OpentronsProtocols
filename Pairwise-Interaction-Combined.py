@@ -88,6 +88,7 @@ class PrimitiveUnknownNumber(object):
         return 'unk(%s)' % hash(self)
 
 
+# This is not fully elaborated for arithmetic
 class UnknownNumber(Number):
     def __init__(self, offset=0, unknowns=None):
         if unknowns is None:
@@ -129,28 +130,32 @@ class WellVolume(object):
         self.initial_known = False
         self.initial = UnknownNumber()
         self.cum_delta = 0
-        self.low_water_mark = 0
-        self.high_water_mark = 0
+        self.min_delta = 0
+        self.max_delta = 0
+
+    def set_initial(self, initial_volume):
+        assert not self.initial_known
+        assert self.cum_delta == 0
+        self.initial_known = True
+        self.initial = initial_volume
 
     def current(self):
         return self.initial + self.cum_delta
 
     def aspirate(self, volume):
         if not self.initial_known:
-            self.initial = UnknownNumber()
-            self.initial_known = True
+            self.set_initial(UnknownNumber())
         self._track_volume(-volume)
 
     def dispense(self, volume):
         if not self.initial_known:
-            self.initial = 0
-            self.initial_known = True
+            self.set_initial(0)
         self._track_volume(volume)
 
     def _track_volume(self, delta):
         self.cum_delta = self.cum_delta + delta
-        self.low_water_mark = min(self.low_water_mark, self.cum_delta)
-        self.high_water_mark = max(self.high_water_mark, self.cum_delta)
+        self.min_delta = min(self.min_delta, self.cum_delta)
+        self.max_delta = max(self.max_delta, self.cum_delta)
 
 
 def isWell(location):
@@ -173,6 +178,7 @@ def noteLiquid(name, location, initial_volume=None):
     d = {'name': name, 'location': get_location_path(well)}
     if initial_volume is not None:
         d['volume'] = initial_volume
+        get_well_volume(well).set_initial(initial_volume)
     serialized = json.dumps(d).replace("{", "{{").replace("}", "}}")  # runtime calls comment.format(...) on our comment; avoid issues therewith
     robot.comment('Liquid: %s' % serialized)
 
@@ -195,6 +201,19 @@ class UnknownWellGeometry(WellGeometry):
         return UnknownNumber()
 
 
+class IdtTubeWellGeometry(WellGeometry):
+    def __init__(self, well):
+        super().__init__(well)
+
+    def depthFromVolume(self, volume):
+        # Calculated from Mathematica models
+        if volume <= 0.0:
+            return 0.0
+        if volume <= 57.8523:
+            return 0.827389 * cube_root(volume)
+        return 3.2 - 0.0184378 * (57.8523 - volume)
+
+
 class Biorad96WellPlateWellGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
@@ -204,7 +223,7 @@ class Biorad96WellPlateWellGeometry(WellGeometry):
         if volume <= 0.0:
             return 0.0
         if volume <= 60.7779:
-            return -13.7243 + 4.24819 * pow(33.7175 + 1.34645 * volume, 1.0/3.0)
+            return -13.7243 + 4.24819 * cube_root(33.7175 + 1.34645 * volume)
         return 14.66 - 0.0427095 * (196.488 - volume)
 
 
@@ -605,6 +624,10 @@ diluted_strand_a = eppendorf_1_5_rack['A6']
 diluted_strand_b = eppendorf_1_5_rack['B6']
 master_mix = falcon_rack['A1']
 
+for well, __ in buffers:
+    well.geometry = IdtTubeWellGeometry(well)
+for well, __ in evagreens:
+    well.geometry = IdtTubeWellGeometry(well)
 diluted_strand_a.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_a)
 diluted_strand_b.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_b)
 master_mix.geometry = FalconTube15mlGeometry(master_mix)
@@ -674,8 +697,13 @@ def simple_mix(wells, msg=None, count=simple_mix_count, volume=simple_mix_vol, p
     if drop_tip:
         done_tip(pipette)
 
+def layered_mix(wells, msg='Mixing', count=simple_mix_count, volume=simple_mix_vol, pipette=p50, drop_tip=True):
+    for well in wells:
+        _layered_mix_one(well, msg=msg, count=count, volume=volume, pipette=pipette)
+    if drop_tip:
+        done_tip(pipette)
 
-def layered_mix(well, msg='Mixing', count=simple_mix_count, volume=simple_mix_vol, pipette=p50, drop_tip=True):
+def _layered_mix_one(well, msg, count, volume, pipette):
     mix_vol = volume
     mix_count = count
     well_vol = get_well_volume(well).current()
@@ -694,8 +722,6 @@ def layered_mix(well, msg='Mixing', count=simple_mix_count, volume=simple_mix_vo
         pipette.aspirate(mix_vol, well.bottom(y))
         pipette.dispense(mix_vol, well.bottom(y_max))
         y += y_incr
-    if drop_tip:
-        done_tip(pipette)
 
 
 def diluteStrands():
@@ -705,8 +731,8 @@ def diluteStrands():
     noteLiquid('Diluted Strand A', location=diluted_strand_a)
     noteLiquid('Diluted Strand B', location=diluted_strand_b)
 
-    simple_mix([strand_a], 'Mixing Strand A')
-    simple_mix([strand_b], 'Mixing Strand B')
+    simple_mix([strand_a], 'Mixing Strand A')  # can't used layered_mix as we don't know the volume
+    simple_mix([strand_b], 'Mixing Strand B')  # ditto
 
     # Create dilutions of strands
     log('Moving water for diluting Strands A and B')
@@ -716,11 +742,11 @@ def diluteStrands():
                  )
     log('Diluting Strand A')
     p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=trash_control, retain_tip=True)
-    layered_mix(diluted_strand_a, 'Mixing Diluted Strand A', count=10)
+    layered_mix([diluted_strand_a], 'Mixing Diluted Strand A', count=10)
 
     log('Diluting Strand B')
     p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=trash_control, retain_tip=True)
-    layered_mix(diluted_strand_b, 'Mixing Diluted Strand B', count=10)
+    layered_mix([diluted_strand_b], 'Mixing Diluted Strand B', count=10)
 
 
 def createMasterMix():
@@ -731,7 +757,7 @@ def createMasterMix():
         noteLiquid('Evagreen', location=evagreen[0], initial_volume=evagreen[1])
 
     # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
-    simple_mix([buffer for buffer, _ in buffers], "Mixing Buffers")
+    layered_mix([buffer for buffer, __ in buffers], "Mixing Buffers", count=10)
 
     # transfer from multiple source wells, each with a current defined volume
     def transferMultiple(ctx, xfer_vol_remaining, tubes, dest, new_tip, *args, **kwargs):
@@ -759,7 +785,7 @@ def createMasterMix():
     # Mixes possibly several times, at different levels
     def mix_master_mix(current_volume, pipette=p50):
         log('Mixing Master Mix')
-        layered_mix(master_mix, pipette=pipette, count=10, volume=pipette.max_volume)
+        layered_mix([master_mix], pipette=pipette, count=10, volume=pipette.max_volume)
 
     log('Creating Master Mix: Water')
     p50.transfer(master_mix_common_water_vol, water, master_mix, trash=trash_control)
@@ -854,7 +880,7 @@ def plateEverything():
             if not p50.has_tip:
                 p50.pick_up_tip()
             # total plated volume is some 84uL; we need to use a substantial fraction of that to get good mixing
-            layered_mix(well, volume=50, pipette=p50)
+            layered_mix([well], volume=50, pipette=p50)
             done_tip(p10)
             done_tip(p50)
 
