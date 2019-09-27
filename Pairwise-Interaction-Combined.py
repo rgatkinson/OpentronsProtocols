@@ -634,6 +634,18 @@ master_mix.geometry = FalconTube15mlGeometry(master_mix)
 for well in plate.wells():
     well.geometry = Biorad96WellPlateWellGeometry(well)
 
+log('Liquid Names')
+noteLiquid('Water', location=water)
+noteLiquid('Strand A', location=strand_a)
+noteLiquid('Strand B', location=strand_b)
+noteLiquid('Diluted Strand A', location=diluted_strand_a)
+noteLiquid('Diluted Strand B', location=diluted_strand_b)
+noteLiquid('Master Mix', location=master_mix)
+for buffer in buffers:
+    noteLiquid('Buffer', location=buffer[0], initial_volume=buffer[1])
+for evagreen in evagreens:
+    noteLiquid('Evagreen', location=evagreen[0], initial_volume=evagreen[1])
+
 
 ########################################################################################################################
 # Well & Pipettes
@@ -725,12 +737,6 @@ def _layered_mix_one(well, msg, count, volume, pipette):
 
 
 def diluteStrands():
-    log('Liquid Names')
-    noteLiquid('Strand A', location=strand_a)
-    noteLiquid('Strand B', location=strand_b)
-    noteLiquid('Diluted Strand A', location=diluted_strand_a)
-    noteLiquid('Diluted Strand B', location=diluted_strand_b)
-
     simple_mix([strand_a], 'Mixing Strand A')  # can't used layered_mix as we don't know the volume
     simple_mix([strand_b], 'Mixing Strand B')  # ditto
 
@@ -750,12 +756,6 @@ def diluteStrands():
 
 
 def createMasterMix():
-    noteLiquid('Master Mix', location=master_mix)
-    for buffer in buffers:
-        noteLiquid('Buffer', location=buffer[0], initial_volume=buffer[1])
-    for evagreen in evagreens:
-        noteLiquid('Evagreen', location=evagreen[0], initial_volume=evagreen[1])
-
     # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
     layered_mix([buffer for buffer, __ in buffers], "Mixing Buffers", count=10)
 
@@ -803,7 +803,7 @@ def createMasterMix():
 # Plating
 ########################################################################################################################
 
-def plateEverything():
+def plateEverythingAndMix():
     # Plate master mix
     log('Plating Master Mix')
     master_mix_per_well = 28
@@ -885,11 +885,17 @@ def plateEverything():
             done_tip(p50)
 
 
+def debug_mix_plate():
+    for well in plate.wells():
+        get_well_volume(well).set_initial(84)
+    for well in plate.wells():
+        layered_mix([well], volume=50, pipette=p50)
+
+
 ########################################################################################################################
 # Off to the races
 ########################################################################################################################
 
-noteLiquid('Water', location=water)
 diluteStrands()
 createMasterMix()
-plateEverything()
+plateEverythingAndMix()
