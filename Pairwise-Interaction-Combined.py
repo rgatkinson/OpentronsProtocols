@@ -4,6 +4,7 @@
 
 import json
 import math
+import cmath
 from abc import abstractmethod
 from numbers import Number
 from typing import List
@@ -181,7 +182,7 @@ class WellGeometry(object):
         self.well = well
 
     @abstractmethod
-    def depthFromVolume(self, volume: Number) -> Number:
+    def depthFromVolume(self, volume):
         pass
 
 
@@ -197,13 +198,42 @@ class Biorad96WellPlateWellGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
-    def depthFromVolume(self, volume: Number) -> Number:
+    def depthFromVolume(self, volume):
         # Calculated from Mathematica models
         if volume <= 0.0:
             return 0.0
         if volume <= 60.7779:
             return -13.7243 + 4.24819 * pow(33.7175 + 1.34645 * volume, 1.0/3.0)
         return 14.66 - 0.0427095 * (196.488 - volume)
+
+
+class Eppendorf1point5mlTubeGeometry(WellGeometry):
+    def __init__(self, well):
+        super().__init__(well)
+
+    def depthFromVolume(self, volume):
+        # Calculated from Mathematica models
+        if volume <= 12.2145:
+            i = complex(0, 1)
+            term = cube_root(36.6435 - 3. * volume + 1.73205 * cmath.sqrt(-73.2871 * volume + 3. * volume * volume))
+            result = 1.8 - (2.98934 - 5.17768 * i) / term - (0.270963 + 0.469322 * i) * term
+            return result.real
+        if volume <= 445.995:
+            return -8.22353 + 2.2996 * cube_root(53.0712 + 2.43507 * volume)
+        return -564. + 49.1204 * cube_root(1580.62 + 0.143239 * volume)
+
+
+class FalconTube15mlGeometry(WellGeometry):
+    def __init__(self, well):
+        super().__init__(well)
+
+    def depthFromVolume(self, volume):
+        # Calculated from Mathematica models
+        if volume <= 0.0686291:
+            return 0.0  # not correct, but not worth it right now to do correct value
+        if volume <= 874.146:
+            return -0.758658 + 1.23996 * cube_root(0.267715 + 5.69138 * volume)
+        return -360.788 + 13.8562 * cube_root(19665.7 + 1.32258 * volume)
 
 
 def get_well_geometry(well):
@@ -495,6 +525,9 @@ def format_number(value, precision=2):
     return "{:.{}f}".format(value, precision)
 
 
+def cube_root(value):
+    return pow(value, 1.0/3.0)
+
 def zeroify(value, digits=2):  # clamps small values to zero, leaves others alone
     rounded = round(value, digits)
     return rounded if rounded == 0 else value
@@ -551,6 +584,9 @@ diluted_strand_a = eppendorf_1_5_rack['A6']
 diluted_strand_b = eppendorf_1_5_rack['B6']
 master_mix = falcon_rack['A1']
 
+diluted_strand_a.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_a)
+diluted_strand_b.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_b)
+master_mix.geometry = FalconTube15mlGeometry(master_mix)
 for well in plate.wells():
     well.geometry = Biorad96WellPlateWellGeometry(well)
 
@@ -618,6 +654,29 @@ def simple_mix(wells, msg=None, count=simple_mix_count, volume=simple_mix_vol, p
         done_tip(pipette)
 
 
+def layered_mix(well, msg='Mixing', count=simple_mix_count, volume=simple_mix_vol, pipette=p50, drop_tip=True):
+    mix_vol = volume
+    mix_count = count
+    well_vol = get_well_volume(well).current()
+    well_depth = get_well_geometry(well).depthFromVolume(well_vol)
+    well_depth_after_asp = get_well_geometry(well).depthFromVolume(well_vol - mix_vol)
+    msg = "%s well='%s' cur_vol=%s well_depth=%s after_asp=%s" % (msg, well.get_name(), format_number(well_vol), format_number(well_depth), format_number(well_depth_after_asp))
+    if msg is not None:
+        log(msg)
+    if not pipette.has_tip:
+        pipette.pick_up_tip()
+    y_min = y = 1.0  # 1.0 is default aspiration position from bottom
+    y_max = well_depth_after_asp-max(1.0, well_depth_after_asp/10)  # 1.0 here is
+    y_incr = (y_max - y_min) / mix_count
+    while y <= y_max:
+        log('asp=%s disp=%s' % (format_number(y), format_number(y_max)))
+        pipette.aspirate(mix_vol, well.bottom(y))
+        pipette.dispense(mix_vol, well.bottom(y_max))
+        y += y_incr
+    if drop_tip:
+        done_tip(pipette)
+
+
 def diluteStrands():
     log('Liquid Names')
     noteLiquid('Strand A', location=strand_a)
@@ -636,11 +695,11 @@ def diluteStrands():
                  )
     log('Diluting Strand A')
     p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=trash_control, retain_tip=True)
-    simple_mix([diluted_strand_a], 'Mixing Diluted Strand A')
+    layered_mix(diluted_strand_a, 'Mixing Diluted Strand A', count=10)
 
     log('Diluting Strand B')
     p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=trash_control, retain_tip=True)
-    simple_mix([diluted_strand_b], 'Mixing Diluted Strand B')
+    layered_mix(diluted_strand_b, 'Mixing Diluted Strand B', count=10)
 
 
 def createMasterMix():
@@ -678,18 +737,8 @@ def createMasterMix():
 
     # Mixes possibly several times, at different levels
     def mix_master_mix(current_volume, pipette=p50):
-        radius = master_mix.x_size() / 2.0
-        area = math.pi * radius * radius  # area is square mm, current_volume is uL
-        # We'll assume tube is cylindrical, which it isn't, but that's conservative
-        current_height = current_volume / area  # in mm (that's how the units work out)
-        step = 5.0  # mm
-        clearance = 1.0  # mm, as in _position_for_aspirate
-        height = min(master_mix.z_size(), clearance)  # as in _position_for_aspirate
-        while height < current_height - 5.0:
-            simple_mix([master_mix.bottom(height)], 'Mixing Master Mix @ %s' % format_number(height), drop_tip=False, pipette=pipette)  # WRONG
-            height += step
-        if pipette.has_tip:
-            done_tip(p50)
+        log('Mixing Master Mix')
+        layered_mix(master_mix, pipette=pipette, count=10, volume=pipette.max_volume)
 
     log('Creating Master Mix: Water')
     p50.transfer(master_mix_common_water_vol, water, master_mix, trash=trash_control)
@@ -784,35 +833,9 @@ def plateEverything():
             if not p50.has_tip:
                 p50.pick_up_tip()
             # total plated volume is some 84uL; we need to use a substantial fraction of that to get good mixing
-            mix_plate_well(well, volume=50, pipette=p50)
+            layered_mix(well, volume=50, pipette=p50)
             done_tip(p10)
             done_tip(p50)
-
-
-def mix_plate_well(well, count=4, volume=50, pipette=p50, drop_tip=True):
-    mix_vol = volume
-    mix_count = count
-    vol = get_well_volume(well).current()
-    depth = get_well_geometry(well).depthFromVolume(vol)
-    after_asp = get_well_geometry(well).depthFromVolume(vol - mix_vol)
-    msg = "Mixing well='%s' cur_vol=%s depth=%s after_asp=%s" % (well.get_name(), format_number(vol), format_number(depth), format_number(after_asp))
-    if False:  # temporary
-        simple_mix([well], msg, count=mix_count, volume=mix_vol, pipette=pipette)
-    else:
-        if msg is not None:
-            log(msg)
-        if not pipette.has_tip:
-            pipette.pick_up_tip()
-        y_min = y = 1
-        y_max = after_asp-1
-        y_incr = (y_max - y_min) / mix_count
-        while y <= y_max:
-            log('asp=%s disp=%s' % (format_number(y), format_number(y_max)))
-            pipette.aspirate(mix_vol, well.bottom(y))
-            pipette.dispense(mix_vol, well.bottom(y_max))
-            y += y_incr
-    if drop_tip:
-        done_tip(pipette)
 
 
 ########################################################################################################################
