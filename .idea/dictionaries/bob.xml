@@ -3,20 +3,30 @@
     <words>
       <w>aluminumblock</w>
       <w>biorad</w>
+      <w>controlfp</w>
       <w>dest</w>
       <w>eppendorf</w>
       <w>evagreen</w>
       <w>evagreens</w>
+      <w>fegetround</w>
+      <w>fesetround</w>
       <w>incr</w>
+      <w>infimum</w>
       <w>labware</w>
+      <w>libm</w>
       <w>mathematica</w>
+      <w>maxiter</w>
+      <w>nonan</w>
       <w>opentrons</w>
       <w>placable</w>
       <w>placeable</w>
       <w>placeables</w>
+      <w>pyinterval</w>
+      <w>rdiv</w>
       <w>safelock</w>
       <w>screwcap</w>
       <w>snapcap</w>
+      <w>supremum</w>
       <w>tempdeck</w>
       <w>thermocycler</w>
       <w>tiprack</w>
