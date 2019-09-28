@@ -4,12 +4,13 @@
 
 import cmath
 import json
-import math
 import numpy
+import string
 from abc import abstractmethod
 from functools import wraps
 from numbers import Number
 from typing import List
+
 from opentrons import labware, instruments, robot, modules, types
 from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
@@ -511,76 +512,34 @@ del coercing, comp_by_comp, Metaclass
 # Well enhancements
 ########################################################################################################################
 
-class PrimitiveUnknownNumber(object):
-    def __init__(self):
-        pass
-
-    def __str__(self):
-        return 'unk(%s)' % hash(self)
-
-
-# This is not fully elaborated for arithmetic
-class UnknownNumber(Number):
-    def __init__(self, offset=0, unknowns=None):
-        if unknowns is None:
-            unknowns = [PrimitiveUnknownNumber()]
-        self.offset = offset
-        self.unknowns = unknowns
-
-    def __copy__(self):
-        return UnknownNumber(self.offset, self.unknowns.copy())
-
-    def __add__(self, other):
-        result = self.__copy__()
-        if isinstance(other, UnknownNumber):
-            result.unknowns.extend(other.unknowns)
-            result.offset += other.offset
-        else:
-            result.offset += other
-        return result
-
-    def __radd__(self, other):
-        return self.__add__(other)
-
-    def formatted(self, *args, **kwargs):
-        result = '('
-        for i, unknown in enumerate(self.unknowns):
-            if i != 0:
-                result += ', '
-            result += str(unknown)
-        result += '+'
-        result += format_number(self.offset, *args, **kwargs)
-        result += ')'
-        return result
-
-
 # If we aspirate from
 class WellVolume(object):
     def __init__(self, well):
         self.well = well
-        self.initial_known = False
-        self.initial = UnknownNumber()
+        self.initial_volume_known = False
+        self.initial_volume = interval([0, fpu.infinity])
         self.cum_delta = 0
         self.min_delta = 0
         self.max_delta = 0
 
-    def set_initial(self, initial_volume):
-        assert not self.initial_known
+    def set_initial_volume(self, initial_volume):
+        assert not self.initial_volume_known
         assert self.cum_delta == 0
-        self.initial_known = True
-        self.initial = initial_volume
+        self.initial_volume_known = True
+        self.initial_volume = initial_volume
 
-    def current(self):
-        return self.initial + self.cum_delta
+    @property
+    def current_volume(self):
+        return self.initial_volume + self.cum_delta
 
     def aspirate(self, volume):
-        if not self.initial_known:
-            self.set_initial(UnknownNumber())
+        if not self.initial_volume_known:
+            self.set_initial_volume(interval([volume, fpu.infinity]))
         self._track_volume(-volume)
 
     def dispense(self, volume):
-        if not self.initial_known:
-            self.set_initial(0)
+        if not self.initial_volume_known:
+            self.set_initial_volume(0)
         self._track_volume(volume)
 
     def _track_volume(self, delta):
@@ -602,14 +561,17 @@ def get_well_volume(well):
         return well.contents
 
 
-# Must keep in sync with Opentrons-Analyze
-def noteLiquid(name, location, initial_volume=None):
+# Must keep in sync with Opentrons-Analyze controller.note_liquid_name
+def note_liquid(name, location, initial_volume=None, min_volume=None):
     well, __ = unpack_location(location)
     assert isWell(well)
     d = {'name': name, 'location': get_location_path(well)}
     if initial_volume is not None:
-        d['volume'] = initial_volume
-        get_well_volume(well).set_initial(initial_volume)
+        d['initial_volume'] = initial_volume
+        get_well_volume(well).set_initial_volume(initial_volume)
+    elif min_volume is not None:
+        d['min_volume'] = min_volume
+        get_well_volume(well).set_initial_volume(interval([min_volume, fpu.infinity]))
     serialized = json.dumps(d).replace("{", "{{").replace("}", "}}")  # runtime calls comment.format(...) on our comment; avoid issues therewith
     robot.comment('Liquid: %s' % serialized)
 
@@ -620,7 +582,12 @@ class WellGeometry(object):
         self.well = well
 
     @abstractmethod
-    def depthFromVolume(self, volume):
+    def depth_from_volume(self, volume):
+        pass
+
+    @property
+    @abstractmethod
+    def capacity(self):
         pass
 
 
@@ -628,15 +595,19 @@ class UnknownWellGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
-    def depthFromVolume(self, volume):
-        return UnknownNumber()
+    def depth_from_volume(self, volume):
+        return interval([0, fpu.infinity])
+
+    @property
+    def capacity(self):
+        return interval([0, fpu.infinity])
 
 
 class IdtTubeWellGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
-    def depthFromVolume(self, volume):
+    def depth_from_volume(self, volume):
         # Calculated from Mathematica models
         if volume <= 0.0:
             return 0.0
@@ -644,12 +615,16 @@ class IdtTubeWellGeometry(WellGeometry):
             return 0.827389 * cube_root(volume)
         return 3.2 - 0.0184378 * (57.8523 - volume)
 
+    @property
+    def capacity(self):
+        return 2266.91
+
 
 class Biorad96WellPlateWellGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
-    def depthFromVolume(self, volume):
+    def depth_from_volume(self, volume):
         # Calculated from Mathematica models
         if volume <= 0.0:
             return 0.0
@@ -657,12 +632,16 @@ class Biorad96WellPlateWellGeometry(WellGeometry):
             return -13.7243 + 4.24819 * cube_root(33.7175 + 1.34645 * volume)
         return 14.66 - 0.0427095 * (196.488 - volume)
 
+    @property
+    def capacity(self):
+        return 200.0
+
 
 class Eppendorf1point5mlTubeGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
-    def depthFromVolume(self, volume):
+    def depth_from_volume(self, volume):
         # Calculated from Mathematica models
         if volume <= 12.2145:
             i = complex(0, 1)
@@ -673,18 +652,26 @@ class Eppendorf1point5mlTubeGeometry(WellGeometry):
             return -8.22353 + 2.2996 * cube_root(53.0712 + 2.43507 * volume)
         return -564. + 49.1204 * cube_root(1580.62 + 0.143239 * volume)
 
+    @property
+    def capacity(self):
+        return 1688.61
+
 
 class FalconTube15mlGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
-    def depthFromVolume(self, volume):
+    def depth_from_volume(self, volume):
         # Calculated from Mathematica models
         if volume <= 0.0686291:
             return 0.0  # not correct, but not worth it right now to do correct value
         if volume <= 874.146:
             return -0.758658 + 1.23996 * cube_root(0.267715 + 5.69138 * volume)
         return -360.788 + 13.8562 * cube_root(19665.7 + 1.32258 * volume)
+
+    @property
+    def capacity(self):
+        return 13756.5
 
 
 def get_well_geometry(well):
@@ -788,7 +775,7 @@ class MyPipette(Pipette):
             if aspirate:
                 # we might have carryover from a previous transfer.
                 if self.current_volume > 0:
-                    info('carried over %s uL from prev operation' % format_number(self.current_volume))
+                    info(Pretty().format('carried over {0:n} uL from prev operation', self.current_volume))
 
                 if not seen_aspirate:
                     assert step_index == 0
@@ -801,13 +788,13 @@ class MyPipette(Pipette):
                                 new_aspirate_vol = zeroify(aspirate.get('volume') - self.current_volume)
                                 if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
                                     aspirate['volume'] = new_aspirate_vol
-                                    info('reduced this aspirate by %s uL' % format_number(self.current_volume))
+                                    info(Pretty().format('reduced this aspirate by {0:n} uL', self.current_volume))
                                     extra = 0  # can't blow out since we're relying on its presence in pipette
                                 else:
                                     extra = self.current_volume - aspirate['volume']
                                     assert zeroify(extra) > 0
                             else:
-                                info("carryover of %s uL isn't for disposal" % format_number(self.current_volume))
+                                info(Pretty().format("carryover of {0:n} uL isn't for disposal", self.current_volume))
                                 extra = self.current_volume
                         else:
                             # different locations; can't re-use
@@ -818,7 +805,7 @@ class MyPipette(Pipette):
                             self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
 
                     elif zeroify(self.current_volume) > 0:
-                        info('blowing out unexpected carryover of %s uL' % format_number(self.current_volume))
+                        info(Pretty().format('blowing out unexpected carryover of {0:n} uL', self.current_volume))
                         self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
 
                 seen_aspirate = True
@@ -831,16 +818,16 @@ class MyPipette(Pipette):
                 # the capacity of the overflowing aspirate, but that would reduce precision (we still *could*
                 # do that if it has disposal_vol, but that doesn't seem worth it).
                 if self.current_volume + aspirate['volume'] > self._working_volume:
-                    info('current %s uL with aspirate(has_disposal=%s) of %s uL would overflow capacity' % (
-                          format_number(self.current_volume),
+                    info(Pretty().format('current {0:n} uL with aspirate(has_disposal={1}) of {2:n} uL would overflow capacity',
+                          self.current_volume,
                           self.has_disposal_vol(plan, step_index, **kwargs),
-                          format_number(aspirate['volume'])))
+                          aspirate['volume']))
                     self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
                 self._aspirate_during_transfer(aspirate['volume'], aspirate['location'], **kwargs)
 
             if dispense:
                 if self.current_volume < dispense['volume']:
-                    warn('current %s uL will truncate dispense of %s uL' %(format_number(self.current_volume), format_number(dispense['volume'])))
+                    warn(Pretty().format('current {0:n} uL will truncate dispense of {1:n} uL', self.current_volume, dispense['volume']))
                 self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
 
                 do_touch = touch_tip or touch_tip is 0
@@ -858,9 +845,9 @@ class MyPipette(Pipette):
                                 if not kwargs.get('allow_carryover', False):
                                     do_blow = True
                                 elif self.current_volume > kwargs.get('disposal_vol', 0):
-                                    warn('carried over %s uL to next operation' % format_number(self.current_volume))
+                                    warn(Pretty().format('carried over {0:n} uL to next operation', self.current_volume))
                                 else:
-                                    info('carried over %s uL to next operation' % format_number(self.current_volume))
+                                    info(Pretty().format('carried over {0:n} uL to next operation', self.current_volume))
                         else:
                             # if we can, account for any carryover in the next aspirate
                             if self.current_volume > 0:
@@ -871,7 +858,7 @@ class MyPipette(Pipette):
                                         new_aspirate_vol = zeroify(next_aspirate.get('volume') - self.current_volume)
                                         if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
                                             next_aspirate['volume'] = new_aspirate_vol
-                                            info('reduced next aspirate by %s uL' % format_number(self.current_volume))
+                                            info(Pretty().format('reduced next aspirate by {0:n} uL', self.current_volume))
                                         else:
                                             do_blow = True
                                     else:
@@ -977,24 +964,29 @@ def silent_log(msg):
 def done_tip(pp):
     if pp.has_tip:
         if pp.current_volume > 0:
-            info('%s has %s uL remaining' % (pp.name, format_number(pp.current_volume)))
+            info(Pretty().format('{0} has {1:n} uL remaining', pp.name, pp.current_volume))
         if trash_control:
             pp.drop_tip()
         else:
             pp.return_tip()
 
-
-def format_number(value, precision=2):
-    if isinstance(value, UnknownNumber):
-        return value.formatted(precision=precision)
-    factor = 1
-    for i in range(precision):
-        if value * factor == int(value * factor):
-            precision = i
-            break
-        factor *= 10
-    return "{:.{}f}".format(value, precision)
-
+class Pretty(string.Formatter):
+    def format_field(self, value, spec):
+        if spec.endswith('n'):  # 'n' for number
+            precision = 2
+            if spec.startswith('.', 0, -1):
+                precision = int(spec[1:-1])
+            if isinstance(value, Number):
+                factor = 1
+                for i in range(precision):
+                    if value * factor == int(value * factor):
+                        precision = i
+                        break
+                    factor *= 10
+                return "{:.{}f}".format(value, precision)
+            else:
+                return str(value)
+        return super().format_field(value, spec)
 
 def cube_root(value):
     return pow(value, 1.0/3.0)
@@ -1065,17 +1057,21 @@ master_mix.geometry = FalconTube15mlGeometry(master_mix)
 for well in plate.wells():
     well.geometry = Biorad96WellPlateWellGeometry(well)
 
+strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
+strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
+
+
 log('Liquid Names')
-noteLiquid('Water', location=water)
-noteLiquid('Strand A', location=strand_a)
-noteLiquid('Strand B', location=strand_b)
-noteLiquid('Diluted Strand A', location=diluted_strand_a)
-noteLiquid('Diluted Strand B', location=diluted_strand_b)
-noteLiquid('Master Mix', location=master_mix)
+note_liquid('Water', location=water)  # 5525.6
+note_liquid('Strand A', location=strand_a)  # strand_dilution_source_vol
+note_liquid('Strand B', location=strand_b)  # strand_dilution_source_vol
+note_liquid('Diluted Strand A', location=diluted_strand_a)
+note_liquid('Diluted Strand B', location=diluted_strand_b)
+note_liquid('Master Mix', location=master_mix)
 for buffer in buffers:
-    noteLiquid('Buffer', location=buffer[0], initial_volume=buffer[1])
+    note_liquid('Buffer', location=buffer[0], initial_volume=buffer[1])
 for evagreen in evagreens:
-    noteLiquid('Evagreen', location=evagreen[0], initial_volume=evagreen[1])
+    note_liquid('Evagreen', location=evagreen[0], initial_volume=evagreen[1])
 
 
 ########################################################################################################################
@@ -1126,10 +1122,6 @@ def usesP10(queriedVol, count, allow_zero):
 # Making master mix and diluting strands
 ########################################################################################################################
 
-strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
-strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
-
-
 def simple_mix(wells, msg=None, count=simple_mix_count, volume=None, pipette=p50, drop_tip=True):
     if msg is not None:
         log(msg)
@@ -1154,10 +1146,10 @@ def layered_mix(wells, msg='Mixing', count=None, min_incr=0.5, incr=1.0, count_p
 def _layered_mix_one(well, msg, count, min_incr, incr, count_per_incr, volume, pipette, delay, rate):
     if volume is None:
         volume = pipette.max_volume
-    well_vol = get_well_volume(well).current()
-    well_depth = get_well_geometry(well).depthFromVolume(well_vol)
-    well_depth_after_asp = get_well_geometry(well).depthFromVolume(well_vol - volume)
-    msg = "%s well='%s' cur_vol=%s well_depth=%s after_asp=%s" % (msg, well.get_name(), format_number(well_vol), format_number(well_depth), format_number(well_depth_after_asp))
+    well_vol = get_well_volume(well).current_volume
+    well_depth = get_well_geometry(well).depth_from_volume(well_vol)
+    well_depth_after_asp = get_well_geometry(well).depth_from_volume(well_vol - volume)
+    msg = Pretty().format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_asp={4:n}", msg, well.get_name(), well_vol, well_depth, well_depth_after_asp)
     if msg is not None:
         log(msg)
     if not pipette.has_tip:
@@ -1179,7 +1171,7 @@ def _layered_mix_one(well, msg, count, min_incr, incr, count_per_incr, volume, p
     while y <= y_max or numpy.isclose(y, y_max):
         if not first:
             pipette.delay(delay / 1000.0)
-        log('asp=%s incr=%s disp=%s' % (format_number(y), format_number(y_incr), format_number(y_max)))
+        log(Pretty().format('asp={0:n} incr={1:n} disp={2:n}', y, y_incr, y_max))
         #
         for i in range(count_per_incr):
             pipette.aspirate(volume, well.bottom(y))
@@ -1340,7 +1332,7 @@ def plateEverythingAndMix():
 def debug_mix_plate():
     wells = plate.cols(0)[0:2]
     for well in wells:
-        get_well_volume(well).set_initial(84)
+        get_well_volume(well).set_initial_volume(84)
     for well in wells:
         layered_mix([well], pipette=p50, incr=0.75)
 
