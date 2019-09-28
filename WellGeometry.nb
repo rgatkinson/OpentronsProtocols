@@ -6,7 +6,7 @@ Cell["Well Geometry", \
 
 Cell["\<\
 Robert Atkinson
-27 Sept 2019\
+28 Sept 2019\
 \>", "Author",ExpressionUUID->"05aea015-05f3-4e99-899d-20a8cd5792a1"],
 
 Cell["We explore the geometry of various labware.", \
@@ -4118,7 +4118,9 @@ Cell[BoxData[{
     RowBox[{"toCartesian", " ", "@", " ", 
      RowBox[{"invertedSphericalCap", "[", 
       RowBox[{"r", ",", " ", "\[Alpha]", ",", " ", "angled"}], "]"}]}]}]}], 
-  ";"}]}], "Input",ExpressionUUID->"859f4ea1-c099-4765-816d-194b0a8cea71"]
+  ";"}]}], "Input",
+ EmphasizeSyntaxErrors->
+  True,ExpressionUUID->"859f4ea1-c099-4765-816d-194b0a8cea71"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -5127,7 +5129,7 @@ Cell[BoxData[{
         RowBox[{"depthFromVolume", "[", 
          RowBox[{
           RowBox[{"tubes", "[", "name", "]"}], ",", " ", "vol"}], "]"}]}], 
-       ";"}], ",", "\[IndentingNewLine]", 
+       ";"}], "\[IndentingNewLine]", ",", "\[IndentingNewLine]", 
       RowBox[{
        RowBox[{"test", " ", "@", " ", 
         RowBox[{"N", " ", "@", " ", 
@@ -5135,6 +5137,11 @@ Cell[BoxData[{
           RowBox[{
            RowBox[{"tubes", "[", "name", "]"}], ",", " ", "vol"}], "]"}]}]}], 
        ";", "\[IndentingNewLine]", 
+       RowBox[{"test", " ", "@", " ", 
+        RowBox[{"N", " ", "@", " ", 
+         RowBox[{"volume", "[", 
+          RowBox[{"tubes", "[", "name", "]"}], "]"}]}]}], ";", 
+       "\[IndentingNewLine]", 
        RowBox[{"expr", " ", "=", " ", 
         RowBox[{"N", " ", "@", " ", 
          RowBox[{"depthFromVolume", "[", 
@@ -5190,8 +5197,8 @@ Cell[BoxData[{
 }, Open  ]]
 }, Open  ]]
 },
-WindowSize->{1296, 1548},
-WindowMargins->{{200, Automatic}, {Automatic, 0}},
+WindowSize->{1296, 1541},
+WindowMargins->{{329, Automatic}, {Automatic, 1}},
 PrintingCopies->1,
 PrintingPageRange->{32000, 32000},
 PrintingOptions->{"Magnification"->1.,
