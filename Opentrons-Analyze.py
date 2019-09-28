@@ -6,7 +6,9 @@
 import argparse
 import json
 import logging
+import string
 import sys
+from numbers import Number
 from typing import List, Mapping, Any
 from functools import wraps
 
@@ -285,13 +287,15 @@ class interval(tuple, metaclass=Metaclass):
         return self._canonical(self.Component(x, x) for c in self for x in c)
 
     def __repr__(self):
-        return self.format("%r")
+        return self.format("{0:r}")
 
     def __str__(self):
-        return self.format("%s")
+        return self.format("{0:s}")
 
-    def format(self, fs):
-        return type(self).__name__ + '(' + ', '.join('[' + ', '.join(fs % x for x in sorted(set(c))) + ']' for c in self) + ')'
+    def format(self, format_spec, formatter=None):
+        if formatter is None:
+            formatter = string.Formatter
+        return type(self).__name__ + '(' + ', '.join('[' + ', '.join(formatter.format(format_spec, x) for x in sorted(set(c))) + ']' for c in self) + ')'
 
     def __pos__(self):
         return self
@@ -530,67 +534,84 @@ class Monitor(object):
             placeable = placeable.parent
         return placeable
 
+class WellVolume(object):
+    def __init__(self, well):
+        self.well = well
+        self.initial_volume_known = False
+        self.initial_volume = interval([0, fpu.infinity])
+        self.cum_delta = 0
+        self.min_delta = 0
+        self.max_delta = 0
+
+    def set_initial_volume(self, initial_volume):  # idempotent
+        if self.initial_volume_known:
+            assert self.initial_volume == initial_volume
+        else:
+            assert not self.initial_volume_known
+            assert self.cum_delta == 0
+            self.initial_volume_known = True
+            self.initial_volume = initial_volume
+
+    @property
+    def current_volume(self):
+        return self.initial_volume + self.cum_delta
+
+    @property
+    def min_volume(self):
+        return self.initial_volume + self.min_delta
+
+    @property
+    def max_volume(self):
+        return self.initial_volume + self.max_delta
+
+    def aspirate(self, volume):
+        assert volume >= 0
+        if not self.initial_volume_known:
+            self.set_initial_volume(interval([volume, fpu.infinity]))
+        self._track_volume(-volume)
+
+    def dispense(self, volume):
+        assert volume >= 0
+        if not self.initial_volume_known:
+            self.set_initial_volume(0)
+        self._track_volume(volume)
+
+    def _track_volume(self, delta):
+        self.cum_delta = self.cum_delta + delta
+        self.min_delta = min(self.min_delta, self.cum_delta)
+        self.max_delta = max(self.max_delta, self.cum_delta)
+
 
 class WellMonitor(Monitor):
     def __init__(self, controller, location_path):
         super(WellMonitor, self).__init__(controller, location_path)
-        self.current = 0
-        self.low_water_mark = 0
-        self.high_water_mark = 0
+        self.volume = WellVolume(self)
         self.liquid_name = None
         self.mixture = Mixture()
 
-    def _track_volume(self, volume, mixture):
-        self.current = self.current + volume
-        self.low_water_mark = min(self.low_water_mark, self.current)
-        self.high_water_mark = max(self.high_water_mark, self.current)
-
     def aspirate(self, volume, mixture):
-        assert volume >= 0
-        self._track_volume(-volume, mixture)
-        if self.mixture.is_empty():
-            # Assume: aspirating from well of unknown initial volume
-            # delta = Mixture(Aliquot(self, volume))
-            # mixture.adjust_mixture(delta)
-            pass
-        else:
-            # delta = self.mixture.slice(volume)
-            # self.mixture.adjust_mixture(delta.negated())
-            # mixture.adjust_mixture(delta)
-            pass
+        self.volume.aspirate(volume)
 
     def dispense(self, volume, mixture):
-        assert volume >= 0
-        self._track_volume(volume, mixture)
-        # delta = mixture.slice(volume)
-        # self.mixture.adjust_mixture(delta)
-        # mixture.adjust_mixture(delta.negated())
+        self.volume.dispense(volume)
 
     def set_liquid_name(self, name):  # idempotent
         assert self.liquid_name is None or self.liquid_name == name
         self.liquid_name = name
+
+    def set_initial_volume(self, initial_volume):
+        self.volume.set_initial_volume(initial_volume)
 
     def formatted(self):
         result = 'well "{0:s}"'.format(self.target.get_name())
         if self.liquid_name is not None:
             result += ' ("{0:s}")'.format(self.liquid_name)
         result += ':'
-        result += ' lo=%s hi=%s cur=%s\n' % (
-            self._format_number(self.low_water_mark),
-            self._format_number(self.high_water_mark),
-            self._format_number(self.current))
+        result += Pretty().format(' lo={0:n} hi={1:n} cur={2:n}\n',
+            self.volume.min_volume,
+            self.volume.max_volume,
+            self.volume.current_volume)
         return result
-
-    @staticmethod
-    def _format_number(value, precision=2):
-        factor = 1
-        for i in range(precision):
-            if value * factor == int(value * factor):
-                precision = i
-                break
-            factor *= 10
-        return "{:.{}f}".format(value, precision)
-
 
 class AbstractContainerMonitor(Monitor):
     def __init__(self, controller, location_path):
@@ -647,9 +668,13 @@ class MonitorController(object):
     def __init__(self):
         self._monitors = dict()  # maps location path to monitor
 
-    def note_liquid_name(self, liquid_name, location_path, initial_volume=None, min_volume=None):
+    def note_liquid_name(self, liquid_name, location_path, initial_volume=None):
         well_monitor = self._monitor_from_location_path(WellMonitor, location_path)
         well_monitor.set_liquid_name(liquid_name)
+        if initial_volume is not None:
+            if isinstance(initial_volume, list):
+                initial_volume = interval(*initial_volume)
+            well_monitor.set_initial_volume(initial_volume)
 
     def well_monitor(self, well):
         well_monitor = self._monitor_from_location_path(WellMonitor, get_location_path(well))
@@ -717,6 +742,26 @@ def info(msg: str, prefix="***********", suffix=' ***********'):
 
 def warn(msg: str, prefix="***********", suffix=' ***********'):
     print("%s%sWARNING: %s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix))
+
+class Pretty(string.Formatter):
+    def format_field(self, value, spec):
+        if spec.endswith('n'):  # 'n' for number
+            precision = 2
+            if spec.startswith('.', 0, -1):
+                precision = int(spec[1:-1])
+            if isinstance(value, Number):
+                factor = 1
+                for i in range(precision):
+                    if value * factor == int(value * factor):
+                        precision = i
+                        break
+                    factor *= 10
+                return "{:.{}f}".format(value, precision)
+            elif hasattr(value, 'format'):
+                return value.format(format_spec="{0:%s}" % spec, formatter=self)
+            else:
+                return str(value)
+        return super().format_field(value, spec)
 
 
 ########################################################################################################################
@@ -792,7 +837,7 @@ def analyzeRunLog(run_log):
                 serialized = text[len(selector):]  # will include initial white space, but that's ok
                 serialized = serialized.replace("}}", "}").replace("{{", "{")
                 d = json.loads(serialized)
-                controller.note_liquid_name(d['name'], d['location'], initial_volume=d.get('initial_volume', None), min_volume=d.get('min_volume', None))
+                controller.note_liquid_name(d['name'], d['location'], initial_volume=d.get('initial_volume', None))
             elif selector == 'air' \
                     or selector == 'returning' \
                     or selector == 'engaging' \

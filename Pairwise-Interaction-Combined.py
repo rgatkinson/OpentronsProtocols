@@ -348,13 +348,15 @@ class interval(tuple, metaclass=Metaclass):
         return self._canonical(self.Component(x, x) for c in self for x in c)
 
     def __repr__(self):
-        return self.format("%r")
+        return self.format("{0:r}")
 
     def __str__(self):
-        return self.format("%s")
+        return self.format("{0:s}")
 
-    def format(self, fs):
-        return type(self).__name__ + '(' + ', '.join('[' + ', '.join(fs % x for x in sorted(set(c))) + ']' for c in self) + ')'
+    def format(self, format_spec, formatter=None):
+        if formatter is None:
+            formatter = string.Formatter
+        return type(self).__name__ + '(' + ', '.join('[' + ', '.join(formatter.format(format_spec, x) for x in sorted(set(c))) + ']' for c in self) + ')'
 
     def __pos__(self):
         return self
@@ -512,7 +514,6 @@ del coercing, comp_by_comp, Metaclass
 # Well enhancements
 ########################################################################################################################
 
-# If we aspirate from
 class WellVolume(object):
     def __init__(self, well):
         self.well = well
@@ -522,22 +523,35 @@ class WellVolume(object):
         self.min_delta = 0
         self.max_delta = 0
 
-    def set_initial_volume(self, initial_volume):
-        assert not self.initial_volume_known
-        assert self.cum_delta == 0
-        self.initial_volume_known = True
-        self.initial_volume = initial_volume
+    def set_initial_volume(self, initial_volume):  # idempotent
+        if self.initial_volume_known:
+            assert self.initial_volume == initial_volume
+        else:
+            assert not self.initial_volume_known
+            assert self.cum_delta == 0
+            self.initial_volume_known = True
+            self.initial_volume = initial_volume
 
     @property
     def current_volume(self):
         return self.initial_volume + self.cum_delta
 
+    @property
+    def min_volume(self):
+        return self.initial_volume + self.min_delta
+
+    @property
+    def max_volume(self):
+        return self.initial_volume + self.max_delta
+
     def aspirate(self, volume):
+        assert volume >= 0
         if not self.initial_volume_known:
             self.set_initial_volume(interval([volume, fpu.infinity]))
         self._track_volume(-volume)
 
     def dispense(self, volume):
+        assert volume >= 0
         if not self.initial_volume_known:
             self.set_initial_volume(0)
         self._track_volume(volume)
@@ -566,12 +580,11 @@ def note_liquid(name, location, initial_volume=None, min_volume=None):
     well, __ = unpack_location(location)
     assert isWell(well)
     d = {'name': name, 'location': get_location_path(well)}
+    if initial_volume is None and min_volume is not None:
+        initial_volume = interval([min_volume, get_well_geometry(well).capacity])
     if initial_volume is not None:
         d['initial_volume'] = initial_volume
         get_well_volume(well).set_initial_volume(initial_volume)
-    elif min_volume is not None:
-        d['min_volume'] = min_volume
-        get_well_volume(well).set_initial_volume(interval([min_volume, fpu.infinity]))
     serialized = json.dumps(d).replace("{", "{{").replace("}", "}}")  # runtime calls comment.format(...) on our comment; avoid issues therewith
     robot.comment('Liquid: %s' % serialized)
 
@@ -600,7 +613,11 @@ class UnknownWellGeometry(WellGeometry):
 
     @property
     def capacity(self):
-        return interval([0, fpu.infinity])
+        # noinspection PyBroadException
+        try:
+            return self.well.properties['total-liquid-volume']
+        except:
+            return fpu.infinity
 
 
 class IdtTubeWellGeometry(WellGeometry):
@@ -970,6 +987,13 @@ def done_tip(pp):
         else:
             pp.return_tip()
 
+def cube_root(value):
+    return pow(value, 1.0/3.0)
+
+def zeroify(value, digits=2):  # clamps small values to zero, leaves others alone
+    rounded = round(value, digits)
+    return rounded if rounded == 0 else value
+
 class Pretty(string.Formatter):
     def format_field(self, value, spec):
         if spec.endswith('n'):  # 'n' for number
@@ -984,16 +1008,11 @@ class Pretty(string.Formatter):
                         break
                     factor *= 10
                 return "{:.{}f}".format(value, precision)
+            elif hasattr(value, 'format'):
+                return value.format(format_spec="{0:%s}" % spec, formatter=self)
             else:
                 return str(value)
         return super().format_field(value, spec)
-
-def cube_root(value):
-    return pow(value, 1.0/3.0)
-
-def zeroify(value, digits=2):  # clamps small values to zero, leaves others alone
-    rounded = round(value, digits)
-    return rounded if rounded == 0 else value
 
 
 ########################################################################################################################
@@ -1004,6 +1023,9 @@ def zeroify(value, digits=2):  # clamps small values to zero, leaves others alon
 ########################################################################################################################
 ########################################################################################################################
 
+# compute derived constants
+strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
+strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
 
 ########################################################################################################################
 # Labware
@@ -1047,27 +1069,27 @@ diluted_strand_a = eppendorf_1_5_rack['A6']
 diluted_strand_b = eppendorf_1_5_rack['B6']
 master_mix = falcon_rack['A1']
 
+# Define geometries
 for well, __ in buffers:
     well.geometry = IdtTubeWellGeometry(well)
 for well, __ in evagreens:
     well.geometry = IdtTubeWellGeometry(well)
+strand_a.geometry = Eppendorf1point5mlTubeGeometry(strand_a)
+strand_b.geometry = Eppendorf1point5mlTubeGeometry(strand_b)
 diluted_strand_a.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_a)
 diluted_strand_b.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_b)
 master_mix.geometry = FalconTube15mlGeometry(master_mix)
 for well in plate.wells():
     well.geometry = Biorad96WellPlateWellGeometry(well)
 
-strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
-strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
-
-
+# Remember initial liquid names and volumes
 log('Liquid Names')
-note_liquid('Water', location=water)  # 5525.6
-note_liquid('Strand A', location=strand_a)  # strand_dilution_source_vol
-note_liquid('Strand B', location=strand_b)  # strand_dilution_source_vol
-note_liquid('Diluted Strand A', location=diluted_strand_a)
-note_liquid('Diluted Strand B', location=diluted_strand_b)
-note_liquid('Master Mix', location=master_mix)
+note_liquid('Water', location=water, min_volume=6000)  # 6000 is a rough guess
+note_liquid('Strand A', location=strand_a, min_volume=strand_dilution_source_vol)
+note_liquid('Strand B', location=strand_b, min_volume=strand_dilution_source_vol)
+note_liquid('Diluted Strand A', location=diluted_strand_a, initial_volume=0)
+note_liquid('Diluted Strand B', location=diluted_strand_b, initial_volume=0)
+note_liquid('Master Mix', location=master_mix, initial_volume=0)
 for buffer in buffers:
     note_liquid('Buffer', location=buffer[0], initial_volume=buffer[1])
 for evagreen in evagreens:
