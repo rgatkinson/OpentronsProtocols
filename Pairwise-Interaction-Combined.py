@@ -62,12 +62,29 @@ per_well_water_volumes = [
 assert len(per_well_water_volumes) == rows_per_plate
 assert len(per_well_water_volumes[0]) * num_replicates == columns_per_plate
 
-# Mixing
-simple_mix_count = 6
 
 # Optimization Control
 allow_blow_elision = True
 allow_carryover = allow_blow_elision
+
+
+class Config(object):
+    pass
+
+
+config = Config()
+config.aspirate_bottom_clearance = 1.0
+config.simple_mix_count = 6
+
+config.layered_mix = Config()
+config.layered_mix.aspirate_rate = 1.0
+config.layered_mix.dispense_rate = 3.0
+config.layered_mix.incr = 1.0
+config.layered_mix.count = None  # we default to using incr, not count
+config.layered_mix.min_incr = 0.5
+config.layered_mix.count_per_incr = 2
+config.layered_mix.delay = 500
+config.layered_mix.drop_tip = True
 
 
 ########################################################################################################################
@@ -77,6 +94,8 @@ allow_carryover = allow_blow_elision
 ##                                                                                                                    ##
 ########################################################################################################################
 ########################################################################################################################
+
+# region Extensions
 
 ########################################################################################################################
 # Interval, adapted from pyinterval
@@ -953,6 +972,99 @@ class MyPipette(Pipette):
         self.robot.poses = self._jog(self.robot.poses, 'x', -shake_off_distance)  # move left
         self.robot.gantry.pop_speed()
 
+    def done_tip(self):
+        if self.has_tip:
+            if self.current_volume > 0:
+                info(Pretty().format('{0} has {1:n} uL remaining', self.name, self.current_volume))
+            if trash_control:
+                self.drop_tip()
+            else:
+                self.return_tip()
+
+    def simple_mix(self, wells, msg=None, count=None, volume=None, drop_tip=True):
+        if count is None:
+            count = config.simple_mix_count
+        if msg is not None:
+            log(msg)
+        if volume is None:
+            volume = self.max_volume
+        if not self.has_tip:
+            self.pick_up_tip()
+        for well in wells:
+            self.mix(count, volume, well)
+        if drop_tip:
+            self.done_tip()
+
+    # By default, we layer every 1.0 mm
+    # If count is provided, we do (at most) that many asp/disp cycles, clamped to an increment of min_incr
+    # If volume is not provided, then maximum volume of hte pipette is used
+    def layered_mix(self, wells, msg='Mixing', count=None, min_incr=None, incr=None, count_per_incr=None, volume=None, drop_tip=None, delay=None, aspirate_rate=None, dispense_rate=None):
+        if drop_tip is None:
+            drop_tip = config.layered_mix.drop_tip
+
+        for well in wells:
+            self._layered_mix_one(well, msg=msg,
+                                  count=count,
+                                  min_incr=min_incr,
+                                  incr=incr,
+                                  count_per_incr=count_per_incr,
+                                  volume=volume,
+                                  delay=delay,
+                                  apirate_rate=aspirate_rate,
+                                  dispense_rate=dispense_rate)
+        if drop_tip:
+            self.done_tip()
+
+    def _layered_mix_one(self, well, msg, **kwargs):
+        def fetch(name, default = None):
+            if default is None:
+                default = getattr(config.layered_mix, name)
+            result = kwargs.get(name, default)
+            if result is None:
+                result = default
+            return result
+
+        volume = fetch('volume', self.max_volume)
+        incr = fetch('incr')
+        count_per_incr = fetch('count_per_incr')
+        count = fetch('count')
+        min_incr = fetch('min_incr')
+        delay = fetch('delay')
+
+        well_vol = get_well_volume(well).current_volume
+        well_depth = get_well_geometry(well).depth_from_volume(well_vol)
+        well_depth_after_asp = get_well_geometry(well).depth_from_volume(well_vol - volume)
+        msg = Pretty().format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_asp={4:n}", msg, well.get_name(), well_vol, well_depth, well_depth_after_asp)
+        if msg is not None:
+            log(msg)
+        if not self.has_tip:
+            self.pick_up_tip()
+        y_min = y = 1.0  # 1.0 is default aspiration position from bottom
+        y_max = well_depth_after_asp - max(1.0, well_depth_after_asp / 10)  # 1.0 here is
+        if count is not None:
+            if count <= 1:
+                y_max = y_min
+                y_incr = 1  # just so we only go one time through the loop
+            else:
+                y_incr = (y_max - y_min) / (count-1)
+                y_incr = max(y_incr, min_incr)
+        else:
+            assert incr is not None
+            y_incr = incr
+
+        first = True
+        while y <= y_max or numpy.isclose(y, y_max):
+            if not first:
+                self.delay(delay / 1000.0)
+            log(Pretty().format('asp={0:n} incr={1:n} disp={2:n}', y, y_incr, y_max))
+            #
+            for i in range(count_per_incr):
+                self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', config.layered_mix.aspirate_rate))
+                self.dispense(volume, well.bottom(y_max), rate=fetch('dispense_rate', config.layered_mix.dispense_rate))
+            #
+            y += y_incr
+            first = False
+
 
 ########################################################################################################################
 # Utilities
@@ -977,15 +1089,6 @@ def warn(msg: str, prefix="***********", suffix=' ***********'):
 def silent_log(msg):
     pass
 
-
-def done_tip(pp):
-    if pp.has_tip:
-        if pp.current_volume > 0:
-            info(Pretty().format('{0} has {1:n} uL remaining', pp.name, pp.current_volume))
-        if trash_control:
-            pp.drop_tip()
-        else:
-            pp.return_tip()
 
 def cube_root(value):
     return pow(value, 1.0/3.0)
@@ -1014,6 +1117,7 @@ class Pretty(string.Formatter):
                 return str(value)
         return super().format_field(value, spec)
 
+# endregion
 
 ########################################################################################################################
 ########################################################################################################################
@@ -1022,6 +1126,7 @@ class Pretty(string.Formatter):
 ##                                                                                                                    ##
 ########################################################################################################################
 ########################################################################################################################
+
 
 # compute derived constants
 strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
@@ -1144,68 +1249,9 @@ def usesP10(queriedVol, count, allow_zero):
 # Making master mix and diluting strands
 ########################################################################################################################
 
-def simple_mix(wells, msg=None, count=simple_mix_count, volume=None, pipette=p50, drop_tip=True):
-    if msg is not None:
-        log(msg)
-    if volume is None:
-        volume = pipette.max_volume
-    if not pipette.has_tip:
-        pipette.pick_up_tip()
-    for well in wells:
-        pipette.mix(count, volume, well)
-    if drop_tip:
-        done_tip(pipette)
-
-# By default, we layer every 1.0 mm
-# If count is provided, we do (at most) that many asp/disp cycles, clamped to an increment of min_incr
-# If volume is not provided, then maximum volume of hte pipette is used
-def layered_mix(wells, msg='Mixing', count=None, min_incr=0.5, incr=1.0, count_per_incr=2, volume=None, pipette=p50, drop_tip=True, delay=500, rate=3.0):
-    for well in wells:
-        _layered_mix_one(well, msg=msg, count=count, min_incr=min_incr, incr=incr, count_per_incr=count_per_incr, volume=volume, pipette=pipette, delay=delay, rate=rate)
-    if drop_tip:
-        done_tip(pipette)
-
-def _layered_mix_one(well, msg, count, min_incr, incr, count_per_incr, volume, pipette, delay, rate):
-    if volume is None:
-        volume = pipette.max_volume
-    well_vol = get_well_volume(well).current_volume
-    well_depth = get_well_geometry(well).depth_from_volume(well_vol)
-    well_depth_after_asp = get_well_geometry(well).depth_from_volume(well_vol - volume)
-    msg = Pretty().format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_asp={4:n}", msg, well.get_name(), well_vol, well_depth, well_depth_after_asp)
-    if msg is not None:
-        log(msg)
-    if not pipette.has_tip:
-        pipette.pick_up_tip()
-    y_min = y = 1.0  # 1.0 is default aspiration position from bottom
-    y_max = well_depth_after_asp - max(1.0, well_depth_after_asp / 10)  # 1.0 here is
-    if count is not None:
-        if count <= 1:
-            y_max = y_min
-            y_incr = 1  # just so we only go one time through the loop
-        else:
-            y_incr = (y_max - y_min) / (count-1)
-            y_incr = max(y_incr, min_incr)
-    else:
-        assert incr is not None
-        y_incr = incr
-
-    first = True
-    while y <= y_max or numpy.isclose(y, y_max):
-        if not first:
-            pipette.delay(delay / 1000.0)
-        log(Pretty().format('asp={0:n} incr={1:n} disp={2:n}', y, y_incr, y_max))
-        #
-        for i in range(count_per_incr):
-            pipette.aspirate(volume, well.bottom(y))
-            pipette.dispense(volume, well.bottom(y_max), rate=rate)
-        #
-        y += y_incr
-        first = False
-
-
 def diluteStrands():
-    simple_mix([strand_a], 'Mixing Strand A')  # can't used layered_mix as we don't know the volume
-    simple_mix([strand_b], 'Mixing Strand B')  # ditto
+    p50.simple_mix([strand_a], 'Mixing Strand A')  # can't used layered_mix as we don't know the volume TODO: not true any more!
+    p50.simple_mix([strand_b], 'Mixing Strand B')  # ditto
 
     # Create dilutions of strands
     log('Moving water for diluting Strands A and B')
@@ -1215,16 +1261,16 @@ def diluteStrands():
                  )
     log('Diluting Strand A')
     p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=trash_control, retain_tip=True)
-    layered_mix([diluted_strand_a], 'Mixing Diluted Strand A', incr=2)
+    p50.layered_mix([diluted_strand_a], 'Mixing Diluted Strand A', incr=2)
 
     log('Diluting Strand B')
     p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=trash_control, retain_tip=True)
-    layered_mix([diluted_strand_b], 'Mixing Diluted Strand B', incr=2)
+    p50.layered_mix([diluted_strand_b], 'Mixing Diluted Strand B', incr=2)
 
 
 def createMasterMix():
     # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
-    layered_mix([buffer for buffer, __ in buffers], "Mixing Buffers", incr=4)
+    p50.layered_mix([buffer for buffer, __ in buffers], "Mixing Buffers", incr=4)
 
     # transfer from multiple source wells, each with a current defined volume
     def transferMultiple(ctx, xfer_vol_remaining, tubes, dest, new_tip, *args, **kwargs):
@@ -1249,9 +1295,9 @@ def createMasterMix():
             xfer_vol_remaining -= this_vol
             cur_vol -= this_vol
 
-    def mix_master_mix(pipette=p50):
+    def mix_master_mix():
         log('Mixing Master Mix')
-        layered_mix([master_mix], pipette=pipette, incr=2)
+        p50.layered_mix([master_mix], incr=2)
 
     log('Creating Master Mix: Water')
     p50.transfer(master_mix_common_water_vol, water, master_mix, trash=trash_control)
@@ -1322,8 +1368,8 @@ def plateEverythingAndMix():
                      trash=trash_control,
                      allow_blow_elision=allow_blow_elision,
                      allow_carryover=allow_carryover)
-    done_tip(p10)
-    done_tip(p50)
+    p10.done_tip()
+    p50.done_tip()
 
     # Plate strand B and mix
     # Mixing always needs the p50, but plating may need either; optimize tip usage
@@ -1346,9 +1392,9 @@ def plateEverythingAndMix():
             if not p50.has_tip:
                 p50.pick_up_tip()
             # total plated volume is some 84uL; we need to use a substantial fraction of that to get good mixing
-            layered_mix([well], pipette=p50, incr=0.75)
-            done_tip(p10)
-            done_tip(p50)
+            p50.layered_mix([well], incr=0.75)
+            p10.done_tip()
+            p50.done_tip()
 
 
 def debug_mix_plate():
@@ -1356,13 +1402,13 @@ def debug_mix_plate():
     for well in wells:
         get_well_volume(well).set_initial_volume(84)
     for well in wells:
-        layered_mix([well], pipette=p50, incr=0.75)
+        p50.layered_mix([well], incr=0.75)
 
 def debug_test_blow():
     p50.pick_up_tip()
     p50.aspirate(5, location=plate.wells('A2'))
     p50.blow_out(p50.trash_container)
-    done_tip(p50)
+    p50.done_tip()
 
 
 ########################################################################################################################
