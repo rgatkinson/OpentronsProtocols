@@ -99,6 +99,8 @@ config.layered_mix.count_per_incr = 2
 config.layered_mix.delay = 750
 config.layered_mix.drop_tip = True
 config.layered_mix.initial_turnover = None
+config.layered_mix.max_tip_cycles = None
+config.layered_mix.max_tip_cycles_large = 12
 
 
 ########################################################################################################################
@@ -945,7 +947,7 @@ class MyPipette(Pipette):
         location = location if location else self.previous_placeable
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume, clearances=config.aspirate)
         super().aspirate(volume=volume, location=location, rate=rate)
-        # track volume
+        # track volume todo: what if we're doing an air gap
         well, __ = unpack_location(location)
         get_well_volume(well).aspirate(volume)
         if volume != 0:
@@ -1023,7 +1025,18 @@ class MyPipette(Pipette):
             self.done_tip()
 
     # If count is provided, we do (at most) that many asp/disp cycles, clamped to an increment of min_incr
-    def layered_mix(self, wells, msg='Mixing', count=None, min_incr=None, incr=None, count_per_incr=None, volume=None, drop_tip=None, delay=None, aspirate_rate=None, dispense_rate=None, initial_turnover=None):
+    def layered_mix(self, wells, msg='Mixing',
+                    count=None,
+                    min_incr=None,
+                    incr=None,
+                    count_per_incr=None,
+                    volume=None,
+                    drop_tip=None,
+                    delay=None,
+                    aspirate_rate=None,
+                    dispense_rate=None,
+                    initial_turnover=None,
+                    max_tip_cycles=None):
         if drop_tip is None:
             drop_tip = config.layered_mix.drop_tip
 
@@ -1037,7 +1050,8 @@ class MyPipette(Pipette):
                                   delay=delay,
                                   apirate_rate=aspirate_rate,
                                   dispense_rate=dispense_rate,
-                                  initial_turnover=initial_turnover)
+                                  initial_turnover=initial_turnover,
+                                  max_tip_cycles=max_tip_cycles)
         if drop_tip:
             self.done_tip()
 
@@ -1059,6 +1073,7 @@ class MyPipette(Pipette):
         min_incr = fetch('min_incr')
         delay = fetch('delay')
         initial_turnover = fetch('initial_turnover')
+        max_tip_cycles = fetch('max_tip_cycles', fpu.infinity)
 
         well_vol = get_well_volume(well).current_volume_min
         well_depth = get_well_geometry(well).depth_from_volume(well_vol)
@@ -1066,8 +1081,6 @@ class MyPipette(Pipette):
         msg = Pretty().format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_aspirate={4:n}", msg, well.get_name(), well_vol, well_depth, well_depth_after_asp)
         if msg is not None:
             log(msg)
-        if not self.has_tip:
-            self.pick_up_tip()
         y_min = y = config.layered_mix.aspirate_bottom_clearance
         y_max = well_depth_after_asp - self._top_clearance(well, well_depth_after_asp, clearance=config.layered_mix.top_clearance, factor=config.layered_mix.top_clearance_factor)
         if count is not None:
@@ -1082,19 +1095,25 @@ class MyPipette(Pipette):
             y_incr = incr
 
         first = True
+        tip_cycles = 0
         while y <= y_max or numpy.isclose(y, y_max):
             if not first:
                 self.delay(delay / 1000.0)
-            # log(Pretty().format('asp={0:n} disp={1:n}', y, y_max))
             #
             if first and initial_turnover is not None:
                 count = int(0.5 + (initial_turnover / volume))
                 count = max(count, count_per_incr)
             else:
                 count = count_per_incr
+            if not self.has_tip:
+                self.pick_up_tip()
             for i in range(count):
                 self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', config.layered_mix.aspirate_rate_factor))
                 self.dispense(volume, well.bottom(y_max), rate=fetch('dispense_rate', config.layered_mix.dispense_rate_factor))
+                tip_cycles += 1
+                if tip_cycles >= max_tip_cycles:
+                    self.done_tip()
+                    tip_cycles = 0
             #
             y += y_incr
             first = False
@@ -1396,7 +1415,7 @@ def createMasterMix():
 
     def mix_master_mix():
         log('Mixing Master Mix')
-        p50.layered_mix([master_mix], incr=2, initial_turnover=master_mix_evagreen_vol * 1.2)
+        p50.layered_mix([master_mix], incr=2, initial_turnover=master_mix_evagreen_vol * 1.2, max_tip_cycles=config.layered_mix.max_tip_cycles_large)
 
     log('Creating Master Mix: Water')
     p50.transfer(master_mix_common_water_vol, water, master_mix, trash=trash_control)
