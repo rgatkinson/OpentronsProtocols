@@ -75,6 +75,7 @@ class Config(object):
 
 
 config = Config()
+config.blow_out_rate_factor = 3.0
 config.position_for_aspirate_bottom_clearance = 1.0  # see Pipette._position_for_aspirate
 config.position_for_dispense_bottom_clearance = 0.5  # see Pipette._position_for_dispense
 config.aspirate_top_clearance = 1.0
@@ -85,8 +86,8 @@ config.simple_mix.count = 6
 
 config.layered_mix = Config()
 config.layered_mix.aspirate_bottom_clearance = 1.0
-config.layered_mix.aspirate_rate = 3.0
-config.layered_mix.dispense_rate = 3.0
+config.layered_mix.aspirate_rate_factor = 3.0
+config.layered_mix.dispense_rate_factor = 3.0
 config.layered_mix.incr = 1.0
 config.layered_mix.count = None  # we default to using incr, not count
 config.layered_mix.min_incr = 0.5
@@ -1088,8 +1089,8 @@ class MyPipette(Pipette):
             else:
                 count = count_per_incr
             for i in range(count):
-                self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', config.layered_mix.aspirate_rate))
-                self.dispense(volume, well.bottom(y_max), rate=fetch('dispense_rate', config.layered_mix.dispense_rate))
+                self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', config.layered_mix.aspirate_rate_factor))
+                self.dispense(volume, well.bottom(y_max), rate=fetch('dispense_rate', config.layered_mix.dispense_rate_factor))
             #
             y += y_incr
             first = False
@@ -1216,11 +1217,13 @@ tips300a = labware.load('opentrons_96_tiprack_300ul', 1)
 tips300b = labware.load('opentrons_96_tiprack_300ul', 4)
 tips10 = labware.load('opentrons_96_tiprack_10ul', 7)
 
-# Configure the pipettes. Blow out faster than default in an attempt to avoid hanging droplets on the pipettes after blowout
+# Configure the pipettes.
 p10 = MyPipette(instruments.P10_Single(mount='left', tip_racks=[tips10]))
 p50 = MyPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b]))
-p10.set_flow_rate(blow_out=p10.get_flow_rates()['blow_out'] * 2)
-p50.set_flow_rate(blow_out=p50.get_flow_rates()['blow_out'] * 2)
+
+# Blow out faster than default in an attempt to avoid hanging droplets on the pipettes after blowout
+p10.set_flow_rate(blow_out=p10.get_flow_rates()['blow_out'] * config.blow_out_rate_factor)
+p50.set_flow_rate(blow_out=p50.get_flow_rates()['blow_out'] * config.blow_out_rate_factor)
 
 # Control tip usage
 p10.start_at_tip(tips10[p10_start_tip])
