@@ -606,6 +606,7 @@ def get_well_volume(well):
 def note_liquid(name, location, initial_volume=None, min_volume=None):
     well, __ = unpack_location(location)
     assert isWell(well)
+    well.label = name
     d = {'name': name, 'location': get_location_path(well)}
     if initial_volume is None and min_volume is not None:
         initial_volume = interval([min_volume, get_well_geometry(well).capacity])
@@ -742,7 +743,6 @@ def get_well_geometry(well):
 #   * support speed and flow rate retrieval
 #   * support option to leave tip attached at end of transfer
 ########################################################################################################################
-
 
 class MyPipette(Pipette):
     def __new__(cls, parentInst):
@@ -1095,6 +1095,18 @@ class MyPipette(Pipette):
             y += y_incr
             first = False
 
+# region Commands
+
+# Enhance well name to include any label that might be present
+
+def get_labelled_placeable_name(self):
+    result = super(Well, self).get_name()
+    label = getattr(self, 'label', None)
+    if label is not None:
+        result += ' (' + label + ')'
+    return result
+
+Well.get_name = get_labelled_placeable_name
 
 # Hook commands to provide more informative text
 
@@ -1110,7 +1122,7 @@ def z_from_bottom(location, clearance):
 
 def command_aspirate(instrument, volume, location, rate):
     z = z_from_bottom(location, config.position_for_aspirate_bottom_clearance)
-    location_text = stringify_location(well)
+    location_text = stringify_location(location)
     text = Pretty().format('Aspirating {volume:n} uL z={z:n} rate={rate:n} at {location}', volume=volume, location=location_text, rate=rate, z=z)
     return make_command(
         name=command_types.ASPIRATE,
@@ -1141,6 +1153,7 @@ def command_dispense(instrument, volume, location, rate):
 
 opentrons.commands.aspirate = command_aspirate
 opentrons.commands.dispense = command_dispense
+# endregion
 
 ########################################################################################################################
 # Utilities
