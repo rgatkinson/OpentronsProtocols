@@ -300,6 +300,14 @@ class interval(tuple, metaclass=Metaclass):
     def format_percent(self, format_spec):
         return type(self).__name__ + '(' + ', '.join('[' + ', '.join(format_spec % x for x in sorted(set(c))) + ']' for c in self) + ')'
 
+    @property
+    def infimum(self):
+        return fpu.min(c.infimum for c in self)
+
+    @property
+    def supremum(self):
+        return fpu.max(c.supremum for c in self)
+
     def __pos__(self):
         return self
 

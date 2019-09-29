@@ -385,6 +385,14 @@ class interval(tuple, metaclass=Metaclass):
     def format_percent(self, format_spec):
         return type(self).__name__ + '(' + ', '.join('[' + ', '.join(format_spec % x for x in sorted(set(c))) + ']' for c in self) + ')'
 
+    @property
+    def infimum(self):
+        return fpu.min(c.infimum for c in self)
+
+    @property
+    def supremum(self):
+        return fpu.max(c.supremum for c in self)
+
     def __pos__(self):
         return self
 
@@ -1043,7 +1051,10 @@ class MyPipette(Pipette):
         delay = fetch('delay')
         initial_turnover = fetch('initial_turnover')
 
+        # use the most pessimistic estimate we have about the current volume of the well
         well_vol = get_well_volume(well).current_volume
+        well_vol = interval.cast(well_vol).infimum
+
         well_depth = get_well_geometry(well).depth_from_volume(well_vol)
         well_depth_after_asp = get_well_geometry(well).depth_from_volume(well_vol - volume)
         msg = Pretty().format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_asp={4:n}", msg, well.get_name(), well_vol, well_depth, well_depth_after_asp)
@@ -1267,8 +1278,8 @@ def usesP10(queriedVol, count, allow_zero):
 ########################################################################################################################
 
 def diluteStrands():
-    p50.simple_mix([strand_a], 'Mixing Strand A')  # can't used layered_mix as we don't know the volume TODO: not true any more!
-    p50.simple_mix([strand_b], 'Mixing Strand B')  # ditto
+    p50.layered_mix([strand_a], 'Mixing Strand A')
+    p50.layered_mix([strand_b], 'Mixing Strand B')
 
     # Create dilutions of strands
     log('Moving water for diluting Strands A and B')
