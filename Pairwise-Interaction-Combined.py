@@ -11,11 +11,13 @@ from functools import wraps
 from numbers import Number
 from typing import List
 
+import opentrons
 from opentrons import labware, instruments, robot, modules, types
+from opentrons.commands.commands import stringify_location, make_command, command_types
 from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DISTANCE, SHAKE_OFF_TIPS_SPEED
-from opentrons.legacy_api.containers.placeable import unpack_location, Well
+from opentrons.legacy_api.containers.placeable import unpack_location, Well, Placeable
 
 metadata = {
     'protocolName': 'Pairwise Interaction: Dilute & Master',
@@ -73,6 +75,8 @@ class Config(object):
 
 
 config = Config()
+config.position_for_aspirate_clearance = 1.0  # see Pipette._position_for_aspirate
+config.position_for_dispense_clearance = 0.5  # see Pipette._position_for_dispense
 config.aspirate_bottom_clearance = 1.0
 config.aspirate_top_clearance = 1.0
 config.aspirate_bottom_clearance_factor = 10
@@ -746,6 +750,7 @@ def get_well_geometry(well):
 #   * support option to leave tip attached at end of transfer
 ########################################################################################################################
 
+
 class MyPipette(Pipette):
     def __new__(cls, parentInst):
         parentInst.__class__ = MyPipette
@@ -1034,7 +1039,6 @@ class MyPipette(Pipette):
         return max(config.aspirate_top_clearance, depth / config.aspirate_bottom_clearance_factor)
 
     def _layered_mix_one(self, well, msg, **kwargs):
-
         def fetch(name, default=None):
             if default is None:
                 default = getattr(config.layered_mix, name)
@@ -1042,7 +1046,6 @@ class MyPipette(Pipette):
             if result is None:
                 result = default
             return result
-
         volume = fetch('volume', self.max_volume)
         incr = fetch('incr')
         count_per_incr = fetch('count_per_incr')
@@ -1079,7 +1082,7 @@ class MyPipette(Pipette):
         while y <= y_max or numpy.isclose(y, y_max):
             if not first:
                 self.delay(delay / 1000.0)
-            log(Pretty().format('asp={0:n} disp={1:n}', y, y_max))
+            # log(Pretty().format('asp={0:n} disp={1:n}', y, y_max))
             #
             if first and initial_turnover is not None:
                 count = int(0.5 + (initial_turnover / volume))
@@ -1093,6 +1096,52 @@ class MyPipette(Pipette):
             y += y_incr
             first = False
 
+
+# Hook commands to provide more informative text
+
+def z_from_bottom(location, clearance):
+    if isinstance(location, Placeable):
+        return min(location.z_size(), clearance)
+    elif isinstance(location, tuple):
+        well, vector = location
+        _, vector_bottom = well.bottom(0)
+        return vector.coordinates.z - vector_bottom.coordinates.z
+    else:
+        raise ValueError('Location should be (Placeable, (x, y, z)) or Placeable')
+
+def command_aspirate(instrument, volume, location, rate):
+    z = z_from_bottom(location, config.position_for_aspirate_clearance)
+    location_text = stringify_location(well)
+    text = Pretty().format('Aspirating {volume:n} uL z={z:n} rate={rate:n} at {location}', volume=volume, location=location_text, rate=rate, z=z)
+    return make_command(
+        name=command_types.ASPIRATE,
+        payload={
+            'instrument': instrument,
+            'volume': volume,
+            'location': location,
+            'rate': rate,
+            'text': text
+        }
+    )
+
+def command_dispense(instrument, volume, location, rate):
+    z = z_from_bottom(location, config.position_for_dispense_clearance)
+    location_text = stringify_location(location)
+    text = Pretty().format('Dispensing {volume:n} uL z={z:n} rate={rate:n} at {location}', volume=volume, location=location_text, rate=rate, z=z)
+    return make_command(
+        name=command_types.DISPENSE,
+        payload={
+            'instrument': instrument,
+            'volume': volume,
+            'location': location,
+            'rate': rate,
+            'text': text
+        }
+    )
+
+
+opentrons.commands.aspirate = command_aspirate
+opentrons.commands.dispense = command_dispense
 
 ########################################################################################################################
 # Utilities
@@ -1443,6 +1492,7 @@ def debug_test_blow():
 # Off to the races
 ########################################################################################################################
 
+p10.pick_up_tip(); p10.return_tip()  # use p10 before p50 so p50 gets used for calibrating labware
 diluteStrands()
 createMasterMix()
 plateEverythingAndMix()
