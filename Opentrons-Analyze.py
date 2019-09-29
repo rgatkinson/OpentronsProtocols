@@ -287,7 +287,7 @@ class interval(tuple, metaclass=Metaclass):
         return self._canonical(self.Component(x, x) for c in self for x in c)
 
     def __repr__(self):
-        return self.format("{0:r}")
+        return self.format_percent("%r")
 
     def __str__(self):
         return self.format("{0:s}")
@@ -296,6 +296,9 @@ class interval(tuple, metaclass=Metaclass):
         if formatter is None:
             formatter = string.Formatter
         return type(self).__name__ + '(' + ', '.join('[' + ', '.join(formatter.format(format_spec, x) for x in sorted(set(c))) + ']' for c in self) + ')'
+
+    def format_percent(self, format_spec):
+        return type(self).__name__ + '(' + ', '.join('[' + ', '.join(format_spec % x for x in sorted(set(c))) + ']' for c in self) + ')'
 
     def __pos__(self):
         return self

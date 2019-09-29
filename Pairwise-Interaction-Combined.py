@@ -74,6 +74,8 @@ class Config(object):
 
 config = Config()
 config.aspirate_bottom_clearance = 1.0
+config.aspirate_top_clearance = 1.0
+config.aspirate_bottom_clearance_factor = 10
 
 config.simple_mix = Config()
 config.simple_mix.count = 6
@@ -370,7 +372,7 @@ class interval(tuple, metaclass=Metaclass):
         return self._canonical(self.Component(x, x) for c in self for x in c)
 
     def __repr__(self):
-        return self.format("{0:r}")
+        return self.format_percent("%r")
 
     def __str__(self):
         return self.format("{0:s}")
@@ -379,6 +381,9 @@ class interval(tuple, metaclass=Metaclass):
         if formatter is None:
             formatter = string.Formatter
         return type(self).__name__ + '(' + ', '.join('[' + ', '.join(formatter.format(format_spec, x) for x in sorted(set(c))) + ']' for c in self) + ')'
+
+    def format_percent(self, format_spec):
+        return type(self).__name__ + '(' + ', '.join('[' + ', '.join(format_spec % x for x in sorted(set(c))) + ']' for c in self) + ')'
 
     def __pos__(self):
         return self
@@ -1017,9 +1022,12 @@ class MyPipette(Pipette):
         if drop_tip:
             self.done_tip()
 
+    def _aspirate_top_clearance(self, well, depth):
+        return max(config.aspirate_top_clearance, depth / config.aspirate_bottom_clearance_factor)
+
     def _layered_mix_one(self, well, msg, **kwargs):
 
-        def fetch(name, default = None):
+        def fetch(name, default=None):
             if default is None:
                 default = getattr(config.layered_mix, name)
             result = kwargs.get(name, default)
@@ -1043,8 +1051,8 @@ class MyPipette(Pipette):
             log(msg)
         if not self.has_tip:
             self.pick_up_tip()
-        y_min = y = 1.0  # 1.0 is default aspiration position from bottom
-        y_max = well_depth_after_asp - max(1.0, well_depth_after_asp / 10)  # 1.0 here is
+        y_min = y = config.aspirate_bottom_clearance
+        y_max = well_depth_after_asp - self._aspirate_top_clearance(well, well_depth_after_asp)
         if count is not None:
             if count <= 1:
                 y_max = y_min
