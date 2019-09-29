@@ -75,16 +75,16 @@ class Config(object):
 
 
 config = Config()
-config.position_for_aspirate_clearance = 1.0  # see Pipette._position_for_aspirate
-config.position_for_dispense_clearance = 0.5  # see Pipette._position_for_dispense
-config.aspirate_bottom_clearance = 1.0
+config.position_for_aspirate_bottom_clearance = 1.0  # see Pipette._position_for_aspirate
+config.position_for_dispense_bottom_clearance = 0.5  # see Pipette._position_for_dispense
 config.aspirate_top_clearance = 1.0
-config.aspirate_bottom_clearance_factor = 10
+config.aspirate_top_clearance_factor = 10
 
 config.simple_mix = Config()
 config.simple_mix.count = 6
 
 config.layered_mix = Config()
+config.layered_mix.aspirate_bottom_clearance = 1.0
 config.layered_mix.aspirate_rate = 3.0
 config.layered_mix.dispense_rate = 3.0
 config.layered_mix.incr = 1.0
@@ -576,7 +576,15 @@ class WellVolume(object):
         return self.initial_volume + self.cum_delta
 
     @property
-    def min_volume(self):
+    def current_volume_min(self):  # (scalar) minimum known to be currently occupied
+        vol = self.current_volume
+        if isinstance(vol, interval):
+            return vol.infimum
+        else:
+            return vol
+
+    @property
+    def min_volume(self):  # minimum historically seen
         return self.initial_volume + self.min_delta
 
     @property
@@ -642,6 +650,13 @@ class WellGeometry(object):
     def capacity(self):
         pass
 
+    def min_depth_from_volume(self, volume):
+        vol = self.depth_from_volume(volume)
+        if isinstance(vol, interval):
+            return vol.infimum
+        else:
+            return vol
+
 
 class UnknownWellGeometry(WellGeometry):
     def __init__(self, well):
@@ -653,10 +668,7 @@ class UnknownWellGeometry(WellGeometry):
     @property
     def capacity(self):
         # noinspection PyBroadException
-        try:
-            return self.well.properties['total-liquid-volume']
-        except:
-            return fpu.infinity
+        return self.well.properties.get('total-liquid-volume', fpu.infinity)
 
 
 class IdtTubeWellGeometry(WellGeometry):
@@ -703,6 +715,7 @@ class Eppendorf1point5mlTubeGeometry(WellGeometry):
             i = complex(0, 1)
             term = cube_root(36.6435 - 3. * volume + 1.73205 * cmath.sqrt(-73.2871 * volume + 3. * volume * volume))
             result = 1.8 - (2.98934 - 5.17768 * i) / term - (0.270963 + 0.469322 * i) * term
+            assert isinstance(result, complex)
             return result.real
         if volume <= 445.995:
             return -8.22353 + 2.2996 * cube_root(53.0712 + 2.43507 * volume)
@@ -940,38 +953,45 @@ class MyPipette(Pipette):
                         self.touch_tip(touch_tip)
 
     def aspirate(self, volume=None, location=None, rate=1.0):
-        # save so super sees actual original parameters
-        saved_volume = volume
-        saved_location = location
         # recapitulate super
         if not helpers.is_number(volume):
             if volume and not location:
                 location = volume
             volume = self._working_volume - self.current_volume
-        display_location = location if location else self.previous_placeable
-        # call super
-        super().aspirate(volume=saved_volume, location=saved_location, rate=rate)
-        # keep track of where we aspirated from and keep track of volume in wells
-        well, __ = unpack_location(display_location)
+        location = location if location else self.previous_placeable
+        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume, bottom_clearance=config.position_for_aspirate_bottom_clearance)
+        super().aspirate(volume=volume, location=location, rate=rate)
+        # track volume
+        well, __ = unpack_location(location)
         get_well_volume(well).aspirate(volume)
         if volume != 0:
             self.prev_aspirated_location = well
 
     def dispense(self, volume=None, location=None, rate=1.0):
-        # save so super sees actual original parameters
-        saved_volume = volume
-        saved_location = location
         # recapitulate super
         if not helpers.is_number(volume):
             if volume and not location:
                 location = volume
             volume = self._working_volume - self.current_volume
-        display_location = location if location else self.previous_placeable
-        # call super
-        super().dispense(volume=saved_volume, location=saved_location, rate=rate)
-        # keep track of volume in wells
-        well, __ = unpack_location(display_location)
+        location = location if location else self.previous_placeable
+        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None, bottom_clearance=config.position_for_dispense_bottom_clearance)
+        super().dispense(volume=volume, location=location, rate=rate)
+        # track volume
+        well, __ = unpack_location(location)
         get_well_volume(well).dispense(volume)
+
+    def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, bottom_clearance=None):
+        if isinstance(location, Placeable):
+            well = location; assert isWell(well)
+            well_vol = get_well_volume(well).current_volume_min
+            well_depth = get_well_geometry(well).min_depth_from_volume(well_vol if aspirate_volume is None else well_vol - aspirate_volume)
+            z = well_depth - self._aspirate_top_clearance(well, well_depth)
+            z = max(z, bottom_clearance)
+            z = min(z, well.z_size())
+            return well.bottom(z)
+        else:
+            assert isinstance(location, tuple)
+        return location
 
     def blow_out(self, location=None):
         super().blow_out(location)
@@ -1036,7 +1056,7 @@ class MyPipette(Pipette):
             self.done_tip()
 
     def _aspirate_top_clearance(self, well, depth):
-        return max(config.aspirate_top_clearance, depth / config.aspirate_bottom_clearance_factor)
+        return max(config.aspirate_top_clearance, depth / config.aspirate_top_clearance_factor)
 
     def _layered_mix_one(self, well, msg, **kwargs):
         def fetch(name, default=None):
@@ -1054,10 +1074,7 @@ class MyPipette(Pipette):
         delay = fetch('delay')
         initial_turnover = fetch('initial_turnover')
 
-        # use the most pessimistic estimate we have about the current volume of the well
-        well_vol = get_well_volume(well).current_volume
-        well_vol = interval.cast(well_vol).infimum
-
+        well_vol = get_well_volume(well).current_volume_min
         well_depth = get_well_geometry(well).depth_from_volume(well_vol)
         well_depth_after_asp = get_well_geometry(well).depth_from_volume(well_vol - volume)
         msg = Pretty().format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_asp={4:n}", msg, well.get_name(), well_vol, well_depth, well_depth_after_asp)
@@ -1065,7 +1082,7 @@ class MyPipette(Pipette):
             log(msg)
         if not self.has_tip:
             self.pick_up_tip()
-        y_min = y = config.aspirate_bottom_clearance
+        y_min = y = config.layered_mix.aspirate_bottom_clearance
         y_max = well_depth_after_asp - self._aspirate_top_clearance(well, well_depth_after_asp)
         if count is not None:
             if count <= 1:
@@ -1110,7 +1127,7 @@ def z_from_bottom(location, clearance):
         raise ValueError('Location should be (Placeable, (x, y, z)) or Placeable')
 
 def command_aspirate(instrument, volume, location, rate):
-    z = z_from_bottom(location, config.position_for_aspirate_clearance)
+    z = z_from_bottom(location, config.position_for_aspirate_bottom_clearance)
     location_text = stringify_location(well)
     text = Pretty().format('Aspirating {volume:n} uL z={z:n} rate={rate:n} at {location}', volume=volume, location=location_text, rate=rate, z=z)
     return make_command(
@@ -1125,7 +1142,7 @@ def command_aspirate(instrument, volume, location, rate):
     )
 
 def command_dispense(instrument, volume, location, rate):
-    z = z_from_bottom(location, config.position_for_dispense_clearance)
+    z = z_from_bottom(location, config.position_for_dispense_bottom_clearance)
     location_text = stringify_location(location)
     text = Pretty().format('Dispensing {volume:n} uL z={z:n} rate={rate:n} at {location}', volume=volume, location=location_text, rate=rate, z=z)
     return make_command(
