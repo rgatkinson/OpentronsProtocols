@@ -1063,7 +1063,7 @@ class MyPipette(Pipette):
         well_vol = get_well_volume(well).current_volume_min
         well_depth = get_well_geometry(well).depth_from_volume(well_vol)
         well_depth_after_asp = get_well_geometry(well).depth_from_volume(well_vol - volume)
-        msg = Pretty().format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_asp={4:n}", msg, well.get_name(), well_vol, well_depth, well_depth_after_asp)
+        msg = Pretty().format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_aspirate={4:n}", msg, well.get_name(), well_vol, well_depth, well_depth_after_asp)
         if msg is not None:
             log(msg)
         if not self.has_tip:
@@ -1269,7 +1269,7 @@ strand_a = eppendorf_1_5_rack['A1']
 strand_b = eppendorf_1_5_rack['B1']
 diluted_strand_a = eppendorf_1_5_rack['A6']
 diluted_strand_b = eppendorf_1_5_rack['B6']
-master_mix = falcon_rack['A1']
+master_mix = falcon_rack['A1']  # note: this needs tape around it's mid-section to keep it in the holder!
 
 # Define geometries
 for well, __ in buffers:
@@ -1297,6 +1297,8 @@ for buffer in buffers:
 for evagreen in evagreens:
     note_liquid('Evagreen', location=evagreen[0], initial_volume=evagreen[1])
 
+# Clean up namespace
+del well
 
 ########################################################################################################################
 # Well & Pipettes
@@ -1470,6 +1472,7 @@ def plateEverythingAndMix():
     # Plate strand B and mix
     # Mixing always needs the p50, but plating may need either; optimize tip usage
     log('Plating Strand B')
+    mixed_wells = set()
     for iVolume in range(0, len(strand_volumes)):
         dest_wells = calculateStrandBWells(iVolume)
         volume = strand_volumes[iVolume]
@@ -1485,12 +1488,18 @@ def plateEverythingAndMix():
                 log("Plating Strand B: well='%s' vol=%d pipette=%s" % (well.get_name(), volume, p.name))
                 p.pick_up_tip()
                 p.transfer(volume, diluted_strand_b, well, new_tip='never')
-            if not p50.has_tip:
-                p50.pick_up_tip()
-            # total plated volume is some 84uL; we need to use a substantial fraction of that to get good mixing
-            p50.layered_mix([well], incr=0.75)
-            p10.done_tip()
-            p50.done_tip()
+            if p is p50:
+                mix_plate_well(well, drop_tip=False)
+                mixed_wells.add(well)
+            p.done_tip()
+
+    for well in plate.wells():
+        if well not in mixed_wells:
+            mix_plate_well(well)
+
+
+def mix_plate_well(well, drop_tip=True):
+    p50.layered_mix([well], incr=0.75, drop_tip=drop_tip)
 
 
 def debug_mix_plate():
@@ -1498,7 +1507,8 @@ def debug_mix_plate():
     for well in wells:
         get_well_volume(well).set_initial_volume(84)
     for well in wells:
-        p50.layered_mix([well], incr=0.75)
+        mix_plate_well(well)
+    p50.done_tip()
 
 def debug_test_blow():
     p50.pick_up_tip()
