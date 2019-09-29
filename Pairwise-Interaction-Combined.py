@@ -74,17 +74,20 @@ class Config(object):
 
 config = Config()
 config.aspirate_bottom_clearance = 1.0
-config.simple_mix_count = 6
+
+config.simple_mix = Config()
+config.simple_mix.count = 6
 
 config.layered_mix = Config()
-config.layered_mix.aspirate_rate = 1.0
+config.layered_mix.aspirate_rate = 3.0
 config.layered_mix.dispense_rate = 3.0
 config.layered_mix.incr = 1.0
 config.layered_mix.count = None  # we default to using incr, not count
 config.layered_mix.min_incr = 0.5
 config.layered_mix.count_per_incr = 2
-config.layered_mix.delay = 500
+config.layered_mix.delay = 750
 config.layered_mix.drop_tip = True
+config.layered_mix.initial_turnover = None
 
 
 ########################################################################################################################
@@ -983,7 +986,7 @@ class MyPipette(Pipette):
 
     def simple_mix(self, wells, msg=None, count=None, volume=None, drop_tip=True):
         if count is None:
-            count = config.simple_mix_count
+            count = config.simple_mix.count
         if msg is not None:
             log(msg)
         if volume is None:
@@ -995,10 +998,8 @@ class MyPipette(Pipette):
         if drop_tip:
             self.done_tip()
 
-    # By default, we layer every 1.0 mm
     # If count is provided, we do (at most) that many asp/disp cycles, clamped to an increment of min_incr
-    # If volume is not provided, then maximum volume of hte pipette is used
-    def layered_mix(self, wells, msg='Mixing', count=None, min_incr=None, incr=None, count_per_incr=None, volume=None, drop_tip=None, delay=None, aspirate_rate=None, dispense_rate=None):
+    def layered_mix(self, wells, msg='Mixing', count=None, min_incr=None, incr=None, count_per_incr=None, volume=None, drop_tip=None, delay=None, aspirate_rate=None, dispense_rate=None, initial_turnover=None):
         if drop_tip is None:
             drop_tip = config.layered_mix.drop_tip
 
@@ -1011,11 +1012,13 @@ class MyPipette(Pipette):
                                   volume=volume,
                                   delay=delay,
                                   apirate_rate=aspirate_rate,
-                                  dispense_rate=dispense_rate)
+                                  dispense_rate=dispense_rate,
+                                  initial_turnover=initial_turnover)
         if drop_tip:
             self.done_tip()
 
     def _layered_mix_one(self, well, msg, **kwargs):
+
         def fetch(name, default = None):
             if default is None:
                 default = getattr(config.layered_mix, name)
@@ -1030,6 +1033,7 @@ class MyPipette(Pipette):
         count = fetch('count')
         min_incr = fetch('min_incr')
         delay = fetch('delay')
+        initial_turnover = fetch('initial_turnover')
 
         well_vol = get_well_volume(well).current_volume
         well_depth = get_well_geometry(well).depth_from_volume(well_vol)
@@ -1056,9 +1060,14 @@ class MyPipette(Pipette):
         while y <= y_max or numpy.isclose(y, y_max):
             if not first:
                 self.delay(delay / 1000.0)
-            log(Pretty().format('asp={0:n} incr={1:n} disp={2:n}', y, y_incr, y_max))
+            log(Pretty().format('asp={0:n} disp={1:n}', y, y_max))
             #
-            for i in range(count_per_incr):
+            if first and initial_turnover is not None:
+                count = int(0.5 + (initial_turnover / volume))
+                count = max(count, count_per_incr)
+            else:
+                count = count_per_incr
+            for i in range(count):
                 self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', config.layered_mix.aspirate_rate))
                 self.dispense(volume, well.bottom(y_max), rate=fetch('dispense_rate', config.layered_mix.dispense_rate))
             #
@@ -1297,7 +1306,7 @@ def createMasterMix():
 
     def mix_master_mix():
         log('Mixing Master Mix')
-        p50.layered_mix([master_mix], incr=2)
+        p50.layered_mix([master_mix], incr=2, initial_turnover=master_mix_evagreen_vol * 1.2)
 
     log('Creating Master Mix: Water')
     p50.transfer(master_mix_common_water_vol, water, master_mix, trash=trash_control)
