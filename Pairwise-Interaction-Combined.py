@@ -978,7 +978,7 @@ class MyPipette(Pipette):
 
     def _shake_tip(self, location):
         # Modelled after Pipette._shake_off_tips()
-        shake_off_distance = SHAKE_OFF_TIPS_DISTANCE / 2  # less distance than shaking off tips
+        shake_off_distance = SHAKE_OFF_TIPS_DISTANCE / 2  # / 2 == less distance than shaking off tips
         if location:
             placeable, _ = unpack_location(location)
             # ensure the distance is not >25% the diameter of placeable
@@ -986,8 +986,10 @@ class MyPipette(Pipette):
             if x != 0:  # trash well has size zero
                 shake_off_distance = max(min(shake_off_distance, x / 4), 1.0)
         self.robot.gantry.push_speed()
-        self.robot.gantry.set_speed(SHAKE_OFF_TIPS_SPEED / 2)  # less fast than shaking off tips
+        self.robot.gantry.set_speed(SHAKE_OFF_TIPS_SPEED)  # tip is fully on, we can handle it
         self.robot.poses = self._jog(self.robot.poses, 'x', -shake_off_distance)  # move left
+        self.robot.poses = self._jog(self.robot.poses, 'x', shake_off_distance * 2)  # move right
+        self.robot.poses = self._jog(self.robot.poses, 'x', -shake_off_distance * 2)  # move left
         self.robot.poses = self._jog(self.robot.poses, 'x', shake_off_distance * 2)  # move right
         self.robot.poses = self._jog(self.robot.poses, 'x', -shake_off_distance)  # move left
         self.robot.gantry.pop_speed()
@@ -1377,7 +1379,6 @@ def createMasterMix():
 
     log('Creating Master Mix: Buffer')
     transferMultiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', retain_tip=True)  # 'once' because we've only got water & buffer in context
-    mix_master_mix()  # help eliminate air bubbles: smaller volume right now
 
     log('Creating Master Mix: EvaGreen')
     transferMultiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always', retain_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
