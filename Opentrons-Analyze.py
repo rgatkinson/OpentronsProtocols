@@ -24,56 +24,18 @@ from opentrons.legacy_api.containers.placeable import Placeable
 # region Floating point helper
 
 # noinspection PyPep8Naming
-class fpu(object):
-    float = float
-    _min = min
-    _max = max
-    infinity = float('inf')
-    nan = infinity / infinity
-
-    _fe_upward = None
-    _fe_downward = None
-    _fegetround = None
-    _fesetround = None
-
-    class NanException(ValueError):
-        # Exception thrown when an unwanted nan is encountered.
-        pass
-
-    @classmethod
-    def _init_libm(cls):  # pragma: nocover
-        import platform
-        processor = platform.processor()
-        if processor == 'powerpc':
-            cls._fe_upward, cls._fe_downward = 2, 3
-        elif processor == 'sparc':
-            cls._fe_upward, cls._fe_downward = 0x80000000, 0xC0000000
-        else:
-            cls._fe_upward, cls._fe_downward = 0x0800, 0x0400
-
-        from ctypes import cdll
-        from ctypes.util import find_library
-        libm = cdll.LoadLibrary(find_library('m'))
-        cls._fegetround, cls._fesetround = libm.fegetround, libm.fesetround
-
-    @classmethod
-    def _init_msvc(cls):  # pragma: nocover
-        from ctypes import cdll
-        controlfp = cdll.msvcrt._controlfp
-
-        def local_fegetround():
-            return controlfp(0, 0)
-
-        def local_fesetround(flag):
-            controlfp(flag, 0x300)
-
-        cls._fe_upward, cls._fe_downward = 0x0200, 0x0100
-        cls._fegetround = local_fegetround
-        cls._fesetround = local_fesetround
-
-    @classmethod
-    def init(cls):  # pragma: nocover
-        for f in cls._init_libm, cls._init_msvc:
+class Fpu(object):
+    def __init__(self):
+        self.float = float
+        self._min = min
+        self._max = max
+        self.infinity = float('inf')
+        self.nan = self.infinity / self.infinity
+        self._fe_upward = None
+        self._fe_downward = None
+        self._fegetround = None
+        self._fesetround = None
+        for f in self._init_libm, self._init_msvc:
             # noinspection PyBroadException
             try:
                 f()
@@ -85,58 +47,77 @@ class fpu(object):
             import warnings
             warnings.warn("Cannot determine FPU control primitives. The fpu module is not correctly initialized.", stacklevel=2)
 
+    def _init_libm(self):  # pragma: nocover
+        import platform
+        processor = platform.processor()
+        if processor == 'powerpc':
+            self._fe_upward, self._fe_downward = 2, 3
+        elif processor == 'sparc':
+            self._fe_upward, self._fe_downward = 0x80000000, 0xC0000000
+        else:
+            self._fe_upward, self._fe_downward = 0x0800, 0x0400
+        from ctypes import cdll
+        from ctypes.util import find_library
+        libm = cdll.LoadLibrary(find_library('m'))
+        self._fegetround, self._fesetround = libm.fegetround, libm.fesetround
+
+    def _init_msvc(self):  # pragma: nocover
+        from ctypes import cdll
+        controlfp = cdll.msvcrt._controlfp
+        self._fe_upward, self._fe_downward = 0x0200, 0x0100
+        self._fegetround = lambda: controlfp(0, 0)
+        self._fesetround = lambda flag: controlfp(flag, 0x300)
+
+    class NanException(ValueError):
+        # Exception thrown when an unwanted nan is encountered.
+        pass
+
     @staticmethod
     def isnan(x):
         return x != x
 
-    @classmethod
-    def down(cls, f):
+    def down(self, f):
         # Perform a computation with the FPU rounding downwards
-        saved = cls._fegetround()
+        saved = self._fegetround()
         try:
-            cls._fesetround(cls._fe_downward)
+            self._fesetround(self._fe_downward)
             return f()
         finally:
-            cls._fesetround(saved)
+            self._fesetround(saved)
 
-    @classmethod
-    def up(cls, f):
+    def up(self, f):
         # Perform a computation with the FPU rounding upwards.
-        saved = cls._fegetround()
+        saved = self._fegetround()
         try:
-            cls._fesetround(cls._fe_upward)
+            self._fesetround(self._fe_upward)
             return f()
         finally:
-            cls._fesetround(saved)
+            self._fesetround(saved)
 
-    @classmethod
-    def ensure_nonan(cls, x):
-        if cls.isnan(x):
-            raise cls.NanException
+    def ensure_nonan(self, x):
+        if self.isnan(x):
+            raise self.NanException
         return x
 
-    @classmethod
-    def min(cls, values):
+    def min(self, values):
         try:
-            return cls._min(cls.ensure_nonan(x) for x in values)
-        except cls.NanException:
-            return cls.nan
+            return self._min(self.ensure_nonan(x) for x in values)
+        except self.NanException:
+            return self.nan
 
-    @classmethod
-    def max(cls, values):
+    def max(self, values):
         try:
-            return cls._max(cls.ensure_nonan(x) for x in values)
-        except cls.NanException:
-            return cls.nan
+            return self._max(self.ensure_nonan(x) for x in values)
+        except self.NanException:
+            return self.nan
 
     @staticmethod
     def isinteger(n):
         return isinstance(n, int)
 
-    @classmethod
-    def power_rn(cls, x, n):
+    def power_rn(self, x, n):
         # Raise x to the n-th power (with n positive integer), rounded to nearest.
-        assert cls.isinteger(n) and n >= 0
+        assert self.isinteger(n) and n >= 0
         value = ()
         while n > 0:
             n, y = divmod(n, 2)
@@ -150,28 +131,26 @@ class fpu(object):
                 result = result * result
         return result
 
-    @classmethod
-    def power_ru(cls, x, n):
+    def power_ru(self, x, n):
         # Raise x to the n-th power (with n positive integer), rounded toward +inf.
         if x >= 0:
-            return cls.up(lambda: cls.power_rn(x, n))
+            return self.up(lambda: self.power_rn(x, n))
         elif n % 2:
-            return - cls.down(lambda: cls.power_rn(-x, n))
+            return - self.down(lambda: self.power_rn(-x, n))
         else:
-            return cls.up(lambda: cls.power_rn(-x, n))
+            return self.up(lambda: self.power_rn(-x, n))
 
-    @classmethod
-    def power_rd(cls, x, n):
+    def power_rd(self, x, n):
         # Raise x to the n-th power (with n positive integer), rounded toward -inf.
         if x >= 0:
-            return cls.down(lambda: cls.power_rn(x, n))
+            return self.down(lambda: self.power_rn(x, n))
         elif n % 2:
-            return - cls.up(lambda: cls.power_rn(-x, n))
+            return - self.up(lambda: self.power_rn(-x, n))
         else:
-            return cls.down(lambda: cls.power_rn(-x, n))
+            return self.down(lambda: self.power_rn(-x, n))
 
 
-fpu.init()
+fpu = Fpu()
 # endregion
 
 # region interval
