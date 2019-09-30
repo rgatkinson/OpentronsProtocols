@@ -955,8 +955,7 @@ class MyPipette(Pipette):
                         self.touch_tip(touch_tip)
 
     def aspirate(self, volume=None, location=None, rate=1.0):
-        # recapitulate super
-        if not helpers.is_number(volume):
+        if not helpers.is_number(volume):  # recapitulate super
             if volume and not location:
                 location = volume
             volume = self._working_volume - self.current_volume
@@ -970,8 +969,7 @@ class MyPipette(Pipette):
             self.prev_aspirated_location = well
 
     def dispense(self, volume=None, location=None, rate=1.0):
-        # recapitulate super
-        if not helpers.is_number(volume):
+        if not helpers.is_number(volume):  # recapitulate super
             if volume and not location:
                 location = volume
             volume = self._working_volume - self.current_volume
