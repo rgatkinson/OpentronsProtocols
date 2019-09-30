@@ -668,7 +668,7 @@ class MonitorController(object):
         well_monitor = self._monitor_from_location_path(WellMonitor, location_path)
         well_monitor.set_liquid_name(liquid_name)
         if initial_volume is not None:
-            if isinstance(initial_volume, list):
+            if isinstance(initial_volume, list):  # work around json parsing deficiency
                 initial_volume = interval(*initial_volume)
             well_monitor.set_initial_volume(initial_volume)
 

@@ -623,7 +623,10 @@ def get_well_volume(well):
 def note_liquid(name, location, initial_volume=None, min_volume=None):
     well, __ = unpack_location(location)
     assert isWell(well)
-    well.label = name
+    if name is None:
+        name = well.label
+    else:
+        well.label = name
     d = {'name': name, 'location': get_location_path(well)}
     if initial_volume is None and min_volume is not None:
         initial_volume = interval([min_volume, get_well_geometry(well).capacity])
@@ -1561,8 +1564,8 @@ if not master_and_dilutions_made:
     diluteStrands()
     createMasterMix()
 else:
-    get_well_volume(diluted_strand_a).set_initial_volume(strand_dilution_vol)
-    get_well_volume(diluted_strand_b).set_initial_volume(strand_dilution_vol)
-    get_well_volume(master_mix).set_initial_volume(master_mix_vol)
+    note_liquid(None, diluted_strand_a, initial_volume=strand_dilution_vol)
+    note_liquid(None, diluted_strand_b, initial_volume=strand_dilution_vol)
+    note_liquid(None, master_mix, initial_volume=master_mix_vol)
 
 plateEverythingAndMix()
