@@ -600,8 +600,9 @@ class WellMonitor(Monitor):
 
     def formatted(self):
         result = 'well "{0:s}"'.format(self.target.get_name())
-        if self.liquid_name is not None:
-            result += ' ("{0:s}")'.format(self.liquid_name)
+        if not getattr(self.target, 'has_labelled_well_name', False):
+            if self.liquid_name is not None:
+                result += ' ("{0:s}")'.format(self.liquid_name)
         result += ':'
         result += Pretty().format(' lo={0:n} hi={1:n} cur={2:n}\n',
             self.volume.min_volume,

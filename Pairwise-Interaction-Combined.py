@@ -1147,6 +1147,7 @@ def get_labelled_well_name(self):
 
 
 Well.get_name = get_labelled_well_name
+Well.has_labelled_well_name = True
 
 
 # Hook commands to provide more informative text
