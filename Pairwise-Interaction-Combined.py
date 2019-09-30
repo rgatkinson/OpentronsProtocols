@@ -620,7 +620,7 @@ def get_well_volume(well):
         return well.contents
 
 # Must keep in sync with Opentrons-Analyze controller.note_liquid_name
-def note_liquid(name, location, initial_volume=None, min_volume=None):
+def note_liquid(location, name=None, initial_volume=None, min_volume=None):
     well, __ = unpack_location(location)
     assert isWell(well)
     if name is None:
@@ -1321,16 +1321,16 @@ for well in plate.wells():
 
 # Remember initial liquid names and volumes
 log('Liquid Names')
-note_liquid('Water', location=water, min_volume=6000)  # 6000 is a rough guess
-note_liquid('Strand A', location=strand_a, min_volume=strand_dilution_source_vol)
-note_liquid('Strand B', location=strand_b, min_volume=strand_dilution_source_vol)
-note_liquid('Diluted Strand A', location=diluted_strand_a)
-note_liquid('Diluted Strand B', location=diluted_strand_b)
-note_liquid('Master Mix', location=master_mix)
+note_liquid(location=water, name='Water', min_volume=6000)  # 6000 is a rough guess
+note_liquid(location=strand_a, name='Strand A', min_volume=strand_dilution_source_vol)
+note_liquid(location=strand_b, name='Strand B', min_volume=strand_dilution_source_vol)
+note_liquid(location=diluted_strand_a, name='Diluted Strand A')
+note_liquid(location=diluted_strand_b, name='Diluted Strand B')
+note_liquid(location=master_mix, name='Master Mix')
 for buffer in buffers:
-    note_liquid('Buffer', location=buffer[0], initial_volume=buffer[1])
+    note_liquid(location=buffer[0], name='Buffer', initial_volume=buffer[1])
 for evagreen in evagreens:
-    note_liquid('Evagreen', location=evagreen[0], initial_volume=evagreen[1])
+    note_liquid(location=evagreen[0], name='Evagreen', initial_volume=evagreen[1])
 
 # Clean up namespace
 del well
@@ -1564,8 +1564,8 @@ if not master_and_dilutions_made:
     diluteStrands()
     createMasterMix()
 else:
-    note_liquid(None, diluted_strand_a, initial_volume=strand_dilution_vol)
-    note_liquid(None, diluted_strand_b, initial_volume=strand_dilution_vol)
-    note_liquid(None, master_mix, initial_volume=master_mix_vol)
+    note_liquid(location=diluted_strand_a, name=None, initial_volume=strand_dilution_vol)
+    note_liquid(location=diluted_strand_b, name=None, initial_volume=strand_dilution_vol)
+    note_liquid(location=master_mix, name=None, initial_volume=master_mix_vol)
 
 plateEverythingAndMix()
