@@ -32,11 +32,11 @@ metadata = {
 
 # Volumes of master mix ingredients
 buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
-evagreen_volumes = [1000]           # B1, B2, etc in screwcap rack
+evagreen_volumes = [720]           # B1, B2, etc in screwcap rack
 
 # Tip usage
-p10_start_tip = 'A1'
-p50_start_tip = 'A1'
+p10_start_tip = 'A4'
+p50_start_tip = 'A6'
 trash_control = False
 
 # Diluting each strand
@@ -47,6 +47,7 @@ strand_dilution_vol = 1225
 master_mix_buffer_vol = 1693.44
 master_mix_evagreen_vol = 423.36
 master_mix_common_water_vol = 705.6
+master_mix_vol = master_mix_buffer_vol + master_mix_evagreen_vol + master_mix_common_water_vol
 
 # Define the volumes of diluted strands we will use
 strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
@@ -82,7 +83,7 @@ config.aspirate.top_clearance = 3.5
 config.aspirate.top_clearance_factor = 10.0
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
-config.dispense.top_clearance = 1.0
+config.dispense.top_clearance = 3.5  # was 1.0, but we were missing top of master mix
 config.dispense.top_clearance_factor = 10.0
 config.simple_mix = Config()
 config.simple_mix.count = 6
@@ -177,6 +178,12 @@ class Fpu(object):
     @staticmethod
     def isnan(x):
         return x != x
+
+    def is_infinite(self, x):
+        return x == self.infinity or x == -self.infinity
+
+    def is_finite(self, x):
+        return not self.isnan(x) and not self.is_infinite(x)
 
     def down(self, f):
         # Perform a computation with the FPU rounding downwards
@@ -586,7 +593,7 @@ class WellVolume(object):
     def aspirate(self, volume):
         assert volume >= 0
         if not self.initial_volume_known:
-            self.set_initial_volume(interval([volume, fpu.infinity]))
+            self.set_initial_volume(interval([volume, get_well_volume(well).capacity]))
         self._track_volume(-volume)
 
     def dispense(self, volume):
@@ -816,7 +823,7 @@ class MyPipette(Pipette):
 
     # Copied and overridden
     # New kw args:
-    #   'retain_tip'
+    #   'retain_tip': if true, then tip is not dropped at end of transfer
     #   'allow_carryover'
     #   'allow_blow_elision'
     def _run_transfer_plan(self, tips, plan, **kwargs):
@@ -1223,7 +1230,7 @@ class Pretty(string.Formatter):
             precision = 2
             if spec.startswith('.', 0, -1):
                 precision = int(spec[1:-1])
-            if isinstance(value, Number):
+            if isinstance(value, Number) and fpu.is_finite(value):
                 factor = 1
                 for i in range(precision):
                     if value * factor == int(value * factor):
@@ -1314,9 +1321,9 @@ log('Liquid Names')
 note_liquid('Water', location=water, min_volume=6000)  # 6000 is a rough guess
 note_liquid('Strand A', location=strand_a, min_volume=strand_dilution_source_vol)
 note_liquid('Strand B', location=strand_b, min_volume=strand_dilution_source_vol)
-note_liquid('Diluted Strand A', location=diluted_strand_a, initial_volume=0)
-note_liquid('Diluted Strand B', location=diluted_strand_b, initial_volume=0)
-note_liquid('Master Mix', location=master_mix, initial_volume=0)
+note_liquid('Diluted Strand A', location=diluted_strand_a)
+note_liquid('Diluted Strand B', location=diluted_strand_b)
+note_liquid('Master Mix', location=master_mix)
 for buffer in buffers:
     note_liquid('Buffer', location=buffer[0], initial_volume=buffer[1])
 for evagreen in evagreens:
@@ -1397,7 +1404,7 @@ def createMasterMix():
     p50.layered_mix([buffer for buffer, __ in buffers], "Mixing Buffers", incr=4)
 
     # transfer from multiple source wells, each with a current defined volume
-    def transferMultiple(ctx, xfer_vol_remaining, tubes, dest, new_tip, *args, **kwargs):
+    def transfer_multiple(ctx, xfer_vol_remaining, tubes, dest, new_tip, *args, **kwargs):
         tube_index = 0
         cur_loc = None
         cur_vol = 0
@@ -1427,10 +1434,12 @@ def createMasterMix():
     p50.transfer(master_mix_common_water_vol, water, master_mix, trash=trash_control)
 
     log('Creating Master Mix: Buffer')
-    transferMultiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', retain_tip=True)  # 'once' because we've only got water & buffer in context
+    transfer_multiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', retain_tip=True)  # 'once' because we've only got water & buffer in context
+    p50.done_tip()  # EvaGreen needs a new tip
 
     log('Creating Master Mix: EvaGreen')
-    transferMultiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always', retain_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
+    transfer_multiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always', retain_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
+
     mix_master_mix()
 
 
@@ -1546,9 +1555,14 @@ def debug_test_blow():
 # Off to the races
 ########################################################################################################################
 
-p10.pick_up_tip(); p10.return_tip()  # use p10 before p50 so p50 gets used for calibrating labware
-diluteStrands()
-createMasterMix()
+master_and_dilutions_made = False
+
+if not master_and_dilutions_made:
+    diluteStrands()
+    createMasterMix()
+else:
+    get_well_volume(diluted_strand_a).set_initial_volume(strand_dilution_vol)
+    get_well_volume(diluted_strand_b).set_initial_volume(strand_dilution_vol)
+    get_well_volume(master_mix).set_initial_volume(master_mix_vol)
+
 plateEverythingAndMix()
-# debug_mix_plate()
-# debug_test_blow()

@@ -76,6 +76,12 @@ class Fpu(object):
     def isnan(x):
         return x != x
 
+    def is_infinite(self, x):
+        return x == self.infinity or x == -self.infinity
+
+    def is_finite(self, x):
+        return not self.isnan(x) and not self.is_infinite(x)
+
     def down(self, f):
         # Perform a computation with the FPU rounding downwards
         saved = self._fegetround()
@@ -739,7 +745,7 @@ class Pretty(string.Formatter):
             precision = 2
             if spec.startswith('.', 0, -1):
                 precision = int(spec[1:-1])
-            if isinstance(value, Number):
+            if isinstance(value, Number) and fpu.is_finite(value):
                 factor = 1
                 for i in range(precision):
                     if value * factor == int(value * factor):
