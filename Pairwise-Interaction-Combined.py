@@ -65,7 +65,7 @@ assert len(per_well_water_volumes) == rows_per_plate
 assert len(per_well_water_volumes[0]) * num_replicates == columns_per_plate
 
 
-# Optimization Control
+# Optimization Control (needs cleaning up)
 allow_blow_elision = True
 allow_carryover = allow_blow_elision
 
@@ -73,12 +73,11 @@ allow_carryover = allow_blow_elision
 class Config(object):
     pass
 
-
 config = Config()
 config.blow_out_rate_factor = 3.0
 config.aspirate = Config()
 config.aspirate.bottom_clearance = 1.0  # see Pipette._position_for_aspirate
-config.aspirate.top_clearance = 3.0
+config.aspirate.top_clearance = 3.5
 config.aspirate.top_clearance_factor = 10.0
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
@@ -93,7 +92,7 @@ config.layered_mix.aspirate_bottom_clearance = 1.0
 config.layered_mix.aspirate_rate_factor = 3.0
 config.layered_mix.dispense_rate_factor = 3.0
 config.layered_mix.incr = 1.0
-config.layered_mix.count = None  # we default to using incr, not count
+config.layered_mix.count = None  # so we default to using incr, not count
 config.layered_mix.min_incr = 0.5
 config.layered_mix.count_per_incr = 2
 config.layered_mix.delay = 750
@@ -271,7 +270,7 @@ def comp_by_comp(f):
             return NotImplemented
     return wrapper
 
-class Metaclass(type):  # TODO Is this ever actually used
+class Metaclass(type):  # See https://docs.python.org/3/reference/datamodel.html, Section 3.3.5. Emulating generic types
     def __getitem__(self, arg):
         return self(arg)
 
@@ -1122,7 +1121,7 @@ class MyPipette(Pipette):
 
 # Enhance well name to include any label that might be present
 
-def get_labelled_placeable_name(self):
+def get_labelled_well_name(self):
     result = super(Well, self).get_name()
     label = getattr(self, 'label', None)
     if label is not None:
@@ -1130,7 +1129,7 @@ def get_labelled_placeable_name(self):
     return result
 
 
-Well.get_name = get_labelled_placeable_name
+Well.get_name = get_labelled_well_name
 
 
 # Hook commands to provide more informative text
