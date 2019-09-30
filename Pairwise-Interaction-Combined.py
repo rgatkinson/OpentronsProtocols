@@ -6,6 +6,7 @@ import cmath
 import json
 import numpy
 import string
+import warnings
 from abc import abstractmethod
 from functools import wraps
 from numbers import Number
@@ -130,7 +131,7 @@ class Fpu(object):
         self._fe_downward = None
         self._fegetround = None
         self._fesetround = None
-        for f in self._init_libm, self._init_msvc:
+        for f in self._init_libm, self._init_msvc, self._init_degenerate:
             # noinspection PyBroadException
             try:
                 f()
@@ -139,7 +140,6 @@ class Fpu(object):
             else:
                 break
         else:
-            import warnings
             warnings.warn("Cannot determine FPU control primitives. The fpu module is not correctly initialized.", stacklevel=2)
 
     def _init_libm(self):  # pragma: nocover
@@ -162,6 +162,13 @@ class Fpu(object):
         self._fe_upward, self._fe_downward = 0x0200, 0x0100
         self._fegetround = lambda: controlfp(0, 0)
         self._fesetround = lambda flag: controlfp(flag, 0x300)
+
+    def _init_degenerate(self):
+        # a do-nothing fallback for the case where we just can't control fpu by other means
+        self._fe_upward, self._fe_downward = 0, 0
+        self._fegetround = lambda: 0  # nop
+        self._fesetround = lambda flag: 0  # nop
+        warnings.warn("Using degenerate FPU control", stacklevel=2)
 
     class NanException(ValueError):
         # Exception thrown when an unwanted nan is encountered.
