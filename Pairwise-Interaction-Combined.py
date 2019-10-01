@@ -83,7 +83,7 @@ config.aspirate.top_clearance = 3.5
 config.aspirate.top_clearance_factor = 10.0
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
-config.dispense.top_clearance = 3.5  # was 1.0, but we were missing top of master mix
+config.dispense.top_clearance = 3.5  # was 1.0, but we were missing top of master mix, especially for small volumes
 config.dispense.top_clearance_factor = 10.0
 config.simple_mix = Config()
 config.simple_mix.count = 6
@@ -960,7 +960,10 @@ class MyPipette(Pipette):
                 location = volume
             volume = self._working_volume - self.current_volume
         location = location if location else self.previous_placeable
-        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume, clearances=config.aspirate)
+        well, _ = unpack_location(location)
+        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume,
+                                                       clearances=config.aspirate,
+                                                       extra_clearance=getattr(well, 'extra_aspirate_top_clearance', 0))
         super().aspirate(volume=volume, location=location, rate=rate)
         # track volume todo: what if we're doing an air gap
         well, __ = unpack_location(location)
@@ -980,12 +983,14 @@ class MyPipette(Pipette):
         well, __ = unpack_location(location)
         get_well_volume(well).dispense(volume)
 
-    def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, clearances=None):
+    def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, clearances=None, extra_clearance=0):
         if isinstance(location, Placeable):
             well = location; assert isWell(well)
             well_vol = get_well_volume(well).current_volume_min
             well_depth = get_well_geometry(well).min_depth_from_volume(well_vol if aspirate_volume is None else well_vol - aspirate_volume)
-            z = well_depth - self._top_clearance(well, well_depth, clearance=clearances.top_clearance, factor=clearances.top_clearance_factor)
+            z = well_depth - self._top_clearance(well, well_depth,
+                                                 clearance=clearances.top_clearance + extra_clearance,
+                                                 factor=clearances.top_clearance_factor)
             z = max(z, clearances.bottom_clearance)
             z = min(z, well.z_size())
             return well.bottom(z)
@@ -1315,6 +1320,7 @@ strand_b.geometry = Eppendorf1point5mlTubeGeometry(strand_b)
 diluted_strand_a.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_a)
 diluted_strand_b.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_b)
 master_mix.geometry = FalconTube15mlGeometry(master_mix)
+master_mix.extra_aspirate_top_clearance = 3.0  # concession to the overall inaccuracies in our falcon tube geometry, both ours and built-in
 for well in plate.wells():
     well.geometry = Biorad96WellPlateWellGeometry(well)
 
