@@ -21,7 +21,7 @@ from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DISTANCE, SH
 from opentrons.legacy_api.containers.placeable import unpack_location, Well, Placeable
 
 metadata = {
-    'protocolName': 'Pairwise Interaction: Dilute & Master',
+    'protocolName': 'Pairwise Interaction: Dilute & Master & Plate',
     'author': 'Robert Atkinson <bob@theatkinsons.org>',
     'description': 'Study the interaction of two DNA strands'
 }
@@ -32,10 +32,10 @@ metadata = {
 
 # Volumes of master mix ingredients
 buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
-evagreen_volumes = [720]           # B1, B2, etc in screwcap rack
+evagreen_volumes = [1000]           # B1, B2, etc in screwcap rack
 
 # Tip usage
-p10_start_tip = 'A4'
+p10_start_tip = 'A5'
 p50_start_tip = 'A6'
 trash_control = False
 
@@ -77,22 +77,26 @@ class Config(object):
 
 config = Config()
 config.blow_out_rate_factor = 3.0
+
 config.aspirate = Config()
 config.aspirate.bottom_clearance = 1.0  # see Pipette._position_for_aspirate
 config.aspirate.top_clearance = 3.5
 config.aspirate.top_clearance_factor = 10.0
+
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
 config.dispense.top_clearance = 3.5  # was 1.0, but we were missing top of master mix, especially for small volumes
 config.dispense.top_clearance_factor = 10.0
+
 config.simple_mix = Config()
 config.simple_mix.count = 6
+
 config.layered_mix = Config()
 config.layered_mix.top_clearance = 1.0
 config.layered_mix.top_clearance_factor = 10
 config.layered_mix.aspirate_bottom_clearance = 1.0
-config.layered_mix.aspirate_rate_factor = 3.0
-config.layered_mix.dispense_rate_factor = 3.0
+config.layered_mix.aspirate_rate_factor = 4.0
+config.layered_mix.dispense_rate_factor = 4.0
 config.layered_mix.incr = 1.0
 config.layered_mix.count = None  # so we default to using incr, not count
 config.layered_mix.min_incr = 0.5
