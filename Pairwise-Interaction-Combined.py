@@ -85,7 +85,7 @@ config.aspirate.top_clearance_factor = 10.0
 
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
-config.dispense.top_clearance = 3.5  # was 1.0, but we were missing top of master mix, especially for small volumes
+config.dispense.top_clearance = 1.0
 config.dispense.top_clearance_factor = 10.0
 
 config.simple_mix = Config()
@@ -633,7 +633,7 @@ def note_liquid(location, name=None, initial_volume=None, min_volume=None):
         well.label = name
     d = {'name': name, 'location': get_location_path(well)}
     if initial_volume is None and min_volume is not None:
-        initial_volume = interval([min_volume, get_well_geometry(well).capacity])
+        initial_volume = interval([min_volume, get_well_geometry(well).well_capacity])
     if initial_volume is not None:
         d['initial_volume'] = initial_volume
         get_well_volume(well).set_initial_volume(initial_volume)
@@ -653,8 +653,13 @@ class WellGeometry(object):
 
     @property
     @abstractmethod
-    def capacity(self):
+    def well_capacity(self):
         pass
+
+    @property
+    # @abstractmethod
+    def well_depth(self):  # not yet actually used, nor fully elaborated
+        return 0
 
     def min_depth_from_volume(self, volume):
         vol = self.depth_from_volume(volume)
@@ -669,10 +674,10 @@ class UnknownWellGeometry(WellGeometry):
         super().__init__(well)
 
     def depth_from_volume(self, volume):
-        return interval([0, self.capacity])
+        return interval([0, self.well_capacity])
 
     @property
-    def capacity(self):
+    def well_capacity(self):
         # noinspection PyBroadException
         return self.well.properties.get('total-liquid-volume', fpu.infinity)
 
@@ -690,7 +695,7 @@ class IdtTubeWellGeometry(WellGeometry):
         return 3.2 - 0.0184378 * (57.8523 - volume)
 
     @property
-    def capacity(self):
+    def well_capacity(self):
         return 2266.91
 
 
@@ -707,7 +712,7 @@ class Biorad96WellPlateWellGeometry(WellGeometry):
         return 14.66 - 0.0427095 * (196.488 - volume)
 
     @property
-    def capacity(self):
+    def well_capacity(self):
         return 200.0
 
 
@@ -728,7 +733,7 @@ class Eppendorf1point5mlTubeGeometry(WellGeometry):
         return -564. + 49.1204 * cube_root(1580.62 + 0.143239 * volume)
 
     @property
-    def capacity(self):
+    def well_capacity(self):
         return 1688.61
 
 
@@ -737,16 +742,20 @@ class FalconTube15mlGeometry(WellGeometry):
         super().__init__(well)
 
     def depth_from_volume(self, volume):
-        # Calculated from Mathematica models
-        if volume <= 0.0686291:
-            return 0.0  # not correct, but not worth it right now to do correct value
-        if volume <= 874.146:
-            return -0.758658 + 1.23996 * cube_root(0.267715 + 5.69138 * volume)
-        return -360.788 + 13.8562 * cube_root(19665.7 + 1.32258 * volume)
+        # Calculated from Mathematica models fitted to empirical depth vs volume measurements
+        if volume <= 0.0:
+            return 0.0
+        if volume <= 1232.34:
+            return -4.60531 + 1.42955 * cube_root(33.4335 + 5.25971 * volume)
+        return -803.774 + 27.1004 * cube_root(27390.9 + 0.738644 * volume)
 
     @property
-    def capacity(self):
-        return 13756.5
+    def well_capacity(self):
+        return 16278.1  # compare to 15000 in opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical
+
+    @property
+    def well_depth(self):
+        return 118.07  # compare to 117.5 in opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical
 
 
 def get_well_geometry(well):
@@ -1317,14 +1326,15 @@ master_mix = falcon_rack['A1']  # note: this needs tape around it's mid-section 
 # Define geometries
 for well, __ in buffers:
     well.geometry = IdtTubeWellGeometry(well)
+    well.extra_aspirate_top_clearance = 3.0  # concession to inaccuracy in tube geometry
 for well, __ in evagreens:
     well.geometry = IdtTubeWellGeometry(well)
+    well.extra_aspirate_top_clearance = 3.0  # concession to inaccuracy in tube geometry
 strand_a.geometry = Eppendorf1point5mlTubeGeometry(strand_a)
 strand_b.geometry = Eppendorf1point5mlTubeGeometry(strand_b)
 diluted_strand_a.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_a)
 diluted_strand_b.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_b)
 master_mix.geometry = FalconTube15mlGeometry(master_mix)
-master_mix.extra_aspirate_top_clearance = 3.0  # concession to the overall inaccuracies in our falcon tube geometry, both ours and built-in
 for well in plate.wells():
     well.geometry = Biorad96WellPlateWellGeometry(well)
 
