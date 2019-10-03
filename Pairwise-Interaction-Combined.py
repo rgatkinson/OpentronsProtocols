@@ -17,7 +17,7 @@ from opentrons import labware, instruments, robot, modules, types
 from opentrons.commands.commands import stringify_location, make_command, command_types
 from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
-from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DISTANCE, SHAKE_OFF_TIPS_SPEED
+from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
 from opentrons.legacy_api.containers.placeable import unpack_location, Well, Placeable
 
 metadata = {
@@ -32,7 +32,7 @@ metadata = {
 
 # Volumes of master mix ingredients
 buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
-evagreen_volumes = [1000]           # B1, B2, etc in screwcap rack
+evagreen_volumes = [500]           # B1, B2, etc in screwcap rack
 
 # Tip usage
 p10_start_tip = 'A5'
@@ -1034,7 +1034,7 @@ class MyPipette(Pipette):
 
     def _shake_tip(self, location):
         # Modelled after Pipette._shake_off_tips()
-        shake_off_distance = SHAKE_OFF_TIPS_DISTANCE / 2  # / 2 == less distance than shaking off tips
+        shake_off_distance = SHAKE_OFF_TIPS_DROP_DISTANCE / 2  # / 2 == less distance than shaking off tips
         if location:
             placeable, _ = unpack_location(location)
             # ensure the distance is not >25% the diameter of placeable
