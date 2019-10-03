@@ -5,11 +5,9 @@
 #
 import argparse
 import json
-import logging
 import string
 import sys
 from numbers import Number
-from typing import List, Mapping, Any
 from functools import wraps
 
 import opentrons
@@ -935,71 +933,21 @@ def analyzeRunLog(run_log):
     return controller
 
 
-def main():
-    parser = argparse.ArgumentParser(prog='opentrons-analyze', description=__doc__)
-    parser.add_argument(
-        'protocol', metavar='PROTOCOL_FILE',
-        type=argparse.FileType('r'),
-        help='The protocol file to simulate (specify - to read from stdin).')
+def main() -> int:
+    parser = argparse.ArgumentParser(prog='opentrons-analyze', description='Analyze an OT-2 protocol')
+    parser = opentrons.simulate.get_arguments(parser)
     parser.add_argument(
         '-v', '--version', action='version',
         version=f'%(prog)s {opentrons.__version__}',
         help='Print the opentrons package version and exit')
-    parser.add_argument(
-        '-l', '--log-level', action='store',
-        help='Log level for the opentrons stack. Anything below warning can be chatty',
-        choices=['error', 'warning', 'info', 'debug'],
-        default='warning'
-    )
     args = parser.parse_args()
 
-    run_log = simulate(args.protocol, log_level=args.log_level)
+    run_log = opentrons.simulate.simulate(args.protocol, log_level=args.log_level)
     analysis = analyzeRunLog(run_log)
     print(opentrons.simulate.format_runlog(run_log))
     print("\n")
     print(analysis.formatted())
     return 0
-
-
-# Cloned from opentrons.simulate.simulate in order to replace 'exec(proto,{})' with something more debugger-friendly
-def simulate(protocol_file,
-             propagate_logs=False,
-             log_level='warning') -> List[Mapping[str, Any]]:
-    stack_logger = logging.getLogger('opentrons')
-    stack_logger.propagate = propagate_logs
-
-    contents = protocol_file.read()
-    protocol_file_name = None
-    if protocol_file is not sys.stdin:
-        protocol_file_name = protocol_file.name
-
-    if opentrons.config.feature_flags.use_protocol_api_v2():
-        try:
-            execute_args = {'protocol_json': json.loads(contents)}
-        except json.JSONDecodeError:
-            execute_args = {'protocol_code': contents}
-        context = opentrons.protocol_api.contexts.ProtocolContext()
-        context.home()
-        scraper = opentrons.simulate.CommandScraper(stack_logger, log_level, context.broker)
-        execute_args.update({'simulate': True, 'context': context})
-        opentrons.protocol_api.execute.run_protocol(**execute_args)
-    else:
-        try:
-            proto = json.loads(contents)
-        except json.JSONDecodeError:
-            proto = contents
-        opentrons.robot.disconnect()
-        scraper = opentrons.simulate.CommandScraper(stack_logger, log_level, opentrons.robot.broker)
-        if isinstance(proto, dict):
-            opentrons.protocols.execute_protocol(proto)
-        else:
-            if protocol_file_name is not None:
-                # https://stackoverflow.com/questions/436198/what-is-an-alternative-to-execfile-in-python-3
-                code = compile(proto, protocol_file_name, 'exec')
-                exec(code, {})
-            else:
-                exec(proto, {})
-    return scraper.commands
 
 
 if __name__ == '__main__':
