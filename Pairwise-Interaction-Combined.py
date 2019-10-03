@@ -179,16 +179,6 @@ class Fpu(object):
         # Exception thrown when an unwanted nan is encountered.
         pass
 
-    @staticmethod
-    def isnan(x):
-        return x != x
-
-    def is_infinite(self, x):
-        return x == self.infinity or x == -self.infinity
-
-    def is_finite(self, x):
-        return not self.isnan(x) and not self.is_infinite(x)
-
     def down(self, f):
         # Perform a computation with the FPU rounding downwards
         saved = self._fegetround()
@@ -208,7 +198,7 @@ class Fpu(object):
             self._fesetround(saved)
 
     def ensure_nonan(self, x):
-        if self.isnan(x):
+        if is_nan(x):
             raise self.NanException
         return x
 
@@ -224,13 +214,9 @@ class Fpu(object):
         except self.NanException:
             return self.nan
 
-    @staticmethod
-    def isinteger(n):
-        return isinstance(n, int)
-
     def power_rn(self, x, n):
         # Raise x to the n-th power (with n positive integer), rounded to nearest.
-        assert self.isinteger(n) and n >= 0
+        assert is_integer(n) and n >= 0
         value = ()
         while n > 0:
             n, y = divmod(n, 2)
@@ -264,6 +250,37 @@ class Fpu(object):
 
 
 fpu = Fpu()
+
+def is_integer(n):
+    return isinstance(n, int)
+
+def is_scalar(x):
+    return isinstance(x, Number)
+
+def is_interval(x):
+    return isinstance(x, interval)
+
+def is_nan(x):
+    return x != x
+
+def is_infinite(x):
+    return is_scalar(x) and (x == fpu.infinity or x == -fpu.infinity)
+
+def is_finite(x):
+    return is_scalar(x) and not is_nan(x) and not is_infinite(x)
+
+def supremum(x):
+    if is_interval(x):
+        return x.supremum
+    else:
+        return x
+
+def infimum(x):
+    if is_interval(x):
+        return x.infimum
+    else:
+        return x
+
 # endregion
 
 # region interval
@@ -329,7 +346,7 @@ class interval(tuple, metaclass=Metaclass):
             y = fpu.float(x)
         except:
             raise cls.ScalarError("Invalid scalar: " + repr(x))
-        if fpu.isinteger(x) and x != y:
+        if is_integer(x) and x != y:
             # Special case for an integer with more bits than in a float's mantissa
             if x > y:
                 return cls.new((cls.Component(y, fpu.up(lambda: y + 1)),))
@@ -441,7 +458,7 @@ class interval(tuple, metaclass=Metaclass):
     __rtruediv__ = __rdiv__
 
     def __pow__(self, n):
-        if not fpu.isinteger(n):
+        if not is_integer(n):
             return NotImplemented
         if n < 0:
             return (self ** -n).inverse()
@@ -487,7 +504,7 @@ class interval(tuple, metaclass=Metaclass):
 
     class Component(tuple):
         def __new__(cls, inf, sup):
-            if fpu.isnan(inf) or fpu.isnan(sup):
+            if is_nan(inf) or is_nan(sup):
                 return tuple.__new__(cls, (-fpu.infinity, +fpu.infinity))
             return tuple.__new__(cls, (inf, sup))
 
@@ -1244,13 +1261,18 @@ def zeroify(value, digits=2):  # clamps small values to zero, leaves others alon
     rounded = round(value, digits)
     return rounded if rounded == 0 else value
 
+def first(iterable):
+    for value in iterable:
+        return value
+    return None
+
 class Pretty(string.Formatter):
     def format_field(self, value, spec):
         if spec.endswith('n'):  # 'n' for number
             precision = 2
             if spec.startswith('.', 0, -1):
                 precision = int(spec[1:-1])
-            if isinstance(value, Number) and fpu.is_finite(value):
+            if isinstance(value, Number) and is_finite(value):
                 factor = 1
                 for i in range(precision):
                     if value * factor == int(value * factor):

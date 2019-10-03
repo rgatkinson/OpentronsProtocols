@@ -72,16 +72,6 @@ class Fpu(object):
         # Exception thrown when an unwanted nan is encountered.
         pass
 
-    @staticmethod
-    def isnan(x):
-        return x != x
-
-    def is_infinite(self, x):
-        return x == self.infinity or x == -self.infinity
-
-    def is_finite(self, x):
-        return not self.isnan(x) and not self.is_infinite(x)
-
     def down(self, f):
         # Perform a computation with the FPU rounding downwards
         saved = self._fegetround()
@@ -101,7 +91,7 @@ class Fpu(object):
             self._fesetround(saved)
 
     def ensure_nonan(self, x):
-        if self.isnan(x):
+        if is_nan(x):
             raise self.NanException
         return x
 
@@ -117,13 +107,9 @@ class Fpu(object):
         except self.NanException:
             return self.nan
 
-    @staticmethod
-    def isinteger(n):
-        return isinstance(n, int)
-
     def power_rn(self, x, n):
         # Raise x to the n-th power (with n positive integer), rounded to nearest.
-        assert self.isinteger(n) and n >= 0
+        assert is_integer(n) and n >= 0
         value = ()
         while n > 0:
             n, y = divmod(n, 2)
@@ -157,6 +143,37 @@ class Fpu(object):
 
 
 fpu = Fpu()
+
+def is_integer(n):
+    return isinstance(n, int)
+
+def is_scalar(x):
+    return isinstance(x, Number)
+
+def is_interval(x):
+    return isinstance(x, interval)
+
+def is_nan(x):
+    return x != x
+
+def is_infinite(x):
+    return is_scalar(x) and (x == fpu.infinity or x == -fpu.infinity)
+
+def is_finite(x):
+    return is_scalar(x) and not is_nan(x) and not is_infinite(x)
+
+def supremum(x):
+    if is_interval(x):
+        return x.supremum
+    else:
+        return x
+
+def infimum(x):
+    if is_interval(x):
+        return x.infimum
+    else:
+        return x
+
 # endregion
 
 # region interval
@@ -222,7 +239,7 @@ class interval(tuple, metaclass=Metaclass):
             y = fpu.float(x)
         except:
             raise cls.ScalarError("Invalid scalar: " + repr(x))
-        if fpu.isinteger(x) and x != y:
+        if is_integer(x) and x != y:
             # Special case for an integer with more bits than in a float's mantissa
             if x > y:
                 return cls.new((cls.Component(y, fpu.up(lambda: y + 1)),))
@@ -334,7 +351,7 @@ class interval(tuple, metaclass=Metaclass):
     __rtruediv__ = __rdiv__
 
     def __pow__(self, n):
-        if not fpu.isinteger(n):
+        if not is_integer(n):
             return NotImplemented
         if n < 0:
             return (self ** -n).inverse()
@@ -380,7 +397,7 @@ class interval(tuple, metaclass=Metaclass):
 
     class Component(tuple):
         def __new__(cls, inf, sup):
-            if fpu.isnan(inf) or fpu.isnan(sup):
+            if is_nan(inf) or is_nan(sup):
                 return tuple.__new__(cls, (-fpu.infinity, +fpu.infinity))
             return tuple.__new__(cls, (inf, sup))
 
@@ -449,70 +466,91 @@ del coercing, comp_by_comp, Metaclass
 # Mixtures
 ########################################################################################################################
 
-class IndeterminateVolume():
-    def __init__(self):
-        pass  # NYI
-
-
-class Aliquot(object):
-    def __init__(self, well_monitor, volume):
-        self.well_monitor = well_monitor
-        self.volume = volume
-
-
 class Mixture(object):
-    def __init__(self, initial_aliquot=None):
-        self.aliquots = dict()
-        if initial_aliquot is not None:
-            self.adjust_aliquot(initial_aliquot)
+    def __init__(self, liquid=None, volume=0):
+        self.liquids = dict()  # map from liquid to volume
+        if liquid is not None:
+            self.set_initial_liquid(liquid=liquid, volume=volume)
 
-    def get_volume(self):
+    def set_initial_liquid(self, liquid, volume):
+        assert len(self.liquids) == 0
+        if liquid is not None:
+            self._adjust_liquid(liquid, volume)
+
+    @property
+    def volume(self):
         result = 0.0
-        for volume in self.aliquots.values():
+        for volume in self.liquids.values():
             result += volume
         return result
 
+    @property
     def is_empty(self):
-        return self.get_volume() == 0
+        return supremum(self.volume) <= 0
 
-    def adjust_aliquot(self, aliquot):
-        assert isinstance(aliquot, Aliquot)
-        existing = self.aliquots.get(aliquot.well_monitor, 0)
-        existing += aliquot.volume
-        assert existing >= 0
-        if existing == 0:
-            self.aliquots.pop(aliquot.well_monitor, None)
+    @property
+    def is_homogeneous(self):
+        return len(self.liquids) <= 1
+
+    def _adjust_liquid(self, liquid, volume):
+        existing = self.liquids.get(liquid, 0)
+        existing += volume
+        if supremum(existing) <= 0:
+            self.liquids.pop(liquid, None)
         else:
-            self.aliquots[aliquot.well_monitor] = existing
+            self.liquids[liquid] = existing
 
-    def adjust_mixture(self, mixture):
-        assert isinstance(mixture, Mixture)
-        for well_monitor, volume in mixture.aliquots.items():
-            self.adjust_aliquot(Aliquot(well_monitor, volume))
+    def to_pipette(self, volume, pipette_contents):
+        removed = self.remove_volume(volume)
+        pipette_contents.mixture.add_mixture(removed)
+
+    def from_pipette(self, volume, pipette_contents):
+        removed = pipette_contents.mixture.remove_volume(volume)
+        self.add_mixture(removed)
+
+    def add_mixture(self, them):
+        assert self is not them
+        for liquid, volume in them.liquids.items():
+            self._adjust_liquid(liquid, volume)
+
+    def remove_volume(self, removal_volume):
+        assert is_scalar(removal_volume)
+        if self.is_homogeneous:
+            # If the liquid is homogeneous, we can remove from non-scalar volumes
+            liquid = first(self.liquids.keys())
+            self._adjust_liquid(liquid, -removal_volume)
+            return Mixture(liquid, removal_volume)
+        else:
+            current_volume = self.volume
+            assert is_scalar(current_volume)
+            removal_fraction = removal_volume / current_volume
+            result = Mixture()
+            new_liquids = Mixture()  # avoid changing while iterating
+            for liquid, volume in self.liquids.items():
+                result._adjust_liquid(liquid, volume * removal_fraction)
+                new_liquids._adjust_liquid(liquid, volume * (1.0 - removal_fraction))
+            self.liquids = new_liquids.liquids
+            return result
+
+
+class PipetteContents(object):
+    def __init__(self):
+        self.mixture = Mixture()
+
+    def pick_up_tip(self):
+        self.clear()
+
+    def drop_tip(self):
+        self.clear()
 
     def clear(self):
-        self.aliquots = dict()
-
-    def slice(self, volume):
-        existing = self.get_volume()
-        assert existing >= 0
-        result = Mixture()
-        ratio = float(volume) / float(existing)
-        for well_monitor, volume in self.aliquots.items():
-            result.adjust_aliquot(Aliquot(well_monitor, volume * ratio))
-        return result
-
-    def negated(self):
-        result = Mixture()
-        for well_monitor, volume in self.aliquots.items():
-            result.adjust_aliquot(Aliquot(well_monitor, -volume))
-        return result
+        self.mixture = Mixture()
 
 ########################################################################################################################
 # Monitors
 ########################################################################################################################
 
-class Monitor(object):
+class PlaceableMonitor(object):
 
     def __init__(self, controller, location_path):
         self.controller = controller
@@ -530,9 +568,9 @@ class Monitor(object):
             placeable = placeable.parent
         return placeable
 
+
 class WellVolume(object):
-    def __init__(self, well):
-        self.well = well
+    def __init__(self):
         self.initial_volume_known = False
         self.initial_volume = interval([0, fpu.infinity])
         self.cum_delta = 0
@@ -578,31 +616,36 @@ class WellVolume(object):
         self.max_delta = max(self.max_delta, self.cum_delta)
 
 
-class WellMonitor(Monitor):
+class WellMonitor(PlaceableMonitor):
     def __init__(self, controller, location_path):
         super(WellMonitor, self).__init__(controller, location_path)
-        self.volume = WellVolume(self)
-        self.liquid_name = None
+        self.volume = WellVolume()
+        self.liquid = Liquid(location_path)  # unique to this well unless we're told a better name later
+        self.liquid_known = False
         self.mixture = Mixture()
 
-    def aspirate(self, volume, mixture):
+    def aspirate(self, volume, pipette_contents: PipetteContents):
         self.volume.aspirate(volume)
+        self.mixture.to_pipette(volume, pipette_contents)
 
-    def dispense(self, volume, mixture):
+    def dispense(self, volume, pipette_contents: PipetteContents):
         self.volume.dispense(volume)
+        self.mixture.from_pipette(volume, pipette_contents)
 
-    def set_liquid_name(self, name):  # idempotent
-        assert self.liquid_name is None or self.liquid_name == name
-        self.liquid_name = name
+    def set_liquid(self, liquid):  # idempotent
+        assert not self.liquid_known or self.liquid is liquid
+        self.liquid = liquid
+        self.liquid_known = True
 
     def set_initial_volume(self, initial_volume):
         self.volume.set_initial_volume(initial_volume)
+        self.mixture.set_initial_liquid(self.liquid, initial_volume)
 
     def formatted(self):
         result = 'well "{0:s}"'.format(self.target.get_name())
         if not getattr(self.target, 'has_labelled_well_name', False):
-            if self.liquid_name is not None:
-                result += ' ("{0:s}")'.format(self.liquid_name)
+            if self.liquid is not None:
+                result += ' ("{0:s}")'.format(self.liquid)
         result += ':'
         result += Pretty().format(' lo={0:n} hi={1:n} cur={2:n}\n',
             self.volume.min_volume,
@@ -610,7 +653,8 @@ class WellMonitor(Monitor):
             self.volume.current_volume)
         return result
 
-class AbstractContainerMonitor(Monitor):
+# region Containers
+class AbstractContainerMonitor(PlaceableMonitor):
     def __init__(self, controller, location_path):
         super(AbstractContainerMonitor, self).__init__(controller, location_path)
 
@@ -653,7 +697,7 @@ class TipRackMonitor(AbstractContainerMonitor):
         result = ''
         result += 'tip rack "%s" in "%s" picked %d tips\n' % (self.target.get_name(), self.get_slot().get_name(), len(self.tips_picked))
         return result
-
+# endregion
 
 # Returns a unique name for the given location. Must track in protocols.
 def get_location_path(location):
@@ -661,13 +705,30 @@ def get_location_path(location):
                                    for item in location.get_trace(None)
                                    if str(item) is not None])))
 
+class Liquid:  # todo: add concentration field
+    def __init__(self, name):
+        self.name = name
+
+    def __str__(self) -> str:
+        return f'Liquid({self.name}'
+
+
 class MonitorController(object):
     def __init__(self):
         self._monitors = dict()  # maps location path to monitor
+        self._liquids = dict()
+
+    def get_liquid(self, liquid_name):
+        try:
+            return self._liquids[liquid_name]
+        except KeyError:
+            self._liquids[liquid_name] = Liquid(liquid_name)
+            return self._liquids[liquid_name]
 
     def note_liquid_name(self, liquid_name, location_path, initial_volume=None):
         well_monitor = self._monitor_from_location_path(WellMonitor, location_path)
-        well_monitor.set_liquid_name(liquid_name)
+        liquid = self.get_liquid(liquid_name)
+        well_monitor.set_liquid(liquid)
         if initial_volume is not None:
             if isinstance(initial_volume, list):  # work around json parsing deficiency
                 initial_volume = interval(*initial_volume)
@@ -740,13 +801,18 @@ def info(msg: str, prefix="***********", suffix=' ***********'):
 def warn(msg: str, prefix="***********", suffix=' ***********'):
     print("%s%sWARNING: %s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix))
 
+def first(iterable):
+    for value in iterable:
+        return value
+    return None
+
 class Pretty(string.Formatter):
     def format_field(self, value, spec):
         if spec.endswith('n'):  # 'n' for number
             precision = 2
             if spec.startswith('.', 0, -1):
                 precision = int(spec[1:-1])
-            if isinstance(value, Number) and fpu.is_finite(value):
+            if isinstance(value, Number) and is_finite(value):
                 factor = 1
                 for i in range(precision):
                     if value * factor == int(value * factor):
@@ -760,7 +826,6 @@ class Pretty(string.Formatter):
                 return str(value)
         return super().format_field(value, spec)
 
-
 ########################################################################################################################
 # Analyzing
 ########################################################################################################################
@@ -768,7 +833,7 @@ class Pretty(string.Formatter):
 def analyzeRunLog(run_log):
 
     controller = MonitorController()
-    pipette_contents = Mixture()
+    pipette_contents = PipetteContents()
 
     # locations are either placeables or (placable, vector) pairs
     def placeable_from_location(location):
@@ -800,20 +865,21 @@ def analyzeRunLog(run_log):
             if selector == 'aspirating' or selector == 'dispensing':
                 well = placeable_from_location(payload['location'])
                 volume = payload['volume']
-                monitor = controller.well_monitor(well)
+                well_monitor = controller.well_monitor(well)
                 if selector == 'aspirating':
-                    monitor.aspirate(volume, pipette_contents)
+                    well_monitor.aspirate(volume, pipette_contents)
                 else:
-                    monitor.dispense(volume, pipette_contents)
+                    well_monitor.dispense(volume, pipette_contents)
             elif selector == 'picking' or selector == 'dropping':
                 well = placeable_from_location(payload['location'])
                 rack = well.parent
-                monitor = controller.tip_rack_monitor(rack)
+                tip_rack_monitor = controller.tip_rack_monitor(rack)
                 if selector == 'picking':
-                    monitor.pick_up_tip(well)
+                    tip_rack_monitor.pick_up_tip(well)
+                    pipette_contents.pick_up_tip()
                 else:
-                    monitor.drop_tip(well)
-                pipette_contents.clear()
+                    tip_rack_monitor.drop_tip(well)
+                    pipette_contents.drop_tip()
             elif selector == 'mixing' \
                     or selector == 'transferring' \
                     or selector == 'distributing' \
