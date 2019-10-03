@@ -477,6 +477,20 @@ class Mixture(object):
         if liquid is not None:
             self._adjust_liquid(liquid, volume)
 
+    def __str__(self) -> str:
+        if self.is_empty:
+            return '{}'
+        else:
+            result = '{ '
+            is_first = True
+            for liquid, volume in self.liquids.items():
+                if not is_first:
+                    result += ', '
+                is_first = False
+                result += Pretty().format('{0:s}: {1:n}', liquid.name, volume)
+            result += ' }'
+        return result
+
     @property
     def volume(self):
         result = 0.0
@@ -647,10 +661,11 @@ class WellMonitor(PlaceableMonitor):
             if self.liquid is not None:
                 result += ' ("{0:s}")'.format(self.liquid)
         result += ':'
-        result += Pretty().format(' lo={0:n} hi={1:n} cur={2:n}\n',
+        result += Pretty().format(' lo={0:n} hi={1:n} cur={2:n} mix={3:s}\n',
             self.volume.min_volume,
             self.volume.max_volume,
-            self.volume.current_volume)
+            self.volume.current_volume,
+            self.mixture.__str__())
         return result
 
 # region Containers
