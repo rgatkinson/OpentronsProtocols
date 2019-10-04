@@ -35,7 +35,7 @@ buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
 evagreen_volumes = [500]           # B1, B2, etc in screwcap rack
 
 # Tip usage
-p10_start_tip = 'A5'
+p10_start_tip = 'A6'
 p50_start_tip = 'A6'
 trash_control = False
 
@@ -105,7 +105,7 @@ config.layered_mix.delay = 750
 config.layered_mix.drop_tip = True
 config.layered_mix.initial_turnover = None
 config.layered_mix.max_tip_cycles = None
-config.layered_mix.max_tip_cycles_large = 12
+config.layered_mix.max_tip_cycles_large = None
 
 
 ########################################################################################################################
