@@ -704,16 +704,16 @@ class IdtTubeWellGeometry(WellGeometry):
         super().__init__(well)
 
     def depth_from_volume(self, volume):
-        # Calculated from Mathematica models
+        # Calculated from Mathematica models. We use fittedIdtTube.
         if volume <= 0.0:
             return 0.0
-        if volume <= 57.8523:
-            return 0.827389 * cube_root(volume)
-        return 3.2 - 0.0184378 * (57.8523 - volume)
+        if volume <= 67.1109:
+            return 0.909568 * cube_root(volume)
+        return 3.69629 - 0.0183591 * (67.1109 - volume)
 
     @property
     def well_capacity(self):
-        return 2266.91
+        return 2153.47
 
 
 class Biorad96WellPlateWellGeometry(WellGeometry):
@@ -738,20 +738,18 @@ class Eppendorf1point5mlTubeGeometry(WellGeometry):
         super().__init__(well)
 
     def depth_from_volume(self, volume):
-        # Calculated from Mathematica models
-        if volume <= 12.2145:
-            i = complex(0, 1)
-            term = cube_root(36.6435 - 3. * volume + 1.73205 * cmath.sqrt(-73.2871 * volume + 3. * volume * volume))
-            result = 1.8 - (2.98934 - 5.17768 * i) / term - (0.270963 + 0.469322 * i) * term
-            assert isinstance(result, complex)
-            return result.real
-        if volume <= 445.995:
-            return -8.22353 + 2.2996 * cube_root(53.0712 + 2.43507 * volume)
-        return -564. + 49.1204 * cube_root(1580.62 + 0.143239 * volume)
+        # Calculated from Mathematica models. We use fittedEppendorf1$5ml
+        if volume <= 0:
+            return 0
+        if volume <= 0.550217:
+            raise NotImplemented
+        if volume <= 575.33:
+            return -13.8495 + 2.9248 * cube_root(157.009 + 2.14521 * volume)
+        return -216.767 + 20.2694 * cube_root(1376.83 + 0.33533 * volume)
 
     @property
     def well_capacity(self):
-        return 1688.61
+        return 1801.76
 
 
 class FalconTube15mlGeometry(WellGeometry):
