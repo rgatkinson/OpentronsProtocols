@@ -83,12 +83,13 @@ config.aspirate = Config()
 config.aspirate.bottom_clearance = 1.0  # see Pipette._position_for_aspirate
 config.aspirate.top_clearance = 3.5
 config.aspirate.top_clearance_factor = 10.0
-config.extra_aspirate_top_clearance_name = 'extra_aspirate_top_clearance'
+config.aspirate.extra_top_clearance_name = 'extra_aspirate_top_clearance'
 
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
 config.dispense.top_clearance = 1.0
 config.dispense.top_clearance_factor = 10.0
+config.dispense.extra_top_clearance_name = 'extra_dispense_top_clearance'
 
 config.simple_mix = Config()
 config.simple_mix.count = 6
@@ -1023,7 +1024,7 @@ class MyPipette(Pipette):
             warn(msg)
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume,
                                                        clearances=config.aspirate,
-                                                       extra_clearance=getattr(well, config.extra_aspirate_top_clearance_name, 0))
+                                                       extra_clearance=getattr(well, config.aspirate.extra_top_clearance_name, 0))
         super().aspirate(volume=volume, location=location, rate=rate)
         # track volume todo: what if we're doing an air gap
         well, __ = unpack_location(location)
@@ -1037,7 +1038,10 @@ class MyPipette(Pipette):
                 location = volume
             volume = self._working_volume - self.current_volume
         location = location if location else self.previous_placeable
-        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None, clearances=config.dispense)
+        well, _ = unpack_location(location)
+        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None,
+                                                       clearances=config.dispense,
+                                                       extra_clearance=getattr(well, config.dispense.extra_top_clearance_name, 0))
         super().dispense(volume=volume, location=location, rate=rate)
         # track volume
         well, __ = unpack_location(location)
@@ -1397,7 +1401,7 @@ diluted_strand_b.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_b)
 master_mix.geometry = FalconTube15mlGeometry(master_mix)
 for well in plate.wells():
     well.geometry = Biorad96WellPlateWellGeometryM3(well)
-    # well.extra_aspirate_top_clearance_name = 2.0
+    # well.extra_aspirate_top_clearance = 2.0
 
 # Remember initial liquid names and volumes
 log('Liquid Names')
