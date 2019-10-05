@@ -1401,9 +1401,9 @@ for well in plate.wells():
 
 # Remember initial liquid names and volumes
 log('Liquid Names')
-note_liquid(location=water, name='Water', min_volume=6000)  # 6000 is a rough guess
-note_liquid(location=strand_a, name='Strand A', min_volume=strand_dilution_source_vol)
-note_liquid(location=strand_b, name='Strand B', min_volume=strand_dilution_source_vol)
+note_liquid(location=water, name='Water', min_volume=7000)  # volume is rough guess
+note_liquid(location=strand_a, name='Strand A', min_volume=strand_dilution_source_vol + get_well_geometry(strand_a).min_aspirate_vol)  # i.e.: we have enough, just not specified how much
+note_liquid(location=strand_b, name='Strand B', min_volume=strand_dilution_source_vol + get_well_geometry(strand_b).min_aspirate_vol)  # ditto
 note_liquid(location=diluted_strand_a, name='Diluted Strand A')
 note_liquid(location=diluted_strand_b, name='Diluted Strand B')
 note_liquid(location=master_mix, name='Master Mix')
