@@ -1386,10 +1386,10 @@ master_mix = falcon_rack['A1']  # note: this needs tape around it's mid-section 
 # Define geometries
 for well, __ in buffers:
     well.geometry = IdtTubeWellGeometry(well)
-    well.extra_aspirate_top_clearance = 3.0
+    # well.extra_aspirate_top_clearance = 3.0
 for well, __ in evagreens:
     well.geometry = IdtTubeWellGeometry(well)
-    well.extra_aspirate_top_clearance = 3.0
+    # well.extra_aspirate_top_clearance = 3.0
 strand_a.geometry = Eppendorf1point5mlTubeGeometry(strand_a)
 strand_b.geometry = Eppendorf1point5mlTubeGeometry(strand_b)
 diluted_strand_a.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_a)
@@ -1397,7 +1397,7 @@ diluted_strand_b.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_b)
 master_mix.geometry = FalconTube15mlGeometry(master_mix)
 for well in plate.wells():
     well.geometry = Biorad96WellPlateWellGeometryM3(well)
-    well.extra_aspirate_top_clearance_name = 2.0
+    # well.extra_aspirate_top_clearance_name = 2.0
 
 # Remember initial liquid names and volumes
 log('Liquid Names')
