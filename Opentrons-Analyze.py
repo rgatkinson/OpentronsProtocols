@@ -7,6 +7,7 @@ import argparse
 import json
 import string
 import sys
+import warnings
 from numbers import Number
 from functools import wraps
 
@@ -42,7 +43,6 @@ class Fpu(object):
             else:
                 break
         else:
-            import warnings
             warnings.warn("Cannot determine FPU control primitives. The fpu module is not correctly initialized.", stacklevel=2)
 
     def _init_libm(self):  # pragma: nocover

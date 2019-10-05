@@ -30,9 +30,9 @@ metadata = {
 # Configurable parameters
 ########################################################################################################################
 
-# Volumes of master mix ingredients
+# Volumes of master mix ingredients. These are minimums in each tube.
 buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
-evagreen_volumes = [500]           # B1, B2, etc in screwcap rack
+evagreen_volumes = [500]            # B1, B2, etc in screwcap rack
 
 # Tip usage
 p10_start_tip = 'A6'
@@ -77,11 +77,13 @@ class Config(object):
 
 config = Config()
 config.blow_out_rate_factor = 3.0
+config.min_aspirate_factor_hack = 15.0
 
 config.aspirate = Config()
 config.aspirate.bottom_clearance = 1.0  # see Pipette._position_for_aspirate
 config.aspirate.top_clearance = 3.5
 config.aspirate.top_clearance_factor = 10.0
+config.extra_aspirate_top_clearance_name = 'extra_aspirate_top_clearance'
 
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
@@ -674,6 +676,10 @@ class WellGeometry(object):
         pass
 
     @property
+    def min_aspirate_vol(self):  # minimum volume we can aspirate from (i.e.: we leave at least this much behind)
+        return 0
+
+    @property
     # @abstractmethod
     def well_depth(self):  # not yet actually used, nor fully elaborated
         return 0
@@ -715,8 +721,12 @@ class IdtTubeWellGeometry(WellGeometry):
     def well_capacity(self):
         return 2153.47
 
+    @property
+    def min_aspirate_vol(self):
+        return 75  # a rough estimate
 
-class Biorad96WellPlateWellGeometry(WellGeometry):
+
+class Biorad96WellPlateWellGeometry2(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
@@ -733,6 +743,23 @@ class Biorad96WellPlateWellGeometry(WellGeometry):
         return 200.0
 
 
+class Biorad96WellPlateWellGeometryM3(WellGeometry):
+    def __init__(self, well):
+        super().__init__(well)
+
+    def depth_from_volume(self, volume):
+        # Calculated from Mathematica models, specifically modelBioRad3[]
+        if volume <= 0.0:
+            return 0.0
+        if volume <= 122.784:
+            return -8.57618 + 3.10509 * cube_root(21.0698 + 1.34645 * volume)
+        return 9.16092 - 0.0427095 * (122.784 - volume)
+
+    @property
+    def well_capacity(self):
+        return 255.051
+
+
 class Eppendorf1point5mlTubeGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
@@ -742,7 +769,7 @@ class Eppendorf1point5mlTubeGeometry(WellGeometry):
         if volume <= 0:
             return 0
         if volume <= 0.550217:
-            raise NotImplemented
+            raise NotImplementedError
         if volume <= 575.33:
             return -13.8495 + 2.9248 * cube_root(157.009 + 2.14521 * volume)
         return -216.767 + 20.2694 * cube_root(1376.83 + 0.33533 * volume)
@@ -989,9 +1016,14 @@ class MyPipette(Pipette):
             volume = self._working_volume - self.current_volume
         location = location if location else self.previous_placeable
         well, _ = unpack_location(location)
+        current_volume = get_well_volume(well).current_volume_min
+        needed_volume = get_well_geometry(well).min_aspirate_vol + volume;
+        if current_volume < needed_volume:
+            msg = Pretty().format('aspirating too much from {0} have={1:n} need={2:n}', well, current_volume, needed_volume)
+            warn(msg)
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume,
                                                        clearances=config.aspirate,
-                                                       extra_clearance=getattr(well, 'extra_aspirate_top_clearance', 0))
+                                                       extra_clearance=getattr(well, config.extra_aspirate_top_clearance_name, 0))
         super().aspirate(volume=volume, location=location, rate=rate)
         # track volume todo: what if we're doing an air gap
         well, __ = unpack_location(location)
@@ -1238,15 +1270,23 @@ def get_location_path(location):
                                    for item in location.get_trace(None)
                                    if str(item) is not None])))
 
+def format_log_msg(msg: str, prefix="***********", suffix=' ***********'):
+    return "%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix)
 
 def log(msg: str, prefix="***********", suffix=' ***********'):
-    robot.comment("%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix))
+    robot.comment(format_log_msg(msg, prefix=prefix, suffix=suffix))
 
 def info(msg):
     log(msg, prefix='info:', suffix='')
 
 def warn(msg: str, prefix="***********", suffix=' ***********'):
     log(msg, prefix=prefix + " WARNING:", suffix=suffix)
+
+def fatal(msg: str, prefix="***********", suffix=' ***********'):
+    formatted = format_log_msg(msg, prefix=prefix + " FATAL ERROR:", suffix=suffix)
+    warnings.warn(formatted, stacklevel=2)
+    log(formatted, prefix='', suffix='')
+    raise RuntimeError  # could do better
 
 def silent_log(msg):
     pass
@@ -1346,17 +1386,18 @@ master_mix = falcon_rack['A1']  # note: this needs tape around it's mid-section 
 # Define geometries
 for well, __ in buffers:
     well.geometry = IdtTubeWellGeometry(well)
-    well.extra_aspirate_top_clearance = 3.0  # concession to inaccuracy in tube geometry
+    well.extra_aspirate_top_clearance = 3.0
 for well, __ in evagreens:
     well.geometry = IdtTubeWellGeometry(well)
-    well.extra_aspirate_top_clearance = 3.0  # concession to inaccuracy in tube geometry
+    well.extra_aspirate_top_clearance = 3.0
 strand_a.geometry = Eppendorf1point5mlTubeGeometry(strand_a)
 strand_b.geometry = Eppendorf1point5mlTubeGeometry(strand_b)
 diluted_strand_a.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_a)
 diluted_strand_b.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_b)
 master_mix.geometry = FalconTube15mlGeometry(master_mix)
 for well in plate.wells():
-    well.geometry = Biorad96WellPlateWellGeometry(well)
+    well.geometry = Biorad96WellPlateWellGeometryM3(well)
+    well.extra_aspirate_top_clearance_name = 2.0
 
 # Remember initial liquid names and volumes
 log('Liquid Names')
@@ -1446,9 +1487,9 @@ def createMasterMix():
     p50.layered_mix([buffer for buffer, __ in buffers], "Mixing Buffers", incr=4)
 
     # transfer from multiple source wells, each with a current defined volume
-    def transfer_multiple(ctx, xfer_vol_remaining, tubes, dest, new_tip, *args, **kwargs):
+    def transfer_multiple(msg, xfer_vol_remaining, tubes, dest, new_tip, *args, **kwargs):
         tube_index = 0
-        cur_loc = None
+        cur_well = None
         cur_vol = 0
         min_vol = 0
         while xfer_vol_remaining > 0:
@@ -1456,15 +1497,19 @@ def createMasterMix():
                 warn("remaining transfer volume of %f too small; ignored" % xfer_vol_remaining)
                 return
             # advance to next tube if there's not enough in this tube
-            while cur_loc is None or cur_vol <= min_vol:
-                cur_loc = tubes[tube_index][0]
+            while cur_well is None or cur_vol <= min_vol:
+                if tube_index >= len(tubes):
+                    fatal('%s: more reagent needed' % msg)
+                cur_well = tubes[tube_index][0]
                 cur_vol = tubes[tube_index][1]
-                min_vol = max(p50_min_vol, cur_vol / 15.0)  # tolerance is proportional to specification of volume. can probably make better guess
+                min_vol = max(p50_min_vol,
+                              cur_vol / config.min_aspirate_factor_hack,  # tolerance is proportional to specification of volume. can probably make better guess
+                              get_well_geometry(cur_well).min_aspirate_vol)
                 tube_index = tube_index + 1
             this_vol = min(xfer_vol_remaining, cur_vol - min_vol)
             assert this_vol >= p50_min_vol  # TODO: is this always the case?
-            log('%s: xfer %f from %s in %s to %s in %s' % (ctx, this_vol, cur_loc, cur_loc.parent, dest, dest.parent))
-            p50.transfer(this_vol, cur_loc, dest, trash=trash_control, new_tip=new_tip, **kwargs)
+            log('%s: xfer %f from %s in %s to %s in %s' % (msg, this_vol, cur_well, cur_well.parent, dest, dest.parent))
+            p50.transfer(this_vol, cur_well, dest, trash=trash_control, new_tip=new_tip, **kwargs)
             xfer_vol_remaining -= this_vol
             cur_vol -= this_vol
 
