@@ -49,7 +49,7 @@ config.aspirate.extra_top_clearance_name = 'extra_aspirate_top_clearance'
 
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
-config.dispense.top_clearance = 1.0
+config.dispense.top_clearance = 2.0
 config.dispense.top_clearance_factor = 10.0
 config.dispense.extra_top_clearance_name = 'extra_dispense_top_clearance'
 
