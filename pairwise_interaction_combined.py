@@ -2,7 +2,6 @@
 @author Robert Atkinson
 """
 
-import cmath
 import json
 import numpy
 import string
@@ -28,59 +27,17 @@ metadata = {
     'description': 'Study the interaction of two DNA strands'
 }
 
+# region Extensions
+
 ########################################################################################################################
-# Configurable parameters
+# Extension Configuration
 ########################################################################################################################
-
-# Volumes of master mix ingredients. These are minimums in each tube.
-buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
-evagreen_volumes = [600]            # B1, B2, etc in screwcap rack
-
-strand_a_conc = '10uM'  # '8.820 uM'
-strand_b_conc = '10uM'  # '9.117 uM'
-
-# Tip usage
-p10_start_tip = 'A8'
-p50_start_tip = 'A8'
-trash_control = False
-
-# Diluting each strand
-strand_dilution_factor = 25.0 / 9.0  # per Excel worksheet
-strand_dilution_vol = 1225
-
-# Master mix
-master_mix_buffer_vol = 1693.44
-master_mix_evagreen_vol = 423.36
-master_mix_common_water_vol = 705.6
-master_mix_vol = master_mix_buffer_vol + master_mix_evagreen_vol + master_mix_common_water_vol
-
-# Define the volumes of diluted strands we will use
-strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
-num_replicates = 3
-columns_per_plate = 12
-rows_per_plate = 8
-per_well_water_volumes = [
-    [56, 54, 51, 48],
-    [54, 52, 49, 46],
-    [51, 49, 46, 43],
-    [48, 46, 43, 40],
-    [32, 28, 24, 16],
-    [28, 24, 20, 12],
-    [24, 20, 16, 8],
-    [16, 12, 8, 0]]
-assert len(per_well_water_volumes) == rows_per_plate
-assert len(per_well_water_volumes[0]) * num_replicates == columns_per_plate
-
-
-# Optimization Control (needs cleaning up)
-allow_blow_elision = True
-allow_carryover = allow_blow_elision
-
 
 class Config(object):
     pass
 
 config = Config()
+config.trash_control = False
 config.blow_out_rate_factor = 3.0
 config.min_aspirate_factor_hack = 15.0
 
@@ -115,16 +72,7 @@ config.layered_mix.initial_turnover = None
 config.layered_mix.max_tip_cycles = None
 config.layered_mix.max_tip_cycles_large = None
 
-
-########################################################################################################################
-########################################################################################################################
-##                                                                                                                    ##
-## Extensions : this section can be reused across protocols                                                           ##
-##                                                                                                                    ##
-########################################################################################################################
-########################################################################################################################
-
-# region Extensions
+# region Other Extension Stuff
 
 ########################################################################################################################
 # Interval, adapted from pyinterval
@@ -1176,7 +1124,7 @@ class MyPipette(Pipette):
         if self.has_tip:
             if self.current_volume > 0:
                 info(Pretty().format('{0} has {1:n} uL remaining', self.name, self.current_volume))
-            if trash_control:
+            if config.trash_control:
                 self.drop_tip()
             else:
                 self.return_tip()
@@ -1418,12 +1366,58 @@ class Pretty(string.Formatter):
 
 # endregion
 
+# endregion
+
 ########################################################################################################################
+# Configurable protocol parameters
 ########################################################################################################################
-##                                                                                                                    ##
-## Protocol                                                                                                           ##
-##                                                                                                                    ##
+
+# Volumes of master mix ingredients. These are minimums in each tube.
+buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
+evagreen_volumes = [600]            # B1, B2, etc in screwcap rack
+
+strand_a_conc = '10uM'  # '8.820 uM'  # why do we use more strand a than strand b?
+strand_b_conc = '10uM'  # '9.117 uM'
+
+# Tip usage
+p10_start_tip = 'A8'
+p50_start_tip = 'A8'
+config.trash_control = False
+
+# Diluting each strand
+strand_dilution_factor = 25.0 / 9.0  # per Excel worksheet
+strand_dilution_vol = 1225
+
+# Master mix
+master_mix_buffer_vol = 1693.44
+master_mix_evagreen_vol = 423.36
+master_mix_common_water_vol = 705.6
+master_mix_vol = master_mix_buffer_vol + master_mix_evagreen_vol + master_mix_common_water_vol
+
+# Define the volumes of diluted strands we will use
+strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
+num_replicates = 3
+columns_per_plate = 12
+rows_per_plate = 8
+per_well_water_volumes = [
+    [56, 54, 51, 48],
+    [54, 52, 49, 46],
+    [51, 49, 46, 43],
+    [48, 46, 43, 40],
+    [32, 28, 24, 16],
+    [28, 24, 20, 12],
+    [24, 20, 16, 8],
+    [16, 12, 8, 0]]
+assert len(per_well_water_volumes) == rows_per_plate
+assert len(per_well_water_volumes[0]) * num_replicates == columns_per_plate
+
+
+# Optimization Control (needs cleaning up)
+allow_blow_elision = True
+allow_carryover = allow_blow_elision
+
 ########################################################################################################################
+## Protocol
 ########################################################################################################################
 
 
@@ -1563,14 +1557,14 @@ def diluteStrands():
     log('Moving water for diluting Strands A and B')
     p50.transfer(strand_dilution_water_vol, water, [diluted_strand_a, diluted_strand_b],
                  new_tip='once',  # can reuse for all diluent dispensing since dest tubes are initially empty
-                 trash=trash_control
+                 trash=config.trash_control
                  )
     log('Diluting Strand A')
-    p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=trash_control, retain_tip=True)
+    p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=config.trash_control, retain_tip=True)
     p50.layered_mix([diluted_strand_a], 'Mixing Diluted Strand A', incr=2)
 
     log('Diluting Strand B')
-    p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=trash_control, retain_tip=True)
+    p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=config.trash_control, retain_tip=True)
     p50.layered_mix([diluted_strand_b], 'Mixing Diluted Strand B', incr=2)
 
 
@@ -1601,7 +1595,7 @@ def createMasterMix():
             this_vol = min(xfer_vol_remaining, cur_vol - min_vol)
             assert this_vol >= p50_min_vol  # TODO: is this always the case?
             log('%s: xfer %f from %s in %s to %s in %s' % (msg, this_vol, cur_well, cur_well.parent, dest, dest.parent))
-            p50.transfer(this_vol, cur_well, dest, trash=trash_control, new_tip=new_tip, **kwargs)
+            p50.transfer(this_vol, cur_well, dest, trash=config.trash_control, new_tip=new_tip, **kwargs)
             xfer_vol_remaining -= this_vol
             cur_vol -= this_vol
 
@@ -1610,7 +1604,7 @@ def createMasterMix():
         p50.layered_mix([master_mix], incr=2, initial_turnover=master_mix_evagreen_vol * 1.2, max_tip_cycles=config.layered_mix.max_tip_cycles_large)
 
     log('Creating Master Mix: Water')
-    p50.transfer(master_mix_common_water_vol, water, master_mix, trash=trash_control)
+    p50.transfer(master_mix_common_water_vol, water, master_mix, trash=config.trash_control)
 
     log('Creating Master Mix: Buffer')
     transfer_multiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', retain_tip=True)  # 'once' because we've only got water & buffer in context
@@ -1633,7 +1627,7 @@ def plateEverythingAndMix():
     p50.distribute(master_mix_per_well, master_mix, usedWells(),
                    new_tip='once',
                    disposal_vol=p50_disposal_vol,
-                   trash=trash_control)
+                   trash=config.trash_control)
 
     log('Plating per-well water')
     # Plate per-well water. We save tips by being happy to pollute our water trough with a bit of master mix.
@@ -1649,7 +1643,7 @@ def plateEverythingAndMix():
     p50.distribute(water_volumes, water, plate.wells(),
                    new_tip='once',
                    disposal_vol=p50_disposal_vol,
-                   trash=trash_control,
+                   trash=config.trash_control,
                    allow_blow_elision=allow_blow_elision,
                    allow_carryover=allow_carryover)
 
@@ -1676,7 +1670,7 @@ def plateEverythingAndMix():
         p.distribute(volumes, diluted_strand_a, dest_wells,
                      new_tip='never',
                      disposal_vol=disposal_vol,
-                     trash=trash_control,
+                     trash=config.trash_control,
                      allow_blow_elision=allow_blow_elision,
                      allow_carryover=allow_carryover)
     p10.done_tip()
