@@ -1481,9 +1481,9 @@ class Pretty(string.Formatter):
                 return str(value)
         return super().format_field(value, spec)
 
-# endregion
+# endregion Other Extension Stuff
 
-# endregion
+# endregion Extensions
 
 ########################################################################################################################
 # Configurable protocol parameters
