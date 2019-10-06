@@ -332,7 +332,5 @@ def terminate_simulator_background_threads():
 
 if __name__ == '__main__':
     rc = main()
-    print('main() completed')
     terminate_simulator_background_threads()
-    print('background threads terminated')
     sys.exit(rc)
