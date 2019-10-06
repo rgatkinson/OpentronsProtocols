@@ -322,6 +322,17 @@ def main() -> int:
     return 0
 
 
+def terminate_simulator_background_threads():
+    # hack-o-rama, but necessary or sys.exit() won't actually terminate
+    import opentrons.protocol_api.back_compat
+    from opentrons.protocol_api.contexts import ProtocolContext
+    rbt = opentrons.protocol_api.back_compat.robot
+    protocol_context: ProtocolContext = rbt._ctx
+    protocol_context._hw_manager._current.join()
+
 if __name__ == '__main__':
     rc = main()
+    print('main() completed')
+    terminate_simulator_background_threads()
+    print('background threads terminated')
     sys.exit(rc)
