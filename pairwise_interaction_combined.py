@@ -1493,7 +1493,7 @@ class Pretty(string.Formatter):
 buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
 evagreen_volumes = [600]            # B1, B2, etc in screwcap rack
 
-strand_a_conc = '10uM'  # '8.820 uM'  # why do we use more strand a than strand b?
+strand_a_conc = '10uM'  # '8.820 uM'  # Note: we'll use more Strand A than Strand B because of disposal_volumes
 strand_b_conc = '10uM'  # '9.117 uM'
 
 # Tip usage
@@ -1589,10 +1589,8 @@ master_mix = falcon_rack['A1']  # note: this needs tape around it's mid-section 
 # Define geometries
 for well, __ in buffers:
     well.geometry = IdtTubeWellGeometry(well)
-    # well.extra_aspirate_top_clearance = 3.0
 for well, __ in evagreens:
     well.geometry = IdtTubeWellGeometry(well)
-    # well.extra_aspirate_top_clearance = 3.0
 strand_a.geometry = Eppendorf1point5mlTubeGeometry(strand_a)
 strand_b.geometry = Eppendorf1point5mlTubeGeometry(strand_b)
 diluted_strand_a.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_a)
@@ -1600,15 +1598,14 @@ diluted_strand_b.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_b)
 master_mix.geometry = FalconTube15mlGeometry(master_mix)
 for well in plate.wells():
     well.geometry = Biorad96WellPlateWellGeometryM3(well)
-    # well.extra_aspirate_top_clearance = 2.0
 
 # Remember initial liquid names and volumes
 log('Liquid Names')
 note_liquid(location=water, name='Water', min_volume=7000)  # volume is rough guess
-note_liquid(location=strand_a, name='Strand A', concentration=strand_a_conc, min_volume=strand_dilution_source_vol + get_well_geometry(strand_a).min_aspirate_vol)  # i.e.: we have enough, just not specified how much
-note_liquid(location=strand_b, name='Strand B', concentration=strand_b_conc, min_volume=strand_dilution_source_vol + get_well_geometry(strand_b).min_aspirate_vol)  # ditto
-note_liquid(location=diluted_strand_a, name='Diluted Strand A')
-note_liquid(location=diluted_strand_b, name='Diluted Strand B')
+note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, min_volume=strand_dilution_source_vol + get_well_geometry(strand_a).min_aspirate_vol)  # i.e.: we have enough, just not specified how much
+note_liquid(location=strand_b, name='StrandB', concentration=strand_b_conc, min_volume=strand_dilution_source_vol + get_well_geometry(strand_b).min_aspirate_vol)  # ditto
+note_liquid(location=diluted_strand_a, name='Diluted StrandA')
+note_liquid(location=diluted_strand_b, name='Diluted StrandB')
 note_liquid(location=master_mix, name='Master Mix')
 for buffer in buffers:
     note_liquid(location=buffer[0], name='Buffer', initial_volume=buffer[1], concentration='5x')
