@@ -2,6 +2,17 @@
 @author Robert Atkinson
 """
 
+from typing import List
+from opentrons.commands.commands import stringify_location
+
+metadata = {
+    'protocolName': 'Pairwise Interaction: Dilute & Master & Plate',
+    'author': 'Robert Atkinson <bob@theatkinsons.org>',
+    'description': 'Study the interaction of two DNA strands'
+}
+
+# region Extensions
+
 import json
 import numpy
 import string
@@ -11,7 +22,6 @@ from enum import Enum
 from functools import wraps
 from numbers import Number
 from numpy import isclose
-from typing import List
 
 import opentrons
 from opentrons import labware, instruments, robot, modules, types
@@ -20,14 +30,6 @@ from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
 from opentrons.legacy_api.containers.placeable import unpack_location, Well, Placeable
-
-metadata = {
-    'protocolName': 'Pairwise Interaction: Dilute & Master & Plate',
-    'author': 'Robert Atkinson <bob@theatkinsons.org>',
-    'description': 'Study the interaction of two DNA strands'
-}
-
-# region Extensions
 
 ########################################################################################################################
 # Extension Configuration
@@ -525,78 +527,22 @@ interval.inverse = interval.function(getattr(interval.inverse, '__func__', inter
 del coercing, comp_by_comp, Metaclass
 # endregion
 
+
 ########################################################################################################################
-# Well enhancements
+# Mixtures
 ########################################################################################################################
 
-class WellVolume(object):
-    def __init__(self, well):
-        self.well = well
-        self.initial_volume_known = False
-        self.initial_volume = interval([0, fpu.infinity])
-        self.cum_delta = 0
-        self.min_delta = 0
-        self.max_delta = 0
+class Liquid:
+    def __init__(self, name):
+        self.name = name
+        self.concentration = Concentration('dc')
 
-    def set_initial_volume(self, initial_volume):  # idempotent
-        if self.initial_volume_known:
-            assert self.initial_volume == initial_volume
+    def __str__(self) -> str:
+        if self.concentration.flavor == Concentration.Flavor.DontCare:
+            return f'Liquid({self.name})'
         else:
-            assert not self.initial_volume_known
-            assert self.cum_delta == 0
-            self.initial_volume_known = True
-            self.initial_volume = initial_volume
+            return f'Liquid([{self.name}]={self.concentration})'
 
-    @property
-    def current_volume(self):
-        return self.initial_volume + self.cum_delta
-
-    @property
-    def current_volume_min(self):  # (scalar) minimum known to be currently occupied
-        vol = self.current_volume
-        if isinstance(vol, interval):
-            return vol.infimum
-        else:
-            return vol
-
-    @property
-    def min_volume(self):  # minimum historically seen
-        return self.initial_volume + self.min_delta
-
-    @property
-    def max_volume(self):
-        return self.initial_volume + self.max_delta
-
-    def aspirate(self, volume):
-        assert volume >= 0
-        if not self.initial_volume_known:
-            self.set_initial_volume(interval([volume, get_well_volume(well).capacity]))
-        self._track_volume(-volume)
-
-    def dispense(self, volume):
-        assert volume >= 0
-        if not self.initial_volume_known:
-            self.set_initial_volume(0)
-        self._track_volume(volume)
-
-    def _track_volume(self, delta):
-        self.cum_delta = self.cum_delta + delta
-        self.min_delta = min(self.min_delta, self.cum_delta)
-        self.max_delta = max(self.max_delta, self.cum_delta)
-
-
-def isWell(location):
-    return isinstance(location, Well)
-
-def get_well_volume(well):
-    assert isWell(well)
-    try:
-        return well.contents
-    except AttributeError:
-        well.contents = WellVolume(well)
-        return well.contents
-
-########################################################################################################################
 
 class Concentration(object):
 
@@ -677,6 +623,107 @@ class Concentration(object):
             return 'DC'
 
 
+class Mixture(object):
+    def __init__(self, liquid=None, volume=0):
+        self.liquids = dict()  # map from liquid to volume
+        if liquid is not None:
+            self.set_initial_liquid(liquid=liquid, volume=volume)
+
+    def set_initial_liquid(self, liquid, volume):
+        assert len(self.liquids) == 0
+        if liquid is not None:
+            self._adjust_liquid(liquid, volume)
+
+    def __str__(self) -> str:
+        if self.is_empty:
+            return '{}'
+        else:
+            result = '{ '
+            is_first = True
+            total_volume = self.volume
+            for liquid, volume in self.liquids.items():
+                if not is_first:
+                    result += ', '
+                if is_scalar(total_volume) and liquid.concentration.flavor != Concentration.Flavor.DontCare:
+                    dilution_factor = volume / total_volume
+                    concentration = liquid.concentration * dilution_factor
+                    result += Pretty().format('{0}:{1:n}={2}', liquid.name, volume, concentration)
+                else:
+                    result += Pretty().format('{0}:{1:n}', liquid.name, volume)
+                is_first = False
+            result += ' }'
+        return result
+
+    @property
+    def volume(self):
+        result = 0.0
+        for volume in self.liquids.values():
+            result += volume
+        return result
+
+    @property
+    def is_empty(self):
+        return supremum(self.volume) <= 0
+
+    @property
+    def is_homogeneous(self):
+        return len(self.liquids) <= 1
+
+    def _adjust_liquid(self, liquid, volume):
+        existing = self.liquids.get(liquid, 0)
+        existing += volume
+        if supremum(existing) <= 0:
+            self.liquids.pop(liquid, None)
+        else:
+            self.liquids[liquid] = existing
+
+    def to_pipette(self, volume, pipette_contents):
+        removed = self.remove_volume(volume)
+        pipette_contents.mixture.add_mixture(removed)
+
+    def from_pipette(self, volume, pipette_contents):
+        removed = pipette_contents.mixture.remove_volume(volume)
+        self.add_mixture(removed)
+
+    def add_mixture(self, them):
+        assert self is not them
+        for liquid, volume in them.liquids.items():
+            self._adjust_liquid(liquid, volume)
+
+    def remove_volume(self, removal_volume):
+        assert is_scalar(removal_volume)
+        if self.is_homogeneous:
+            # If the liquid is homogeneous, we can remove from non-scalar volumes
+            liquid = first(self.liquids.keys())
+            self._adjust_liquid(liquid, -removal_volume)
+            return Mixture(liquid, removal_volume)
+        else:
+            current_volume = self.volume
+            assert is_scalar(current_volume)
+            removal_fraction = removal_volume / current_volume
+            result = Mixture()
+            new_liquids = Mixture()  # avoid changing while iterating
+            for liquid, volume in self.liquids.items():
+                result._adjust_liquid(liquid, volume * removal_fraction)
+                new_liquids._adjust_liquid(liquid, volume * (1.0 - removal_fraction))
+            self.liquids = new_liquids.liquids
+            return result
+
+
+class PipetteContents(object):
+    def __init__(self):
+        self.mixture = Mixture()
+
+    def pick_up_tip(self):
+        self.clear()
+
+    def drop_tip(self):
+        self.clear()
+
+    def clear(self):
+        self.mixture = Mixture()
+
+
 # Must keep in sync with Opentrons-Analyze controller.note_liquid_name
 def note_liquid(location, name=None, initial_volume=None, min_volume=None, concentration=None):
     well, __ = unpack_location(location)
@@ -697,6 +744,76 @@ def note_liquid(location, name=None, initial_volume=None, min_volume=None, conce
     robot.comment('Liquid: %s' % serialized)
 
 ########################################################################################################################
+# Well enhancements
+########################################################################################################################
+
+class WellVolume(object):
+    def __init__(self, well=None):
+        self.well = well
+        self.initial_volume_known = False
+        self.initial_volume = interval([0, fpu.infinity])
+        self.cum_delta = 0
+        self.min_delta = 0
+        self.max_delta = 0
+
+    def set_initial_volume(self, initial_volume):  # idempotent
+        if self.initial_volume_known:
+            assert self.initial_volume == initial_volume
+        else:
+            assert not self.initial_volume_known
+            assert self.cum_delta == 0
+            self.initial_volume_known = True
+            self.initial_volume = initial_volume
+
+    @property
+    def current_volume(self):
+        return self.initial_volume + self.cum_delta
+
+    @property
+    def current_volume_min(self):  # (scalar) minimum known to be currently occupied
+        vol = self.current_volume
+        if isinstance(vol, interval):
+            return vol.infimum
+        else:
+            return vol
+
+    @property
+    def min_volume(self):  # minimum historically seen
+        return self.initial_volume + self.min_delta
+
+    @property
+    def max_volume(self):
+        return self.initial_volume + self.max_delta
+
+    def aspirate(self, volume):
+        assert volume >= 0
+        if not self.initial_volume_known:
+            self.set_initial_volume(interval([volume,
+                                              fpu.infinity if self.well is None else get_well_volume(self.well).capacity]))
+        self._track_volume(-volume)
+
+    def dispense(self, volume):
+        assert volume >= 0
+        if not self.initial_volume_known:
+            self.set_initial_volume(0)
+        self._track_volume(volume)
+
+    def _track_volume(self, delta):
+        self.cum_delta = self.cum_delta + delta
+        self.min_delta = min(self.min_delta, self.cum_delta)
+        self.max_delta = max(self.max_delta, self.cum_delta)
+
+
+def isWell(location):
+    return isinstance(location, Well)
+
+def get_well_volume(well):
+    assert isWell(well)
+    try:
+        return well.contents
+    except AttributeError:
+        well.contents = WellVolume(well)
+        return well.contents
 
 # region Well Geometry
 class WellGeometry(object):

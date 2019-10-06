@@ -2,6 +2,8 @@
 @author Robert Atkinson
 """
 
+# region Extensions
+
 import json
 import numpy
 import string
@@ -19,8 +21,6 @@ from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
 from opentrons.legacy_api.containers.placeable import unpack_location, Well, Placeable
-
-# region Extensions
 
 ########################################################################################################################
 # Extension Configuration
