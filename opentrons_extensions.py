@@ -11,6 +11,7 @@ from abc import abstractmethod
 from enum import Enum
 from functools import wraps
 from numbers import Number
+from typing import List
 
 import opentrons
 from opentrons import labware, instruments, robot, modules, types
@@ -1480,6 +1481,19 @@ class Pretty(string.Formatter):
         return super().format_field(value, spec)
 
 pretty = Pretty()
+
+def verify_well_locations(well_list: List[Well], pipette: MyPipette):
+    picked_tip = False
+    if not pipette.has_tip:
+        pipette.pick_up_tip()
+        picked_tip = True
+
+    for well in well_list:
+        pipette.move_to(well.top())
+        robot.pause(f'verify location: {well.get_name()} in {well.parent.get_name()}')
+
+    if picked_tip:
+        pipette.done_tip()
 
 # endregion Other Extension Stuff
 

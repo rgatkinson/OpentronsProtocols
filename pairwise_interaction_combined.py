@@ -1490,6 +1490,19 @@ class Pretty(string.Formatter):
 
 pretty = Pretty()
 
+def verify_well_locations(well_list: List[Well], pipette: MyPipette):
+    picked_tip = False
+    if not pipette.has_tip:
+        pipette.pick_up_tip()
+        picked_tip = True
+
+    for well in well_list:
+        pipette.move_to(well.top())
+        robot.pause(f'verify location: {well.get_name()} in {well.parent.get_name()}')
+
+    if picked_tip:
+        pipette.done_tip()
+
 # endregion Other Extension Stuff
 
 # endregion Extensions
@@ -1607,6 +1620,8 @@ diluted_strand_b.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_b)
 master_mix.geometry = FalconTube15mlGeometry(master_mix)
 for well in plate.wells():
     well.geometry = Biorad96WellPlateWellGeometryM3(well)
+
+wells_to_verify = [master_mix, diluted_strand_a, diluted_strand_b, plate.wells('H12')]
 
 # Remember initial liquid names and volumes
 log('Liquid Names')
@@ -1852,6 +1867,7 @@ def debug_test_blow():
 ########################################################################################################################
 
 master_and_dilutions_made = False
+verify_well_locations(wells_to_verify, p50)
 
 if not master_and_dilutions_made:
     diluteStrands()
@@ -1862,3 +1878,4 @@ else:
     note_liquid(location=master_mix, name=None, initial_volume=master_mix_vol)
 
 plateEverythingAndMix()
+verify_well_locations(wells_to_verify, p50)
