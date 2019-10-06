@@ -699,20 +699,27 @@ class Concentration(object):
         return self * scale
 
     def __str__(self) -> str:
-        def test(scale):
-            return int(self.value * scale) != 0
+        def test(v, scale):
+            return int(v * scale) != 0
 
         def emit(scale, unit):
-            return Pretty().format('{0:.3n}{1}', self.value * scale, unit)
+            v = self.value * scale
+            if v >= 100:
+                return Pretty().format('{0:.0n}{1}', v, unit)
+            if v >= 10:
+                return Pretty().format('{0:.1n}{1}', v, unit)
+            if v >= 1:
+                return Pretty().format('{0:.2n}{1}', v, unit)
+            return Pretty().format('{0:.3n}{1}', v, unit)
 
         if self.flavor == Concentration.Flavor.Molar:
             if self.value == 0:
                 return emit(1, 'M')
-            elif test(1):
+            elif test(self.value, 1):
                 return emit(1, 'M')
-            elif test(1e3):
+            elif test(self.value, 1e3):
                 return emit(1e3, 'mM')
-            elif test(1e6):
+            elif test(self.value, 1e6):
                 return emit(1e6, 'uM')
             else:
                 return emit(1e9, 'nM')
