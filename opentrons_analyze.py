@@ -8,7 +8,9 @@ import json
 import string
 import sys
 import warnings
+from enum import Enum
 from numbers import Number
+from numpy import isclose
 from functools import wraps
 
 import opentrons
@@ -464,6 +466,90 @@ del coercing, comp_by_comp, Metaclass
 # Mixtures
 ########################################################################################################################
 
+class Liquid:
+    def __init__(self, name):
+        self.name = name
+        self.concentration = Concentration('dc')
+
+    def __str__(self) -> str:
+        if self.concentration.flavor == Concentration.Flavor.DontCare:
+            return f'Liquid({self.name})'
+        else:
+            return f'Liquid([{self.name}]={self.concentration})'
+
+
+class Concentration(object):
+
+    class Flavor(Enum):
+        Molar = 0
+        X = 1
+        DontCare = 2
+
+    def __init__(self, value, unit=None, flavor=None):
+        if flavor is not None:
+            if flavor == Concentration.Flavor.Molar:
+                unit = 'M'
+            elif flavor == Concentration.Flavor.X:
+                unit = 'x'
+            elif flavor == Concentration.Flavor.DontCare:
+                unit = 'dc'
+        if unit is not None:
+            value = str(value) + str(unit)
+        else:
+            value = str(value)
+        self.flavor = Concentration.Flavor.Molar
+        units = [('mM', 0.001), ('uM', 0.000001), ('nM', 1e-9), ('M', 1)]
+        for unit, factor in units:
+            if value.endswith(unit):
+                quantity = value[0:-len(unit)]
+                self.value = float(quantity) * factor
+                return
+        if value.lower().endswith('x'):
+            quantity = value[0:-1]
+            try:
+                self.value = float(quantity)
+            except ValueError:
+                self.value = 0
+            self.flavor = Concentration.Flavor.X
+            return
+        if value.lower().endswith('dc'):
+            self.value = 0
+            self.flavor = Concentration.Flavor.DontCare
+            return
+        # default is micro-molar
+        factor = 1e-6
+        self.value = float(value) * factor
+
+    def __mul__(self, scale):
+        return Concentration(self.value * scale, flavor=self.flavor)
+
+    def __rmul__(self, scale):
+        return self * scale
+
+    def __str__(self) -> str:
+        def test(scale):
+            return int(self.value * scale) != 0
+
+        def emit(scale, unit):
+            return Pretty().format('{0:.3n}{1}', self.value * scale, unit)
+
+        if self.flavor == Concentration.Flavor.Molar:
+            if self.value == 0:
+                return emit(1, 'M')
+            elif test(1):
+                return emit(1, 'M')
+            elif test(1e3):
+                return emit(1e3, 'mM')
+            elif test(1e6):
+                return emit(1e6, 'uM')
+            else:
+                return emit(1e9, 'nM')
+        elif self.flavor == Concentration.Flavor.X:
+            return Pretty().format('{0:.3n}x', self.value)
+        else:
+            return 'DC'
+
+
 class Mixture(object):
     def __init__(self, liquid=None, volume=0):
         self.liquids = dict()  # map from liquid to volume
@@ -481,11 +567,17 @@ class Mixture(object):
         else:
             result = '{ '
             is_first = True
+            total_volume = self.volume
             for liquid, volume in self.liquids.items():
                 if not is_first:
                     result += ', '
+                if is_scalar(total_volume) and liquid.concentration.flavor != Concentration.Flavor.DontCare:
+                    dilution_factor = volume / total_volume
+                    concentration = liquid.concentration * dilution_factor
+                    result += Pretty().format('{0}:{1:n}={2}', liquid.name, volume, concentration)
+                else:
+                    result += Pretty().format('{0}:{1:n}', liquid.name, volume)
                 is_first = False
-                result += Pretty().format('{0:s}: {1:n}', liquid.name, volume)
             result += ' }'
         return result
 
@@ -718,14 +810,6 @@ def get_location_path(location):
                                    for item in location.get_trace(None)
                                    if str(item) is not None])))
 
-class Liquid:  # todo: add concentration field
-    def __init__(self, name):
-        self.name = name
-
-    def __str__(self) -> str:
-        return f'Liquid({self.name}'
-
-
 class MonitorController(object):
     def __init__(self):
         self._monitors = dict()  # maps location path to monitor
@@ -738,9 +822,12 @@ class MonitorController(object):
             self._liquids[liquid_name] = Liquid(liquid_name)
             return self._liquids[liquid_name]
 
-    def note_liquid_name(self, liquid_name, location_path, initial_volume=None):
+    def note_liquid_name(self, liquid_name, location_path, initial_volume=None, concentration=None):
         well_monitor = self._monitor_from_location_path(WellMonitor, location_path)
         liquid = self.get_liquid(liquid_name)
+        if concentration is not None:
+            concentration = Concentration(concentration)
+            liquid.concentration = concentration
         well_monitor.set_liquid(liquid)
         if initial_volume is not None:
             if isinstance(initial_volume, list):  # work around json parsing deficiency
@@ -828,7 +915,7 @@ class Pretty(string.Formatter):
             if isinstance(value, Number) and is_finite(value):
                 factor = 1
                 for i in range(precision):
-                    if value * factor == int(value * factor):
+                    if isclose(value * factor, int(value * factor)):
                         precision = i
                         break
                     factor *= 10
@@ -913,7 +1000,7 @@ def analyzeRunLog(run_log):
                 serialized = text[len(selector):]  # will include initial white space, but that's ok
                 serialized = serialized.replace("}}", "}").replace("{{", "{")
                 d = json.loads(serialized)
-                controller.note_liquid_name(d['name'], d['location'], initial_volume=d.get('initial_volume', None))
+                controller.note_liquid_name(d['name'], d['location'], initial_volume=d.get('initial_volume', None), concentration=d.get('concentration', None))
             elif selector == 'air' \
                     or selector == 'returning' \
                     or selector == 'engaging' \

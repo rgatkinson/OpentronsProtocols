@@ -8,8 +8,10 @@ import numpy
 import string
 import warnings
 from abc import abstractmethod
+from enum import Enum
 from functools import wraps
 from numbers import Number
+from numpy import isclose
 from typing import List
 
 import opentrons
@@ -33,6 +35,9 @@ metadata = {
 # Volumes of master mix ingredients. These are minimums in each tube.
 buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
 evagreen_volumes = [600]            # B1, B2, etc in screwcap rack
+
+strand_a_conc = '10uM'  # '8.820 uM'
+strand_b_conc = '10uM'  # '9.117 uM'
 
 # Tip usage
 p10_start_tip = 'A8'
@@ -643,8 +648,82 @@ def get_well_volume(well):
         well.contents = WellVolume(well)
         return well.contents
 
+########################################################################################################################
+
+class Concentration(object):
+
+    class Flavor(Enum):
+        Molar = 0
+        X = 1
+        DontCare = 2
+
+    def __init__(self, value, unit=None, flavor=None):
+        if flavor is not None:
+            if flavor == Concentration.Flavor.Molar:
+                unit = 'M'
+            elif flavor == Concentration.Flavor.X:
+                unit = 'x'
+            elif flavor == Concentration.Flavor.DontCare:
+                unit = 'dc'
+        if unit is not None:
+            value = str(value) + str(unit)
+        else:
+            value = str(value)
+        self.flavor = Concentration.Flavor.Molar
+        units = [('mM', 0.001), ('uM', 0.000001), ('nM', 1e-9), ('M', 1)]
+        for unit, factor in units:
+            if value.endswith(unit):
+                quantity = value[0:-len(unit)]
+                self.value = float(quantity) * factor
+                return
+        if value.lower().endswith('x'):
+            quantity = value[0:-1]
+            try:
+                self.value = float(quantity)
+            except ValueError:
+                self.value = 0
+            self.flavor = Concentration.Flavor.X
+            return
+        if value.lower().endswith('dc'):
+            self.value = 0
+            self.flavor = Concentration.Flavor.DontCare
+            return
+        # default is micro-molar
+        factor = 1e-6
+        self.value = float(value) * factor
+
+    def __mul__(self, scale):
+        return Concentration(self.value * scale, flavor=self.flavor)
+
+    def __rmul__(self, scale):
+        return self * scale
+
+    def __str__(self) -> str:
+        def test(scale):
+            return int(self.value * scale) != 0
+
+        def emit(scale, unit):
+            return Pretty().format('{0:.3n}{1}', self.value * scale, unit)
+
+        if self.flavor == Concentration.Flavor.Molar:
+            if self.value == 0:
+                return emit(1, 'M')
+            elif test(1):
+                return emit(1, 'M')
+            elif test(1e3):
+                return emit(1e3, 'mM')
+            elif test(1e6):
+                return emit(1e6, 'uM')
+            else:
+                return emit(1e9, 'nM')
+        elif self.flavor == Concentration.Flavor.X:
+            return Pretty().format('{0:.3n}x', self.value)
+        else:
+            return 'DC'
+
+
 # Must keep in sync with Opentrons-Analyze controller.note_liquid_name
-def note_liquid(location, name=None, initial_volume=None, min_volume=None):
+def note_liquid(location, name=None, initial_volume=None, min_volume=None, concentration=None):
     well, __ = unpack_location(location)
     assert isWell(well)
     if name is None:
@@ -657,6 +736,8 @@ def note_liquid(location, name=None, initial_volume=None, min_volume=None):
     if initial_volume is not None:
         d['initial_volume'] = initial_volume
         get_well_volume(well).set_initial_volume(initial_volume)
+    if concentration is not None:
+        d['concentration'] = str(Concentration(concentration))
     serialized = json.dumps(d).replace("{", "{{").replace("}", "}}")  # runtime calls comment.format(...) on our comment; avoid issues therewith
     robot.comment('Liquid: %s' % serialized)
 
@@ -1317,7 +1398,7 @@ class Pretty(string.Formatter):
             if isinstance(value, Number) and is_finite(value):
                 factor = 1
                 for i in range(precision):
-                    if value * factor == int(value * factor):
+                    if isclose(value * factor, int(value * factor)):
                         precision = i
                         break
                     factor *= 10
@@ -1406,15 +1487,15 @@ for well in plate.wells():
 # Remember initial liquid names and volumes
 log('Liquid Names')
 note_liquid(location=water, name='Water', min_volume=7000)  # volume is rough guess
-note_liquid(location=strand_a, name='Strand A', min_volume=strand_dilution_source_vol + get_well_geometry(strand_a).min_aspirate_vol)  # i.e.: we have enough, just not specified how much
-note_liquid(location=strand_b, name='Strand B', min_volume=strand_dilution_source_vol + get_well_geometry(strand_b).min_aspirate_vol)  # ditto
+note_liquid(location=strand_a, name='Strand A', concentration=strand_a_conc, min_volume=strand_dilution_source_vol + get_well_geometry(strand_a).min_aspirate_vol)  # i.e.: we have enough, just not specified how much
+note_liquid(location=strand_b, name='Strand B', concentration=strand_b_conc, min_volume=strand_dilution_source_vol + get_well_geometry(strand_b).min_aspirate_vol)  # ditto
 note_liquid(location=diluted_strand_a, name='Diluted Strand A')
 note_liquid(location=diluted_strand_b, name='Diluted Strand B')
 note_liquid(location=master_mix, name='Master Mix')
 for buffer in buffers:
-    note_liquid(location=buffer[0], name='Buffer', initial_volume=buffer[1])
+    note_liquid(location=buffer[0], name='Buffer', initial_volume=buffer[1], concentration='5x')
 for evagreen in evagreens:
-    note_liquid(location=evagreen[0], name='Evagreen', initial_volume=evagreen[1])
+    note_liquid(location=evagreen[0], name='Evagreen', initial_volume=evagreen[1], concentration='20x')
 
 # Clean up namespace
 del well

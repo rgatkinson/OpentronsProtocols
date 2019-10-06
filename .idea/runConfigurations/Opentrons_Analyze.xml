@@ -11,8 +11,8 @@
     <option name="IS_MODULE_SDK" value="false" />
     <option name="ADD_CONTENT_ROOTS" value="false" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
-    <option name="SCRIPT_NAME" value="Opentrons-Analyze.py" />
-    <option name="PARAMETERS" value="Pairwise-Interaction-Combined.py" />
+    <option name="SCRIPT_NAME" value="Opentrons_Analyze.py" />
+    <option name="PARAMETERS" value="Pairwise_Interaction_Combined.py" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />
