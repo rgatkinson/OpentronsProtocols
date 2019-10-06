@@ -32,11 +32,11 @@ metadata = {
 
 # Volumes of master mix ingredients. These are minimums in each tube.
 buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
-evagreen_volumes = [500]            # B1, B2, etc in screwcap rack
+evagreen_volumes = [600]            # B1, B2, etc in screwcap rack
 
 # Tip usage
-p10_start_tip = 'A6'
-p50_start_tip = 'A6'
+p10_start_tip = 'A8'
+p50_start_tip = 'A8'
 trash_control = False
 
 # Diluting each strand
