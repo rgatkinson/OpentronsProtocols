@@ -766,7 +766,7 @@ class WellVolume(object):
     @property
     def current_volume_min(self):  # (scalar) minimum known to be currently occupied
         vol = self.current_volume
-        if isinstance(vol, interval):
+        if is_interval(vol):
             return vol.infimum
         else:
             return vol
@@ -834,7 +834,7 @@ class WellGeometry(object):
 
     def min_depth_from_volume(self, volume):
         vol = self.depth_from_volume(volume)
-        if isinstance(vol, interval):
+        if is_interval(vol):
             return vol.infimum
         else:
             return vol
