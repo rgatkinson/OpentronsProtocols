@@ -5,14 +5,12 @@
 # region Extensions
 
 import json
-import numpy
 import string
 import warnings
 from abc import abstractmethod
 from enum import Enum
 from functools import wraps
 from numbers import Number
-from numpy import isclose
 
 import opentrons
 from opentrons import labware, instruments, robot, modules, types
@@ -201,13 +199,13 @@ class Fpu(object):
 fpu = Fpu()
 
 def is_integer(n):
-    return isinstance(n, int)
+    return n.__class__ is int
 
 def is_scalar(x):
-    return isinstance(x, Number)
+    return float is x.__class__ or int is x.__class__ or isinstance(x, Number)
 
 def is_interval(x):
-    return isinstance(x, interval)
+    return x.__class__ is interval
 
 def is_nan(x):
     return x != x
@@ -217,6 +215,12 @@ def is_infinite(x):
 
 def is_finite(x):
     return is_scalar(x) and not is_nan(x) and not is_infinite(x)
+
+def is_close(x, y, atol=1e-08, rtol=1e-05):  # after numpy.isclose, but faster, and only for scalars
+    if x == y:
+        return True
+    result = abs(x-y) <= atol + rtol * abs(y)
+    return result
 
 def supremum(x):
     if is_interval(x):
@@ -590,12 +594,12 @@ class Concentration(object):
         def emit(scale, unit):
             v = self.value * scale
             if v >= 100:
-                return Pretty().format('{0:.0n}{1}', v, unit)
+                return pretty.format('{0:.0n}{1}', v, unit)
             if v >= 10:
-                return Pretty().format('{0:.1n}{1}', v, unit)
+                return pretty.format('{0:.1n}{1}', v, unit)
             if v >= 1:
-                return Pretty().format('{0:.2n}{1}', v, unit)
-            return Pretty().format('{0:.3n}{1}', v, unit)
+                return pretty.format('{0:.2n}{1}', v, unit)
+            return pretty.format('{0:.3n}{1}', v, unit)
 
         if self.flavor == Concentration.Flavor.Molar:
             if self.value == 0:
@@ -609,7 +613,7 @@ class Concentration(object):
             else:
                 return emit(1e9, 'nM')
         elif self.flavor == Concentration.Flavor.X:
-            return Pretty().format('{0:.3n}x', self.value)
+            return pretty.format('{0:.3n}x', self.value)
         else:
             return 'DC'
 
@@ -638,9 +642,9 @@ class Mixture(object):
                 if is_scalar(total_volume) and liquid.concentration.flavor != Concentration.Flavor.DontCare:
                     dilution_factor = volume / total_volume
                     concentration = liquid.concentration * dilution_factor
-                    result += Pretty().format('{0}:{1:n}={2}', liquid.name, volume, concentration)
+                    result += pretty.format('{0}:{1:n}={2}', liquid.name, volume, concentration)
                 else:
-                    result += Pretty().format('{0}:{1:n}', liquid.name, volume)
+                    result += pretty.format('{0}:{1:n}', liquid.name, volume)
                 is_first = False
             result += ' }'
         return result
@@ -1047,7 +1051,7 @@ class MyPipette(Pipette):
             if aspirate:
                 # we might have carryover from a previous transfer.
                 if self.current_volume > 0:
-                    info(Pretty().format('carried over {0:n} uL from prev operation', self.current_volume))
+                    info(pretty.format('carried over {0:n} uL from prev operation', self.current_volume))
 
                 if not seen_aspirate:
                     assert step_index == 0
@@ -1060,13 +1064,13 @@ class MyPipette(Pipette):
                                 new_aspirate_vol = zeroify(aspirate.get('volume') - self.current_volume)
                                 if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
                                     aspirate['volume'] = new_aspirate_vol
-                                    info(Pretty().format('reduced this aspirate by {0:n} uL', self.current_volume))
+                                    info(pretty.format('reduced this aspirate by {0:n} uL', self.current_volume))
                                     extra = 0  # can't blow out since we're relying on its presence in pipette
                                 else:
                                     extra = self.current_volume - aspirate['volume']
                                     assert zeroify(extra) > 0
                             else:
-                                info(Pretty().format("carryover of {0:n} uL isn't for disposal", self.current_volume))
+                                info(pretty.format("carryover of {0:n} uL isn't for disposal", self.current_volume))
                                 extra = self.current_volume
                         else:
                             # different locations; can't re-use
@@ -1077,7 +1081,7 @@ class MyPipette(Pipette):
                             self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
 
                     elif zeroify(self.current_volume) > 0:
-                        info(Pretty().format('blowing out unexpected carryover of {0:n} uL', self.current_volume))
+                        info(pretty.format('blowing out unexpected carryover of {0:n} uL', self.current_volume))
                         self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
 
                 seen_aspirate = True
@@ -1090,7 +1094,7 @@ class MyPipette(Pipette):
                 # the capacity of the overflowing aspirate, but that would reduce precision (we still *could*
                 # do that if it has disposal_vol, but that doesn't seem worth it).
                 if self.current_volume + aspirate['volume'] > self._working_volume:
-                    info(Pretty().format('current {0:n} uL with aspirate(has_disposal={1}) of {2:n} uL would overflow capacity',
+                    info(pretty.format('current {0:n} uL with aspirate(has_disposal={1}) of {2:n} uL would overflow capacity',
                           self.current_volume,
                           self.has_disposal_vol(plan, step_index, **kwargs),
                           aspirate['volume']))
@@ -1099,7 +1103,7 @@ class MyPipette(Pipette):
 
             if dispense:
                 if self.current_volume < dispense['volume']:
-                    warn(Pretty().format('current {0:n} uL will truncate dispense of {1:n} uL', self.current_volume, dispense['volume']))
+                    warn(pretty.format('current {0:n} uL will truncate dispense of {1:n} uL', self.current_volume, dispense['volume']))
                 self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
 
                 do_touch = touch_tip or touch_tip is 0
@@ -1117,9 +1121,9 @@ class MyPipette(Pipette):
                                 if not kwargs.get('allow_carryover', False):
                                     do_blow = True
                                 elif self.current_volume > kwargs.get('disposal_vol', 0):
-                                    warn(Pretty().format('carried over {0:n} uL to next operation', self.current_volume))
+                                    warn(pretty.format('carried over {0:n} uL to next operation', self.current_volume))
                                 else:
-                                    info(Pretty().format('carried over {0:n} uL to next operation', self.current_volume))
+                                    info(pretty.format('carried over {0:n} uL to next operation', self.current_volume))
                         else:
                             # if we can, account for any carryover in the next aspirate
                             if self.current_volume > 0:
@@ -1130,7 +1134,7 @@ class MyPipette(Pipette):
                                         new_aspirate_vol = zeroify(next_aspirate.get('volume') - self.current_volume)
                                         if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
                                             next_aspirate['volume'] = new_aspirate_vol
-                                            info(Pretty().format('reduced next aspirate by {0:n} uL', self.current_volume))
+                                            info(pretty.format('reduced next aspirate by {0:n} uL', self.current_volume))
                                         else:
                                             do_blow = True
                                     else:
@@ -1164,7 +1168,7 @@ class MyPipette(Pipette):
         current_volume = get_well_volume(well).current_volume_min
         needed_volume = get_well_geometry(well).min_aspirate_vol + volume;
         if current_volume < needed_volume:
-            msg = Pretty().format('aspirating too much from {0} have={1:n} need={2:n}', well, current_volume, needed_volume)
+            msg = pretty.format('aspirating too much from {0} have={1:n} need={2:n}', well, current_volume, needed_volume)
             warn(msg)
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume,
                                                        clearances=config.aspirate,
@@ -1231,7 +1235,7 @@ class MyPipette(Pipette):
     def done_tip(self):
         if self.has_tip:
             if self.current_volume > 0:
-                info(Pretty().format('{0} has {1:n} uL remaining', self.name, self.current_volume))
+                info(pretty.format('{0} has {1:n} uL remaining', self.name, self.current_volume))
             if config.trash_control:
                 self.drop_tip()
             else:
@@ -1305,7 +1309,7 @@ class MyPipette(Pipette):
         well_vol = get_well_volume(well).current_volume_min
         well_depth = get_well_geometry(well).depth_from_volume(well_vol)
         well_depth_after_asp = get_well_geometry(well).depth_from_volume(well_vol - volume)
-        msg = Pretty().format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_aspirate={4:n}", msg, well.get_name(), well_vol, well_depth, well_depth_after_asp)
+        msg = pretty.format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_aspirate={4:n}", msg, well.get_name(), well_vol, well_depth, well_depth_after_asp)
         if msg is not None:
             log(msg)
         y_min = y = config.layered_mix.aspirate_bottom_clearance
@@ -1323,7 +1327,7 @@ class MyPipette(Pipette):
 
         first = True
         tip_cycles = 0
-        while y <= y_max or numpy.isclose(y, y_max):
+        while y <= y_max or is_close(y, y_max):
             if not first:
                 self.delay(delay / 1000.0)
             #
@@ -1376,7 +1380,7 @@ def z_from_bottom(location, clearance):
 def command_aspirate(instrument, volume, location, rate):
     z = z_from_bottom(location, config.aspirate.bottom_clearance)
     location_text = stringify_location(location)
-    text = Pretty().format('Aspirating {volume:n} uL z={z:n} rate={rate:n} at {location}', volume=volume, location=location_text, rate=rate, z=z)
+    text = pretty.format('Aspirating {volume:n} uL z={z:n} rate={rate:n} at {location}', volume=volume, location=location_text, rate=rate, z=z)
     return make_command(
         name=command_types.ASPIRATE,
         payload={
@@ -1391,7 +1395,7 @@ def command_aspirate(instrument, volume, location, rate):
 def command_dispense(instrument, volume, location, rate):
     z = z_from_bottom(location, config.dispense.bottom_clearance)
     location_text = stringify_location(location)
-    text = Pretty().format('Dispensing {volume:n} uL z={z:n} rate={rate:n} at {location}', volume=volume, location=location_text, rate=rate, z=z)
+    text = pretty.format('Dispensing {volume:n} uL z={z:n} rate={rate:n} at {location}', volume=volume, location=location_text, rate=rate, z=z)
     return make_command(
         name=command_types.DISPENSE,
         payload={
@@ -1414,9 +1418,13 @@ opentrons.commands.dispense = command_dispense
 
 # Returns a unique name for the given location. Must track in Opentrons-Analyze.
 def get_location_path(location):
-    return '/'.join(list(reversed([str(item)
-                                   for item in location.get_trace(None)
-                                   if str(item) is not None])))
+    result = getattr(location, 'location_path', None)
+    if result is None:
+        result = '/'.join(list(reversed([str(item)
+                                       for item in location.get_trace(None)
+                                       if str(item) is not None])))
+        location.location_path = result
+    return result
 
 def format_log_msg(msg: str, prefix="***********", suffix=' ***********'):
     return "%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix)
@@ -1459,18 +1467,20 @@ class Pretty(string.Formatter):
             if spec.startswith('.', 0, -1):
                 precision = int(spec[1:-1])
             if isinstance(value, Number) and is_finite(value):
-                factor = 1
+                factor = 1.0
                 for i in range(precision):
-                    if isclose(value * factor, int(value * factor)):
+                    if is_close(value * factor, float(int(value * factor))):
                         precision = i
                         break
-                    factor *= 10
+                    factor *= 10.0
                 return "{:.{}f}".format(value, precision)
             elif hasattr(value, 'format'):
                 return value.format(format_spec="{0:%s}" % spec, formatter=self)
             else:
                 return str(value)
         return super().format_field(value, spec)
+
+pretty = Pretty()
 
 # endregion Other Extension Stuff
 
