@@ -210,17 +210,16 @@ def is_interval(x):
 def is_nan(x):
     return x != x
 
-def is_infinite(x):
+def is_infinite_scalar(x):
     return is_scalar(x) and (x == fpu.infinity or x == -fpu.infinity)
 
-def is_finite(x):
-    return is_scalar(x) and not is_nan(x) and not is_infinite(x)
+def is_finite_scalar(x):
+    return is_scalar(x) and not is_nan(x) and not is_infinite_scalar(x)
 
 def is_close(x, y, atol=1e-08, rtol=1e-05):  # after numpy.isclose, but faster, and only for scalars
     if x == y:
         return True
-    result = abs(x-y) <= atol + rtol * abs(y)
-    return result
+    return abs(x-y) <= atol + rtol * abs(y)
 
 def supremum(x):
     if is_interval(x):
@@ -1466,13 +1465,13 @@ class Pretty(string.Formatter):
             precision = 2
             if spec.startswith('.', 0, -1):
                 precision = int(spec[1:-1])
-            if isinstance(value, Number) and is_finite(value):
-                factor = 1.0
+            if is_finite_scalar(value):
+                factor = 1
                 for i in range(precision):
-                    if is_close(value * factor, float(int(value * factor))):
+                    if is_close(value * factor, int(value * factor)):
                         precision = i
                         break
-                    factor *= 10.0
+                    factor *= 10
                 return "{:.{}f}".format(value, precision)
             elif hasattr(value, 'format'):
                 return value.format(format_spec="{0:%s}" % spec, formatter=self)
