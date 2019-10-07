@@ -983,7 +983,6 @@ class MyPipette(Pipette):
         self.full_dispense_during_transfer = False
         self.full_dispense_explicit_dispense = False
         self.full_dispense_dispensed = False
-        self.full_dispense_recovery_mm = 0
         pass
 
     def _get_speed(self, func):
@@ -1227,16 +1226,11 @@ class MyPipette(Pipette):
         super().dispense(volume=volume, location=location, rate=rate)
         self.full_dispense_explicit_dispense = False
         if self.full_dispense_dispensed:
+            assert self.current_volume == 0
             if self.current_volume == 0:
                 pass  # nothing to do: the next self._position_for_aspirate will reposition for us: 'if pipette is currently empty, ensure the plunger is at "bottom"'
             else:
-                # We dispensed while the tip was in the liquid, but moved the plunger a little too far for the given volume (on
-                # purpose). Lift it back out of the liquid and restore to where we normally would have had the plunger so that
-                # the rest of the system is none the wiser of our shenanigans.
-                _, vector_restore = self._adjust_location_to_liquid_top(well, extra_clearance=-config.dispense.full_dispense_recovery_z_offset, allow_above=True)
-                info(pretty.format('restoring to mm={0:n} at z={1:n}', self.full_dispense_recovery_mm, vector_restore.coordinates.z - well.bottom(0)[1].coordinates.z))
-                self.move_to((well, vector_restore), strategy='direct')
-                self._move_plunger(self.full_dispense_recovery_mm, 'dispense', rate)
+                raise NotImplementedError
             self.full_dispense_dispensed = False
         # track volume
         well, __ = unpack_location(location)
@@ -1248,22 +1242,10 @@ class MyPipette(Pipette):
             mm_from_blow = self._get_plunger_position('blow_out')
             info(pretty.format('dispensing to mm={0:n} instead of mm={1:n}', mm_from_blow, mm_from_vol))
             self.full_dispense_dispensed = True  # funky return value
-            self.full_dispense_recovery_mm = mm_from_vol
             return mm_from_blow
         else:
             self.full_dispense_dispensed = False  # funky return value
             return mm_from_vol
-
-    def _move_plunger(self, mm_position, flavor, rate):
-        speed = self.speeds[flavor] * rate
-        self.instrument_actuator.push_speed()
-        self.instrument_actuator.set_speed(speed)
-        self.instrument_actuator.set_active_current(self._plunger_current)
-        self.robot.poses = self.instrument_actuator.move(
-            self.robot.poses,
-            x=mm_position
-        )
-        self.instrument_actuator.pop_speed()
 
     def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, clearances=None, extra_clearance=0, allow_above=False):
         if isinstance(location, Placeable):
@@ -1424,7 +1406,7 @@ class MyPipette(Pipette):
             #
             y += y_incr
             first = False
-
+            
 # region Commands
 
 # Enhance well name to include any label that might be present
