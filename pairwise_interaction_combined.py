@@ -1627,9 +1627,9 @@ strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
 ########################################################################################################################
 
 # Configure the tips
-tips300a = labware.load('opentrons_96_tiprack_300ul', 1)
-tips300b = labware.load('opentrons_96_tiprack_300ul', 4)
-tips10 = labware.load('opentrons_96_tiprack_10ul', 7)
+tips10 = labware.load('opentrons_96_tiprack_10ul', 1)
+tips300a = labware.load('opentrons_96_tiprack_300ul', 4)
+tips300b = labware.load('opentrons_96_tiprack_300ul', 7)
 
 # Configure the pipettes.
 p10 = MyPipette(instruments.P10_Single(mount='left', tip_racks=[tips10]))
