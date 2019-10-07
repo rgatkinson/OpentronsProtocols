@@ -44,6 +44,8 @@ config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
 config.dispense.top_clearance = 2.0
 config.dispense.top_clearance_factor = 10.0
 config.dispense.extra_top_clearance_name = 'extra_dispense_top_clearance'
+config.dispense.enable_full_dispense = True
+config.dispense.full_dispense_recovery_z_offset = 5
 
 config.simple_mix = Config()
 config.simple_mix.count = 6
@@ -978,6 +980,10 @@ class MyPipette(Pipette):
     # noinspection PyMissingConstructor
     def __init__(self, parentInst):
         self.prev_aspirated_location = None
+        self.full_dispense_during_transfer = False
+        self.full_dispense_explicit_dispense = False
+        self.full_dispense_dispensed = False
+        self.full_dispense_recovery_mm = 0
         pass
 
     def _get_speed(self, func):
@@ -1007,32 +1013,48 @@ class MyPipette(Pipette):
             step_index += 1
         return result
 
-    def has_disposal_vol(self, plan, step_index, **kwargs):
+    def has_disposal_vol(self, plan, step_index, has_disposal_map, **kwargs):
         if kwargs.get('mode', 'transfer') != 'distribute':
             return False
         if kwargs.get('disposal_vol', 0) <= 0:
             return False
-        check_has_disposal_vol = False
+        result = False
         next_steps = self._get_next_ops(plan, step_index, 3)
         assert next_steps[0] == 'aspirate'
         if len(next_steps) >= 2:
             if next_steps[1] == 'dispense':
                 if len(next_steps) >= 3:
                     if next_steps[2] == 'dispense':
-                        check_has_disposal_vol = True
+                        result = True
                     else:
                         silent_log('aspirate-dispense-aspirate')
                 else:
                     info('aspirate-dispense is entire remaining plan')
             else:
                 info('unexpected aspirate-aspirate sequence')
-        return check_has_disposal_vol
+
+        # record result in the steps themselves. result is valid up until the next aspirate
+        def record_result():
+            existing = has_disposal_map.get(step_index, None)
+            if existing is not None:
+                assert existing == result
+            else:
+                pass  # print(f'step={step_index} has_disposal_vol={result}')
+            has_disposal_map[step_index] = result
+        record_result()
+        step_index += 1
+        while step_index < len(plan) and not plan[step_index].get('aspirate'):
+            record_result()
+            step_index += 1
+
+        return result
 
     # Copied and overridden
     # New kw args:
     #   'retain_tip': if true, then tip is not dropped at end of transfer
     #   'allow_carryover'
     #   'allow_blow_elision'
+    #   'full_dispense'
     def _run_transfer_plan(self, tips, plan, **kwargs):
         air_gap = kwargs.get('air_gap', 0)
         touch_tip = kwargs.get('touch_tip', False)
@@ -1042,6 +1064,7 @@ class MyPipette(Pipette):
         seen_aspirate = False
         assert len(plan) == 0 or plan[0].get('aspirate')  # first step must be an aspirate
 
+        has_disposal_map = dict()
         for step_index, step in enumerate(plan):
             # print('cur=%s index=%s step=%s' % (format_number(self.current_volume), step_index, step))
 
@@ -1049,6 +1072,9 @@ class MyPipette(Pipette):
             dispense = step.get('dispense')
 
             if aspirate:
+                # *always* record on aspirates so we can test has_disposal_vol on subsequent dispenses
+                have_disposal_vol = self.has_disposal_vol(plan, step_index, has_disposal_map, **kwargs)
+
                 # we might have carryover from a previous transfer.
                 if self.current_volume > 0:
                     info(pretty.format('carried over {0:n} uL from prev operation', self.current_volume))
@@ -1059,7 +1085,7 @@ class MyPipette(Pipette):
                     if kwargs.get('allow_carryover', False) and zeroify(self.current_volume) > 0:
                         this_aspirated_location, __ = unpack_location(aspirate['location'])
                         if self.prev_aspirated_location is this_aspirated_location:
-                            if self.has_disposal_vol(plan, step_index, **kwargs):
+                            if have_disposal_vol:
                                 # try to remove current volume from this aspirate
                                 new_aspirate_vol = zeroify(aspirate.get('volume') - self.current_volume)
                                 if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
@@ -1096,7 +1122,7 @@ class MyPipette(Pipette):
                 if self.current_volume + aspirate['volume'] > self._working_volume:
                     info(pretty.format('current {0:n} uL with aspirate(has_disposal={1}) of {2:n} uL would overflow capacity',
                           self.current_volume,
-                          self.has_disposal_vol(plan, step_index, **kwargs),
+                          self.has_disposal_vol(plan, step_index, has_disposal_map, **kwargs),
                           aspirate['volume']))
                     self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
                 self._aspirate_during_transfer(aspirate['volume'], aspirate['location'], **kwargs)
@@ -1104,6 +1130,8 @@ class MyPipette(Pipette):
             if dispense:
                 if self.current_volume < dispense['volume']:
                     warn(pretty.format('current {0:n} uL will truncate dispense of {1:n} uL', self.current_volume, dispense['volume']))
+
+                kwargs['_full_dispense_during_transfer'] = kwargs.get('full_dispense', False) and not has_disposal_map.get(step_index)
                 self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
 
                 do_touch = touch_tip or touch_tip is 0
@@ -1127,7 +1155,7 @@ class MyPipette(Pipette):
                         else:
                             # if we can, account for any carryover in the next aspirate
                             if self.current_volume > 0:
-                                if self.has_disposal_vol(plan, step_index + 1, **kwargs):
+                                if self.has_disposal_vol(plan, step_index + 1, has_disposal_map, **kwargs):
                                     next_aspirate = plan[step_index + 1].get('aspirate'); assert next_aspirate
                                     next_aspirated_location, __ = unpack_location(next_aspirate['location'])
                                     if self.prev_aspirated_location is next_aspirated_location:
@@ -1180,7 +1208,12 @@ class MyPipette(Pipette):
         if volume != 0:
             self.prev_aspirated_location = well
 
-    def dispense(self, volume=None, location=None, rate=1.0):
+    def _dispense_during_transfer(self, vol, loc, **kwargs):
+        self.full_dispense_during_transfer = kwargs.get('_full_dispense_during_transfer', False)  # funky way of passing parameter to _dispense_plunger_position()
+        super()._dispense_during_transfer(vol, loc, **kwargs)
+        self.full_dispense_during_transfer = False
+
+    def dispense(self, volume=None, location=None, rate=1.0, full_dispense: bool = False):
         if not helpers.is_number(volume):  # recapitulate super
             if volume and not location:
                 location = volume
@@ -1190,25 +1223,65 @@ class MyPipette(Pipette):
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None,
                                                        clearances=config.dispense,
                                                        extra_clearance=getattr(well, config.dispense.extra_top_clearance_name, 0))
+        self.full_dispense_explicit_dispense = full_dispense  # funky way of passing parameter to _dispense_plunger_position()
         super().dispense(volume=volume, location=location, rate=rate)
+        self.full_dispense_explicit_dispense = False
+        if self.full_dispense_dispensed:
+            if self.current_volume == 0:
+                pass  # nothing to do: the next self._position_for_aspirate will reposition for us: 'if pipette is currently empty, ensure the plunger is at "bottom"'
+            else:
+                # We dispensed while the tip was in the liquid, but moved the plunger a little too far for the given volume (on
+                # purpose). Lift it back out of the liquid and restore to where we normally would have had the plunger so that
+                # the rest of the system is none the wiser of our shenanigans.
+                _, vector_restore = self._adjust_location_to_liquid_top(well, extra_clearance=-config.dispense.full_dispense_recovery_z_offset, allow_above=True)
+                info(pretty.format('restoring to mm={0:n} at z={1:n}', self.full_dispense_recovery_mm, vector_restore.coordinates.z - well.bottom(0)[1].coordinates.z))
+                self.move_to((well, vector_restore), strategy='direct')
+                self._move_plunger(self.full_dispense_recovery_mm, 'dispense', rate)
+            self.full_dispense_dispensed = False
         # track volume
         well, __ = unpack_location(location)
         get_well_volume(well).dispense(volume)
 
-    def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, clearances=None, extra_clearance=0):
+    def _dispense_plunger_position(self, ul):
+        mm_from_vol = super()._dispense_plunger_position(ul)  # retrieve position historically used
+        if config.dispense.enable_full_dispense and (self.full_dispense_explicit_dispense or self.full_dispense_during_transfer):
+            mm_from_blow = self._get_plunger_position('blow_out')
+            info(pretty.format('dispensing to mm={0:n} instead of mm={1:n}', mm_from_blow, mm_from_vol))
+            self.full_dispense_dispensed = True  # funky return value
+            self.full_dispense_recovery_mm = mm_from_vol
+            return mm_from_blow
+        else:
+            self.full_dispense_dispensed = False  # funky return value
+            return mm_from_vol
+
+    def _move_plunger(self, mm_position, flavor, rate):
+        speed = self.speeds[flavor] * rate
+        self.instrument_actuator.push_speed()
+        self.instrument_actuator.set_speed(speed)
+        self.instrument_actuator.set_active_current(self._plunger_current)
+        self.robot.poses = self.instrument_actuator.move(
+            self.robot.poses,
+            x=mm_position
+        )
+        self.instrument_actuator.pop_speed()
+
+    def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, clearances=None, extra_clearance=0, allow_above=False):
         if isinstance(location, Placeable):
             well = location; assert isWell(well)
             well_vol = get_well_volume(well).current_volume_min
             well_depth = get_well_geometry(well).min_depth_from_volume(well_vol if aspirate_volume is None else well_vol - aspirate_volume)
             z = well_depth - self._top_clearance(well, well_depth,
-                                                 clearance=clearances.top_clearance + extra_clearance,
-                                                 factor=clearances.top_clearance_factor)
-            z = max(z, clearances.bottom_clearance)
-            z = min(z, well.z_size())
-            return well.bottom(z)
+                                                 clearance=(0 if clearances is None else clearances.top_clearance) + extra_clearance,
+                                                 factor=1 if clearances is None else clearances.top_clearance_factor)
+            if clearances is not None:
+                z = max(z, clearances.bottom_clearance)
+            if not allow_above:
+                z = min(z, well.z_size())
+            result = well.bottom(z)
         else:
-            assert isinstance(location, tuple)
-        return location
+            result = location
+        assert isinstance(result, tuple)
+        return result
 
     def blow_out(self, location=None):
         super().blow_out(location)
@@ -1287,7 +1360,10 @@ class MyPipette(Pipette):
             self.done_tip()
 
     def _top_clearance(self, well, depth, clearance, factor):
-        return max(clearance, depth / factor)
+        if clearance < 0:
+            return clearance
+        else:
+            return max(clearance, depth / factor)
 
     def _layered_mix_one(self, well, msg, **kwargs):
         def fetch(name, default=None):

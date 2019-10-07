@@ -2,7 +2,6 @@
 @author Robert Atkinson
 """
 
-from typing import List
 from opentrons.commands.commands import stringify_location
 
 metadata = {
@@ -20,6 +19,7 @@ from abc import abstractmethod
 from enum import Enum
 from functools import wraps
 from numbers import Number
+from typing import List
 
 import opentrons
 from opentrons import labware, instruments, robot, modules, types
