@@ -1577,18 +1577,18 @@ strand_a_conc = '10uM'  # '8.820 uM'  # Note: we'll use more Strand A than Stran
 strand_b_conc = '10uM'  # '9.117 uM'
 
 # Tip usage
-p10_start_tip = 'A8'
-p50_start_tip = 'A8'
-config.trash_control = False
+p10_start_tip = 'A9'
+p50_start_tip = 'A9'
+config.trash_control = True
 
 # Diluting each strand
 strand_dilution_factor = 25.0 / 9.0  # per Excel worksheet
 strand_dilution_vol = 1225
 
 # Master mix
-master_mix_buffer_vol = 1693.44
-master_mix_evagreen_vol = 423.36
-master_mix_common_water_vol = 705.6
+master_mix_buffer_vol = 1645.06
+master_mix_evagreen_vol = 411.264
+master_mix_common_water_vol = 685.44
 master_mix_vol = master_mix_buffer_vol + master_mix_evagreen_vol + master_mix_common_water_vol
 
 # Define the volumes of diluted strands we will use
