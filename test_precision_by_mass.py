@@ -49,6 +49,7 @@ config.aspirate.top_clearance = 3.5
 config.aspirate.top_clearance_factor = 10.0
 config.aspirate.extra_top_clearance_name = 'extra_aspirate_top_clearance'
 config.aspirate.pre_wet_default = False
+config.aspirate.pre_wet_count = 3
 
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
@@ -1235,8 +1236,9 @@ class EnhancedPipette(Pipette):
                 pre_wet_rate = rate  # todo: or 1?
                 self.tip_wetness = TipWetness.WETTING
                 info(pretty.format('prewetting tip in well {0} vol={1:n}', well.get_name(), pre_wet_volume))
-                self.aspirate(volume=pre_wet_volume, location=location, rate=pre_wet_rate, pre_wet=False)
-                self.dispense(volume=pre_wet_volume, location=location, rate=pre_wet_rate, full_dispense=True)  # todo: review full_dispense
+                for i in range(config.aspirate.pre_wet_count):
+                    self.aspirate(volume=pre_wet_volume, location=location, rate=pre_wet_rate, pre_wet=False)
+                    self.dispense(volume=pre_wet_volume, location=location, rate=pre_wet_rate, full_dispense=(i+1 == config.aspirate.pre_wet_count))  # todo: review full_dispense
                 self.tip_wetness = TipWetness.WET
 
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume,
@@ -1421,6 +1423,7 @@ class EnhancedPipette(Pipette):
         delay = fetch('delay')
         initial_turnover = fetch('initial_turnover')
         max_tip_cycles = fetch('max_tip_cycles', fpu.infinity)
+        pre_wet = fetch('pre_wet', False)  # not much point in pre-wetting during mixing; save some time, simpler
 
         well_vol = get_well_volume(well).current_volume_min
         well_depth = get_well_geometry(well).depth_from_volume(well_vol)
@@ -1460,7 +1463,7 @@ class EnhancedPipette(Pipette):
                 tip_cycles += 1
                 need_new_tip = tip_cycles >= max_tip_cycles
                 full_dispense = need_new_tip or (not do_layer(y + y_incr) and i == count - 1)
-                self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', config.layered_mix.aspirate_rate_factor), pre_wet=True)
+                self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', config.layered_mix.aspirate_rate_factor), pre_wet=pre_wet)
                 self.dispense(volume, well.bottom(y_max), rate=fetch('dispense_rate', config.layered_mix.dispense_rate_factor), full_dispense=full_dispense)
                 if need_new_tip:
                     self.done_tip()
