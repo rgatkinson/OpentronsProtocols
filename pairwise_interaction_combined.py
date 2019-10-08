@@ -1152,8 +1152,7 @@ class EnhancedPipette(Pipette):
                 if self.current_volume < dispense['volume']:
                     warn(pretty.format('current {0:n} uL will truncate dispense of {1:n} uL', self.current_volume, dispense['volume']))
 
-                subsequent_dispense_count, has_disposal_vol = step_info_map.get(i)
-                can_full_dispense = subsequent_dispense_count == 0 and not has_disposal_vol
+                can_full_dispense = self.current_volume - dispense['volume'] <= 0
                 kwargs['_full_dispense_during_transfer'] = kwargs.get('full_dispense', False) and can_full_dispense
                 self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
 
