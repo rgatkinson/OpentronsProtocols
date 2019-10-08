@@ -1009,50 +1009,66 @@ class MyPipette(Pipette):
     def _get_ul_per_mm(self, func):  # hack, but there seems no public way
         return self._ul_per_mm(self.max_volume, func)
 
-    def _get_next_ops(self, plan, step_index, max_count):
+    #-------------------------------------------------------------------------------------------------------------------
+    # Transfers
+    #-------------------------------------------------------------------------------------------------------------------
+
+    def _get_next_ops(self, plan, i, max_count):
         result = []
-        while step_index < len(plan) and len(result) < max_count:
-            step = plan[step_index]
+        while i < len(plan) and len(result) < max_count:
+            step = plan[i]
             if step.get('aspirate'):
                 result.append('aspirate')
             if step.get('dispense'):
                 result.append('dispense')
-            step_index += 1
+            i += 1
         return result
 
-    def has_disposal_vol(self, plan, step_index, has_disposal_map, **kwargs):
-        if kwargs.get('mode', 'transfer') != 'distribute':
-            return False
-        if kwargs.get('disposal_vol', 0) <= 0:
-            return False
-        result = False
-        next_steps = self._get_next_ops(plan, step_index, 3)
-        assert next_steps[0] == 'aspirate'
-        if len(next_steps) >= 2:
-            if next_steps[1] == 'dispense':
-                if len(next_steps) >= 3:
-                    if next_steps[2] == 'dispense':
-                        result = True
-                    else:
-                        silent_log('aspirate-dispense-aspirate')
-                else:
-                    info('aspirate-dispense is entire remaining plan')
-            else:
-                info('unexpected aspirate-aspirate sequence')
+    def _operations(self, plan, i):
+        while i < len(plan):
+            step = plan[i]
+            if step.get('aspirate'):
+                yield ('aspirate', i,)
+            if step.get('dispense'):
+                yield ('dispense', i,)
+            i += 1
 
-        # record result in the steps themselves. result is valid up until the next aspirate
-        def record_result():
-            existing = has_disposal_map.get(step_index, None)
-            if existing is not None:
-                assert existing == result
+    def _has_aspirate(self, plan, i):
+        return plan[i].get('aspirate')
+
+    def _has_dispense(self, plan, i):
+        return plan[i].get('dispense')
+
+    # Does the aspiration starting here have an active disposal volume? Also,
+    # record for all steps that value together with the number of remaining 'dispense'
+    # steps before the next aspirate
+    def has_disposal_vol(self, plan, i, step_info_map, **kwargs):
+        assert self._has_aspirate(plan, i)
+
+        in_distribute_with_disposal_vol = kwargs.get('mode', 'transfer') == 'distribute' and kwargs.get('disposal_vol', 0) > 0
+
+        dispense_count = 0
+        i_aspirate_next = len(plan)  # default in case we don't go through the loop at all
+        for op, j in self._operations(plan, i):
+            if op == 'dispense':
+                dispense_count += 1
+            elif op == 'aspirate' and j > i:
+                i_aspirate_next = j
+                break
+
+        result = dispense_count > 1 and in_distribute_with_disposal_vol
+
+        remaining_dispense_count = dispense_count-1 if self._has_dispense(plan, i) else dispense_count
+        while i < i_aspirate_next:
+            assert remaining_dispense_count >= 0
+            existing = step_info_map.get(i, None)
+            value = (remaining_dispense_count, result,)
+            if existing is None:
+                step_info_map[i] = value
             else:
-                pass  # print(f'step={step_index} has_disposal_vol={result}')
-            has_disposal_map[step_index] = result
-        record_result()
-        step_index += 1
-        while step_index < len(plan) and not plan[step_index].get('aspirate'):
-            record_result()
-            step_index += 1
+                assert existing == value  # should be idempotent
+            i += 1
+            remaining_dispense_count -= 1
 
         return result
 
@@ -1071,23 +1087,23 @@ class MyPipette(Pipette):
         seen_aspirate = False
         assert len(plan) == 0 or plan[0].get('aspirate')  # first step must be an aspirate
 
-        has_disposal_map = dict()
-        for step_index, step in enumerate(plan):
-            # print('cur=%s index=%s step=%s' % (format_number(self.current_volume), step_index, step))
+        step_info_map = dict()
+        for i, step in enumerate(plan):
+            # print('cur=%s index=%s step=%s' % (format_number(self.current_volume), i, step))
 
             aspirate = step.get('aspirate')
             dispense = step.get('dispense')
 
             if aspirate:
                 # *always* record on aspirates so we can test has_disposal_vol on subsequent dispenses
-                have_disposal_vol = self.has_disposal_vol(plan, step_index, has_disposal_map, **kwargs)
+                have_disposal_vol = self.has_disposal_vol(plan, i, step_info_map, **kwargs)
 
                 # we might have carryover from a previous transfer.
                 if self.current_volume > 0:
                     info(pretty.format('carried over {0:n} uL from prev operation', self.current_volume))
 
                 if not seen_aspirate:
-                    assert step_index == 0
+                    assert i == 0
 
                     if kwargs.get('allow_carryover', False) and zeroify(self.current_volume) > 0:
                         this_aspirated_location, __ = unpack_location(aspirate['location'])
@@ -1129,7 +1145,7 @@ class MyPipette(Pipette):
                 if self.current_volume + aspirate['volume'] > self._working_volume:
                     info(pretty.format('current {0:n} uL with aspirate(has_disposal={1}) of {2:n} uL would overflow capacity',
                           self.current_volume,
-                          self.has_disposal_vol(plan, step_index, has_disposal_map, **kwargs),
+                          self.has_disposal_vol(plan, i, step_info_map, **kwargs),
                           aspirate['volume']))
                     self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
                 self._aspirate_during_transfer(aspirate['volume'], aspirate['location'], **kwargs)
@@ -1138,12 +1154,14 @@ class MyPipette(Pipette):
                 if self.current_volume < dispense['volume']:
                     warn(pretty.format('current {0:n} uL will truncate dispense of {1:n} uL', self.current_volume, dispense['volume']))
 
-                kwargs['_full_dispense_during_transfer'] = kwargs.get('full_dispense', False) and not has_disposal_map.get(step_index)
+                subsequent_dispense_count, has_disposal_vol = step_info_map.get(i)
+                can_full_dispense = subsequent_dispense_count == 0 and not has_disposal_vol
+                kwargs['_full_dispense_during_transfer'] = kwargs.get('full_dispense', False) and can_full_dispense
                 self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
 
                 do_touch = touch_tip or touch_tip is 0
                 is_last_step = step is plan[-1]
-                if is_last_step or plan[step_index + 1].get('aspirate'):
+                if is_last_step or plan[i + 1].get('aspirate'):
                     do_drop = not is_last_step or not kwargs.get('retain_tip', False)
                     # original always blew here. there are several reasons we could still be forced to blow
                     do_blow = not is_distribute  # other modes (are there any?) we're not sure about
@@ -1162,8 +1180,8 @@ class MyPipette(Pipette):
                         else:
                             # if we can, account for any carryover in the next aspirate
                             if self.current_volume > 0:
-                                if self.has_disposal_vol(plan, step_index + 1, has_disposal_map, **kwargs):
-                                    next_aspirate = plan[step_index + 1].get('aspirate'); assert next_aspirate
+                                if self.has_disposal_vol(plan, i + 1, step_info_map, **kwargs):
+                                    next_aspirate = plan[i + 1].get('aspirate'); assert next_aspirate
                                     next_aspirated_location, __ = unpack_location(next_aspirate['location'])
                                     if self.prev_aspirated_location is next_aspirated_location:
                                         new_aspirate_vol = zeroify(next_aspirate.get('volume') - self.current_volume)
@@ -1186,7 +1204,7 @@ class MyPipette(Pipette):
                     if do_touch:
                         self.touch_tip(touch_tip)
                     if do_drop:
-                        tips = self._drop_tip_during_transfer(tips, step_index, total_transfers, **kwargs)
+                        tips = self._drop_tip_during_transfer(tips, i, total_transfers, **kwargs)
                 else:
                     if air_gap:
                         self.air_gap(air_gap)
