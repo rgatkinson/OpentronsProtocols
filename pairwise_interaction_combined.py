@@ -1588,7 +1588,7 @@ config.trash_control = True
 strand_dilution_factor = 25.0 / 9.0  # per Excel worksheet
 strand_dilution_vol = 1225
 
-# Master mix
+# Master mix, values per Excel worksheet
 master_mix_buffer_vol = 1645.06
 master_mix_evagreen_vol = 411.264
 master_mix_common_water_vol = 685.44
