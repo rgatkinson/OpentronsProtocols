@@ -1405,9 +1405,11 @@ class EnhancedPipette(Pipette):
             assert incr is not None
             y_incr = incr
 
+        def do_layer(y_layer):
+            return y_layer <= y_max or is_close(y_layer, y_max)
         first = True
         tip_cycles = 0
-        while y <= y_max or is_close(y, y_max):
+        while do_layer(y):
             if not first:
                 self.delay(delay / 1000.0)
             #
@@ -1419,10 +1421,12 @@ class EnhancedPipette(Pipette):
             if not self.has_tip:
                 self.pick_up_tip()
             for i in range(count):
-                self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', config.layered_mix.aspirate_rate_factor))
-                self.dispense(volume, well.bottom(y_max), rate=fetch('dispense_rate', config.layered_mix.dispense_rate_factor))
                 tip_cycles += 1
-                if tip_cycles >= max_tip_cycles:
+                need_new_tip = tip_cycles >= max_tip_cycles
+                full_dispense = need_new_tip or (not do_layer(y + y_incr) and i == count - 1)
+                self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', config.layered_mix.aspirate_rate_factor))
+                self.dispense(volume, well.bottom(y_max), rate=fetch('dispense_rate', config.layered_mix.dispense_rate_factor), full_dispense=full_dispense)
+                if need_new_tip:
                     self.done_tip()
                     tip_cycles = 0
             #
