@@ -980,9 +980,14 @@ def get_well_geometry(well):
 #   * support option to leave tip attached at end of transfer
 ########################################################################################################################
 
-class MyPipette(Pipette):
+class EnhancedPipette(Pipette):
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Construction
+    #-------------------------------------------------------------------------------------------------------------------
+
     def __new__(cls, parentInst):
-        parentInst.__class__ = MyPipette
+        parentInst.__class__ = EnhancedPipette
         return parentInst
 
     # noinspection PyMissingConstructor
@@ -992,6 +997,10 @@ class MyPipette(Pipette):
         self.full_dispense_explicit_dispense = False
         self.full_dispense_dispensed = False
         pass
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Rates and speeds
+    #-------------------------------------------------------------------------------------------------------------------
 
     def _get_speed(self, func):
         return self.speeds[func]
@@ -1012,17 +1021,6 @@ class MyPipette(Pipette):
     #-------------------------------------------------------------------------------------------------------------------
     # Transfers
     #-------------------------------------------------------------------------------------------------------------------
-
-    def _get_next_ops(self, plan, i, max_count):
-        result = []
-        while i < len(plan) and len(result) < max_count:
-            step = plan[i]
-            if step.get('aspirate'):
-                result.append('aspirate')
-            if step.get('dispense'):
-                result.append('dispense')
-            i += 1
-        return result
 
     def _operations(self, plan, i):
         while i < len(plan):
@@ -1291,6 +1289,10 @@ class MyPipette(Pipette):
         assert isinstance(result, tuple)
         return result
 
+    #-------------------------------------------------------------------------------------------------------------------
+    # Blow outs
+    #-------------------------------------------------------------------------------------------------------------------
+
     def blow_out(self, location=None):
         super().blow_out(location)
         self._shake_tip(location)  # try to get rid of pesky retentive drops
@@ -1313,6 +1315,10 @@ class MyPipette(Pipette):
         self.robot.poses = self._jog(self.robot.poses, 'x', -shake_off_distance)  # move left
         self.robot.gantry.pop_speed()
 
+    #-------------------------------------------------------------------------------------------------------------------
+    # Util
+    #-------------------------------------------------------------------------------------------------------------------
+
     def done_tip(self):
         if self.has_tip:
             if self.current_volume > 0:
@@ -1322,19 +1328,9 @@ class MyPipette(Pipette):
             else:
                 self.return_tip()
 
-    def simple_mix(self, wells, msg=None, count=None, volume=None, drop_tip=True):
-        if count is None:
-            count = config.simple_mix.count
-        if msg is not None:
-            log(msg)
-        if volume is None:
-            volume = self.max_volume
-        if not self.has_tip:
-            self.pick_up_tip()
-        for well in wells:
-            self.mix(count, volume, well)
-        if drop_tip:
-            self.done_tip()
+    #-------------------------------------------------------------------------------------------------------------------
+    # Mixing
+    #-------------------------------------------------------------------------------------------------------------------
 
     # If count is provided, we do (at most) that many asp/disp cycles, clamped to an increment of min_incr
     def layered_mix(self, wells, msg='Mixing',
@@ -1566,7 +1562,7 @@ class Pretty(string.Formatter):
 
 pretty = Pretty()
 
-def verify_well_locations(well_list: List[Well], pipette: MyPipette):
+def verify_well_locations(well_list: List[Well], pipette: EnhancedPipette):
     picked_tip = False
     if not pipette.has_tip:
         pipette.pick_up_tip()
@@ -1650,8 +1646,8 @@ tips300a = labware.load('opentrons_96_tiprack_300ul', 4)
 tips300b = labware.load('opentrons_96_tiprack_300ul', 7)
 
 # Configure the pipettes.
-p10 = MyPipette(instruments.P10_Single(mount='left', tip_racks=[tips10]))
-p50 = MyPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b]))
+p10 = EnhancedPipette(instruments.P10_Single(mount='left', tip_racks=[tips10]))
+p50 = EnhancedPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b]))
 
 # Blow out faster than default in an attempt to avoid hanging droplets on the pipettes after blowout
 p10.set_flow_rate(blow_out=p10.get_flow_rates()['blow_out'] * config.blow_out_rate_factor)
