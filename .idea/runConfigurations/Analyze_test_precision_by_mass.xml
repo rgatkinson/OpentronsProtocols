@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Opentrons Analyze" type="PythonConfigurationType" factoryName="Python">
+  <configuration default="false" name="Analyze test_precision_by_mass" type="PythonConfigurationType" factoryName="Python">
     <module name="OpentronsProtocols" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
