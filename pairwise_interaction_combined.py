@@ -37,7 +37,8 @@ class Config(object):
     pass
 
 config = Config()
-config.trash_control = False
+config.enhanced_options = True
+config.trash_control = True
 config.blow_out_rate_factor = 3.0
 config.min_aspirate_factor_hack = 15.0
 
@@ -1072,10 +1073,10 @@ class EnhancedPipette(Pipette):
 
     # Copied and overridden
     # New kw args:
-    #   'retain_tip': if true, then tip is not dropped at end of transfer
-    #   'allow_carryover'
-    #   'allow_blow_elision'
-    #   'full_dispense'
+    #   'keep_last_tip': if true, then tip is not dropped at end of transfer
+    #   'full_dispense': if true, and if a dispense empties the pipette, then dispense to blow_out 'position' instead of 'bottom' position
+    #   'allow_carryover': if true, we allow carry over of disposal_vol from one run of (asp, disp+) to the next
+    #   'allow_blow_elision': if true, then blow-outs which are not logically needed (such as before a tip drop) are elided
     def _run_transfer_plan(self, tips, plan, **kwargs):
         air_gap = kwargs.get('air_gap', 0)
         touch_tip = kwargs.get('touch_tip', False)
@@ -1103,7 +1104,7 @@ class EnhancedPipette(Pipette):
                 if not seen_aspirate:
                     assert i == 0
 
-                    if kwargs.get('allow_carryover', False) and zeroify(self.current_volume) > 0:
+                    if (kwargs.get('allow_carryover', False) and config.enhanced_options) and zeroify(self.current_volume) > 0:
                         this_aspirated_location, __ = unpack_location(aspirate['location'])
                         if self.prev_aspirated_location is this_aspirated_location:
                             if have_disposal_vol:
@@ -1153,22 +1154,22 @@ class EnhancedPipette(Pipette):
                     warn(pretty.format('current {0:n} uL will truncate dispense of {1:n} uL', self.current_volume, dispense['volume']))
 
                 can_full_dispense = self.current_volume - dispense['volume'] <= 0
-                kwargs['_full_dispense_during_transfer'] = kwargs.get('full_dispense', False) and can_full_dispense
+                kwargs['_full_dispense_during_transfer'] = (kwargs.get('full_dispense', False) and config.enhanced_options) and can_full_dispense
                 self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
 
                 do_touch = touch_tip or touch_tip is 0
                 is_last_step = step is plan[-1]
                 if is_last_step or plan[i + 1].get('aspirate'):
-                    do_drop = not is_last_step or not kwargs.get('retain_tip', False)
+                    do_drop = not is_last_step or not (kwargs.get('retain_tip', False) and config.enhanced_options)
                     # original always blew here. there are several reasons we could still be forced to blow
                     do_blow = not is_distribute  # other modes (are there any?) we're not sure about
                     do_blow = do_blow or kwargs.get('blow_out', False)  # for compatibility
                     do_blow = do_blow or do_touch  # for compatibility
-                    do_blow = do_blow or not kwargs.get('allow_blow_elision', False)
+                    do_blow = do_blow or not (kwargs.get('allow_blow_elision', False) and config.enhanced_options)
                     if not do_blow:
                         if is_last_step:
                             if self.current_volume > 0:
-                                if not kwargs.get('allow_carryover', False):
+                                if not (kwargs.get('allow_carryover', False) and config.enhanced_options):
                                     do_blow = True
                                 elif self.current_volume > kwargs.get('disposal_vol', 0):
                                     warn(pretty.format('carried over {0:n} uL to next operation', self.current_volume))
@@ -1245,7 +1246,7 @@ class EnhancedPipette(Pipette):
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None,
                                                        clearances=config.dispense,
                                                        extra_clearance=getattr(well, config.dispense.extra_top_clearance_name, 0))
-        self.full_dispense_explicit_dispense = full_dispense  # funky way of passing parameter to _dispense_plunger_position()
+        self.full_dispense_explicit_dispense = (full_dispense and config.enhanced_options)  # funky way of passing parameter to _dispense_plunger_position()
         super().dispense(volume=volume, location=location, rate=rate)
         self.full_dispense_explicit_dispense = False
         if self.full_dispense_dispensed:
@@ -1769,11 +1770,11 @@ def diluteStrands():
                  trash=config.trash_control
                  )
     log('Diluting Strand A')
-    p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=config.trash_control, retain_tip=True)
+    p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=config.trash_control, keep_last_tip=True)
     p50.layered_mix([diluted_strand_a], 'Mixing Diluted Strand A', incr=2)
 
     log('Diluting Strand B')
-    p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=config.trash_control, retain_tip=True)
+    p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=config.trash_control, keep_last_tip=True)
     p50.layered_mix([diluted_strand_b], 'Mixing Diluted Strand B', incr=2)
 
 
@@ -1816,11 +1817,11 @@ def createMasterMix():
     p50.transfer(master_mix_common_water_vol, water, master_mix, trash=config.trash_control)
 
     log('Creating Master Mix: Buffer')
-    transfer_multiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', retain_tip=True)  # 'once' because we've only got water & buffer in context
+    transfer_multiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', keep_last_tip=True)  # 'once' because we've only got water & buffer in context
     p50.done_tip()  # EvaGreen needs a new tip
 
     log('Creating Master Mix: EvaGreen')
-    transfer_multiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always', retain_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
+    transfer_multiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always', keep_last_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
 
     mix_master_mix()
 
