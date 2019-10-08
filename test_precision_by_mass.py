@@ -12,6 +12,7 @@ metadata = {
 
 # region Enhancements
 
+import enum
 import json
 import string
 import warnings
@@ -47,6 +48,7 @@ config.aspirate.bottom_clearance = 1.0  # see Pipette._position_for_aspirate
 config.aspirate.top_clearance = 3.5
 config.aspirate.top_clearance_factor = 10.0
 config.aspirate.extra_top_clearance_name = 'extra_aspirate_top_clearance'
+config.aspirate.pre_wet_default = False
 
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
@@ -964,6 +966,13 @@ def get_well_geometry(well):
 #   * support option to leave tip attached at end of transfer
 ########################################################################################################################
 
+@enum.unique
+class TipWetness(Enum):
+    NONE = enum.auto()
+    DRY = enum.auto()
+    WETTING = enum.auto()
+    WET = enum.auto()
+
 class EnhancedPipette(Pipette):
 
     #-------------------------------------------------------------------------------------------------------------------
@@ -980,6 +989,8 @@ class EnhancedPipette(Pipette):
         self.full_dispense_during_transfer = False
         self.full_dispense_explicit_dispense = False
         self.full_dispense_dispensed = False
+        self.tip_wetness = TipWetness.NONE
+        self.pre_wet_during_transfer = None
         pass
 
     #-------------------------------------------------------------------------------------------------------------------
@@ -1192,32 +1203,57 @@ class EnhancedPipette(Pipette):
                     if do_touch:
                         self.touch_tip(touch_tip)
 
-    def aspirate(self, volume=None, location=None, rate=1.0):
+    #-------------------------------------------------------------------------------------------------------------------
+    # Aspirate and dispense
+    #-------------------------------------------------------------------------------------------------------------------
+
+    def aspirate(self, volume=None, location=None, rate=1.0, pre_wet=None):
         if not helpers.is_number(volume):  # recapitulate super
             if volume and not location:
                 location = volume
             volume = self._working_volume - self.current_volume
         location = location if location else self.previous_placeable
         well, _ = unpack_location(location)
-        current_volume = get_well_volume(well).current_volume_min
-        needed_volume = get_well_geometry(well).min_aspirate_vol + volume;
-        if current_volume < needed_volume:
-            msg = pretty.format('aspirating too much from {0} have={1:n} need={2:n}', well, current_volume, needed_volume)
+
+        current_well_volume = get_well_volume(well).current_volume_min
+        needed_well_volume = get_well_geometry(well).min_aspirate_vol + volume;
+        if current_well_volume < needed_well_volume:
+            msg = pretty.format('aspirating too much from well={0} have={1:n} need={2:n}', well.get_name(), current_well_volume, needed_well_volume)
             warn(msg)
+
+        if pre_wet is None:
+            pre_wet = self.pre_wet_during_transfer
+        if pre_wet is None:
+            pre_wet = config.aspirate.pre_wet_default  # todo: prewetting might not work well with mixing during transfer, we're off by default for now at least
+        if pre_wet and config.enhanced_options:
+            if self.tip_wetness is TipWetness.DRY:
+                # see also https://github.com/Opentrons/opentrons/issues/2901
+                pre_wet_volume = min(
+                    self.max_volume * 2 / 3,
+                    volume * 3 / 4 if current_well_volume == 0 else current_well_volume * 3 / 4  # todo: is zero test correct / needed?
+                )
+                pre_wet_rate = rate  # todo: or 1?
+                self.tip_wetness = TipWetness.WETTING
+                info(pretty.format('prewetting tip in well {0} vol={1:n}', well.get_name(), pre_wet_volume))
+                self.aspirate(volume=pre_wet_volume, location=location, rate=pre_wet_rate, pre_wet=False)
+                self.dispense(volume=pre_wet_volume, location=location, rate=pre_wet_rate, full_dispense=True)  # todo: review full_dispense
+                self.tip_wetness = TipWetness.WET
+
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume,
                                                        clearances=config.aspirate,
                                                        extra_clearance=getattr(well, config.aspirate.extra_top_clearance_name, 0))
         super().aspirate(volume=volume, location=location, rate=rate)
+
         # track volume todo: what if we're doing an air gap
         well, __ = unpack_location(location)
         get_well_volume(well).aspirate(volume)
         if volume != 0:
             self.prev_aspirated_location = well
 
-    def _dispense_during_transfer(self, vol, loc, **kwargs):
-        self.full_dispense_during_transfer = kwargs.get('_full_dispense_during_transfer', False)  # funky way of passing parameter to _dispense_plunger_position()
-        super()._dispense_during_transfer(vol, loc, **kwargs)
-        self.full_dispense_during_transfer = False
+    def _aspirate_during_transfer(self, vol, loc, **kwargs):  # funky param passing to self.aspirate
+        self.pre_wet_during_transfer = kwargs.get('pre_wet', None)
+        super()._aspirate_during_transfer(vol, loc, **kwargs)
+        self.pre_wet_during_transfer = None
 
     def dispense(self, volume=None, location=None, rate=1.0, full_dispense: bool = False):
         if not helpers.is_number(volume):  # recapitulate super
@@ -1244,6 +1280,11 @@ class EnhancedPipette(Pipette):
         # track volume
         well, __ = unpack_location(location)
         get_well_volume(well).dispense(volume)
+
+    def _dispense_during_transfer(self, vol, loc, **kwargs):
+        self.full_dispense_during_transfer = kwargs.get('_full_dispense_during_transfer', False)  # funky way of passing parameter to _dispense_plunger_position()
+        super()._dispense_during_transfer(vol, loc, **kwargs)
+        self.full_dispense_during_transfer = False
 
     def _dispense_plunger_position(self, ul):
         mm_from_vol = super()._dispense_plunger_position(ul)  # retrieve position historically used
@@ -1275,6 +1316,29 @@ class EnhancedPipette(Pipette):
         return result
 
     #-------------------------------------------------------------------------------------------------------------------
+    # Tip Management
+    #-------------------------------------------------------------------------------------------------------------------
+
+    def pick_up_tip(self, location=None, presses=None, increment=None):
+        result = super().pick_up_tip(location, presses, increment)
+        self.tip_wetness = TipWetness.DRY
+        return result
+
+    def drop_tip(self, location=None, home_after=True):
+        result = super().drop_tip(location, home_after)
+        self.tip_wetness = TipWetness.NONE
+        return result
+
+    def done_tip(self):  # a handy little utility that looks at config.trash_control
+        if self.has_tip:
+            if self.current_volume > 0:
+                info(pretty.format('{0} has {1:n} uL remaining', self.name, self.current_volume))
+            if config.trash_control:
+                self.drop_tip()
+            else:
+                self.return_tip()
+
+    #-------------------------------------------------------------------------------------------------------------------
     # Blow outs
     #-------------------------------------------------------------------------------------------------------------------
 
@@ -1299,19 +1363,6 @@ class EnhancedPipette(Pipette):
         self.robot.poses = self._jog(self.robot.poses, 'x', shake_off_distance * 2)  # move right
         self.robot.poses = self._jog(self.robot.poses, 'x', -shake_off_distance)  # move left
         self.robot.gantry.pop_speed()
-
-    #-------------------------------------------------------------------------------------------------------------------
-    # Util
-    #-------------------------------------------------------------------------------------------------------------------
-
-    def done_tip(self):
-        if self.has_tip:
-            if self.current_volume > 0:
-                info(pretty.format('{0} has {1:n} uL remaining', self.name, self.current_volume))
-            if config.trash_control:
-                self.drop_tip()
-            else:
-                self.return_tip()
 
     #-------------------------------------------------------------------------------------------------------------------
     # Mixing
@@ -1409,7 +1460,7 @@ class EnhancedPipette(Pipette):
                 tip_cycles += 1
                 need_new_tip = tip_cycles >= max_tip_cycles
                 full_dispense = need_new_tip or (not do_layer(y + y_incr) and i == count - 1)
-                self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', config.layered_mix.aspirate_rate_factor))
+                self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', config.layered_mix.aspirate_rate_factor), pre_wet=True)
                 self.dispense(volume, well.bottom(y_max), rate=fetch('dispense_rate', config.layered_mix.dispense_rate_factor), full_dispense=full_dispense)
                 if need_new_tip:
                     self.done_tip()
@@ -1626,4 +1677,5 @@ for well in mass_wells:
                new_tip='once',
                trash=config.trash_control,
                allow_blow_elision=True,
-               allow_carryover=True)
+               allow_carryover=True,
+               pre_wet=True)
