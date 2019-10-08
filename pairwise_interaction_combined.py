@@ -1576,6 +1576,8 @@ evagreen_volumes = [600]            # B1, B2, etc in screwcap rack
 
 strand_a_conc = '10uM'  # '8.820 uM'  # Note: we'll use more Strand A than Strand B because of disposal_volumes
 strand_b_conc = '10uM'  # '9.117 uM'
+strand_a_min_vol = 600  # set as best one can
+strand_b_min_vol = 600  # set as best one can
 
 # Tip usage
 p10_start_tip = 'A9'
@@ -1685,8 +1687,10 @@ wells_to_verify = [master_mix, strand_a, strand_b, diluted_strand_a, diluted_str
 # Remember initial liquid names and volumes
 log('Liquid Names')
 note_liquid(location=water, name='Water', min_volume=7000)  # volume is rough guess
-note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, min_volume=strand_dilution_source_vol + get_well_geometry(strand_a).min_aspirate_vol)  # i.e.: we have enough, just not specified how much
-note_liquid(location=strand_b, name='StrandB', concentration=strand_b_conc, min_volume=strand_dilution_source_vol + get_well_geometry(strand_b).min_aspirate_vol)  # ditto
+assert strand_a_min_vol >= strand_dilution_source_vol + get_well_geometry(strand_a).min_aspirate_vol
+assert strand_b_min_vol >= strand_dilution_source_vol + get_well_geometry(strand_b).min_aspirate_vol
+note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, min_volume=strand_a_min_vol)  # i.e.: we have enough, just not specified how much
+note_liquid(location=strand_b, name='StrandB', concentration=strand_b_conc, min_volume=strand_b_min_vol)  # ditto
 note_liquid(location=diluted_strand_a, name='Diluted StrandA')
 note_liquid(location=diluted_strand_b, name='Diluted StrandB')
 note_liquid(location=master_mix, name='Master Mix')
