@@ -878,24 +878,7 @@ class IdtTubeWellGeometry(WellGeometry):
         return 75  # a rough estimate
 
 
-class Biorad96WellPlateWellGeometry2(WellGeometry):
-    def __init__(self, well):
-        super().__init__(well)
-
-    def depth_from_volume(self, volume):
-        # Calculated from Mathematica models
-        if volume <= 0.0:
-            return 0.0
-        if volume <= 60.7779:
-            return -13.7243 + 4.24819 * cube_root(33.7175 + 1.34645 * volume)
-        return 14.66 - 0.0427095 * (196.488 - volume)
-
-    @property
-    def well_capacity(self):
-        return 200.0
-
-
-class Biorad96WellPlateWellGeometryM3(WellGeometry):
+class Biorad96WellPlateWellGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
