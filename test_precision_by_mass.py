@@ -1570,24 +1570,24 @@ def verify_well_locations(well_list: List[Well], pipette: EnhancedPipette):
 # Configurable protocol parameters
 ########################################################################################################################
 
-
-########################################################################################################################
-## Protocol
-########################################################################################################################
-
-num_replicates = 3
-num_masses = 6
+num_replicates = 3   # down rows
+num_masses = 6       # across columns
 mass_incr_vol = 200
+
+start_tip = 'A1'
+tips_vol = '1000'
+pipette_vol = '1000'
+pipette_mount = 'left'
 
 ########################################################################################################################
 # Labware
 ########################################################################################################################
 
 # Configure the pipette
-tips = labware.load('opentrons_96_tiprack_1000ul', 1)
-p = EnhancedPipette(instruments.P1000_Single(mount='left', tip_racks=[tips]))
+tips = labware.load('opentrons_96_tiprack_' + tips_vol + 'ul', 1)
+p = EnhancedPipette(getattr(instruments, 'P' + pipette_vol + '_Single')(mount=pipette_mount, tip_racks=[tips]))
 p.set_flow_rate(blow_out=p.get_flow_rates()['blow_out'] * config.blow_out_rate_factor)
-p.start_at_tip('A1')
+p.start_at_tip(start_tip)
 config.trash_control = True
 
 # All the labware containers
