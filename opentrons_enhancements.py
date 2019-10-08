@@ -1218,6 +1218,8 @@ class EnhancedPipette(Pipette):
             volume = self._working_volume - self.current_volume
         location = location if location else self.previous_placeable
         well, _ = unpack_location(location)
+        if is_close(volume, self.current_volume):  # avoid finicky floating-point precision issues
+            volume = self.current_volume
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None,
                                                        clearances=config.dispense,
                                                        extra_clearance=getattr(well, config.dispense.extra_top_clearance_name, 0))
