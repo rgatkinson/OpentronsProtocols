@@ -9,7 +9,7 @@ import sys
 import opentrons.simulate
 from opentrons.legacy_api.containers import Slot
 
-from opentrons_extensions import *
+from opentrons_enhancements import *
 
 ########################################################################################################################
 # Monitors

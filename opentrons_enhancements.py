@@ -2,7 +2,7 @@
 @author Robert Atkinson
 """
 
-# region Extensions
+# region Enhancements
 
 import json
 import string
@@ -22,7 +22,7 @@ from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANC
 from opentrons.legacy_api.containers.placeable import unpack_location, Well, Placeable
 
 ########################################################################################################################
-# Extension Configuration
+# Enhancements Configuration
 ########################################################################################################################
 
 class Config(object):
@@ -67,7 +67,7 @@ config.layered_mix.initial_turnover = None
 config.layered_mix.max_tip_cycles = None
 config.layered_mix.max_tip_cycles_large = None
 
-# region Other Extension Stuff
+# region Other Enhancements Stuff
 
 ########################################################################################################################
 # Interval, adapted from pyinterval
@@ -1554,6 +1554,6 @@ def verify_well_locations(well_list: List[Well], pipette: EnhancedPipette):
     if picked_tip:
         pipette.done_tip()
 
-# endregion Other Extension Stuff
+# endregion Other Enhancements Stuff
 
-# endregion Extensions
+# endregion Enhancements
