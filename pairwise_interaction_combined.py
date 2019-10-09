@@ -76,7 +76,7 @@ config.layered_mix.count = None  # so we default to using incr, not count
 config.layered_mix.min_incr = 0.5
 config.layered_mix.count_per_incr = 2
 config.layered_mix.delay = 750
-config.layered_mix.drop_tip = True
+config.layered_mix.drop_tip = True  # todo: change to keep_last_tip
 config.layered_mix.initial_turnover = None
 config.layered_mix.max_tip_cycles = None
 config.layered_mix.max_tip_cycles_large = None
@@ -1427,7 +1427,7 @@ class EnhancedPipette(Pipette):
                     incr=None,
                     count_per_incr=None,
                     volume=None,
-                    drop_tip=None,
+                    drop_tip=None,  # todo: change to keep_last_tip, add ability to control tip changing per well
                     delay=None,
                     aspirate_rate=None,
                     dispense_rate=None,
@@ -1873,8 +1873,8 @@ def usesP10(queriedVol, count, allow_zero):
 ########################################################################################################################
 
 def diluteStrands():
-    p50.layered_mix([strand_a], 'Mixing Strand A')
-    p50.layered_mix([strand_b], 'Mixing Strand B')
+    p50.layered_mix([strand_a])
+    p50.layered_mix([strand_b])
 
     # Create dilutions of strands
     log('Moving water for diluting Strands A and B')
@@ -1884,16 +1884,16 @@ def diluteStrands():
                  )
     log('Diluting Strand A')
     p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=config.trash_control, keep_last_tip=True)
-    p50.layered_mix([diluted_strand_a], 'Mixing Diluted Strand A', incr=2)
+    p50.layered_mix([diluted_strand_a])
 
     log('Diluting Strand B')
     p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=config.trash_control, keep_last_tip=True)
-    p50.layered_mix([diluted_strand_b], 'Mixing Diluted Strand B', incr=2)
+    p50.layered_mix([diluted_strand_b])
 
 
 def createMasterMix():
     # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
-    p50.layered_mix([buffer for buffer, __ in buffers], "Mixing Buffers", incr=4)
+    p50.layered_mix([buffer for buffer, __ in buffers], incr=2)
 
     # transfer from multiple source wells, each with a current defined volume
     def transfer_multiple(msg, xfer_vol_remaining, tubes, dest, new_tip, *args, **kwargs):
