@@ -1284,10 +1284,11 @@ class EnhancedPipette(Pipette):
                     max(volume, get_well_volume(well).available_volume_min))
                 pre_wet_rate = config.aspirate.pre_wet.rate_func(rate)
                 self.tip_wetness = TipWetness.WETTING
-                info(pretty.format('prewetting tip in well {0} vol={1:n}', well.get_name(), pre_wet_volume))
-                for i in range(config.aspirate.pre_wet.count):
-                    self.aspirate(volume=pre_wet_volume, location=location, rate=pre_wet_rate, pre_wet=False)
-                    self.dispense(volume=pre_wet_volume, location=location, rate=pre_wet_rate, full_dispense=(i+1 == config.aspirate.pre_wet.count))
+                def do_pre_wet():
+                    for i in range(config.aspirate.pre_wet.count):
+                        self.aspirate(volume=pre_wet_volume, location=location, rate=pre_wet_rate, pre_wet=False)
+                        self.dispense(volume=pre_wet_volume, location=location, rate=pre_wet_rate, full_dispense=(i+1 == config.aspirate.pre_wet.count))
+                info_while(pretty.format('prewetting tip in well {0} vol={1:n}', well.get_name(), pre_wet_volume), do_pre_wet)
                 self.tip_wetness = TipWetness.WET
 
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume,
@@ -1532,7 +1533,6 @@ def get_labelled_well_name(self):
         result += ' (' + label + ')'
     return result
 
-
 Well.get_name = get_labelled_well_name
 Well.has_labelled_well_name = True
 
@@ -1606,6 +1606,18 @@ def log(msg: str, prefix="***********", suffix=' ***********'):
 
 def info(msg):
     log(msg, prefix='info:', suffix='')
+
+# enhance robot.comment to take an optional func param to call while the comment is 'in effect'
+@opentrons.commands.publish.both(command=opentrons.commands.comment)
+def robot_comment_while(self, msg, **kwargs):
+    func = kwargs.get('func', None)
+    if func is not None:
+        func()
+opentrons.legacy_api.robot.Robot.comment = robot_comment_while
+
+def info_while(msg, func):
+    msg = format_log_msg(msg, prefix='info:', suffix='')
+    robot.comment(msg, func=func)
 
 def warn(msg: str, prefix="***********", suffix=' ***********'):
     log(msg, prefix=prefix + " WARNING:", suffix=suffix)
