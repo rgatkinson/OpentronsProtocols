@@ -1200,7 +1200,7 @@ class EnhancedPipette(Pipette):
                     warn(pretty.format('current {0:n} uL will truncate dispense of {1:n} uL', self.current_volume, dispense['volume']))
 
                 can_full_dispense = self.current_volume - dispense['volume'] <= 0
-                kwargs[self.dispense_params_hack.full_dispense_during_transfer_kw] = (kwargs.get('full_dispense', False) and config.enhanced_options) and can_full_dispense  # todo: can't we just set self.full_dispense_params.transfer directly?
+                kwargs[self.dispense_params_hack.full_dispense_during_transfer_kw] = (kwargs.get('full_dispense', False) and config.enhanced_options) and can_full_dispense  # todo: can't we just set self.full_dispense_params.transfer directly? no: because of mix_before (and maybe mix_after)
                 self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
 
                 do_touch = touch_tip or touch_tip is 0
@@ -1287,7 +1287,7 @@ class EnhancedPipette(Pipette):
                 info(pretty.format('prewetting tip in well {0} vol={1:n}', well.get_name(), pre_wet_volume))
                 for i in range(config.aspirate.pre_wet.count):
                     self.aspirate(volume=pre_wet_volume, location=location, rate=pre_wet_rate, pre_wet=False)
-                    self.dispense(volume=pre_wet_volume, location=location, rate=pre_wet_rate, full_dispense=(i+1 == config.aspirate.pre_wet.count))  # todo: review full_dispense
+                    self.dispense(volume=pre_wet_volume, location=location, rate=pre_wet_rate, full_dispense=(i+1 == config.aspirate.pre_wet.count))
                 self.tip_wetness = TipWetness.WET
 
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume,
@@ -1665,7 +1665,7 @@ def verify_well_locations(well_list: List[Well], pipette: EnhancedPipette):
         robot.pause(f'verify location: {well.get_name()} in {well.parent.get_name()}')
 
     if picked_tip:
-        pipette.done_tip()
+        pipette.return_tip()  # we didn't dirty it, we can always re-use it todo: enhance return_tip() to adjust iterator so that next pick can pick up again
 
 # endregion Other Enhancements Stuff
 
