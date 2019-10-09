@@ -48,11 +48,13 @@ config.aspirate.bottom_clearance = 1.0  # see Pipette._position_for_aspirate
 config.aspirate.top_clearance = 3.5
 config.aspirate.top_clearance_factor = 10.0
 config.aspirate.extra_top_clearance_name = 'extra_aspirate_top_clearance'
-config.aspirate.pre_wet_default = True
-config.aspirate.pre_wet_count = 3
-config.aspirate.pre_wet_max_volume_fraction = 1  # https://github.com/Opentrons/opentrons/issues/2901 would pre-wet only 2/3, but why not everything?
-config.aspirate.pre_wet_current_volume_fraction = 0.75
-config.aspirate.pre_wet_requested_volume_fraction = 0.75
+config.aspirate.pre_wet = Config()
+config.aspirate.pre_wet.default = True
+config.aspirate.pre_wet.count = 3
+config.aspirate.pre_wet.max_volume_fraction = 1  # https://github.com/Opentrons/opentrons/issues/2901 would pre-wet only 2/3, but why not everything?
+config.aspirate.pre_wet.current_volume_fraction = 0.75
+config.aspirate.pre_wet.requested_volume_fraction = 0.75
+config.aspirate.pre_wet.rate_func = lambda aspirate_rate: 1  # could instead just use the aspirate
 
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
@@ -1239,19 +1241,19 @@ class EnhancedPipette(Pipette):
         if pre_wet is None:
             pre_wet = self.aspirate_params_hack.pre_wet_during_transfer
         if pre_wet is None:
-            pre_wet = config.aspirate.pre_wet_default
+            pre_wet = config.aspirate.pre_wet.default
         if pre_wet and config.enhanced_options:
             if self.tip_wetness is TipWetness.DRY:
                 pre_wet_volume = min(
-                    self.max_volume * config.aspirate.pre_wet_max_volume_fraction,
-                    volume * config.aspirate.pre_wet_requested_volume_fraction if current_well_volume == 0 else current_well_volume * config.aspirate.pre_wet_current_volume_fraction  # todo: is zero test correct / needed?
+                    self.max_volume * config.aspirate.pre_wet.max_volume_fraction,
+                    volume * config.aspirate.pre_wet.requested_volume_fraction if current_well_volume == 0 else current_well_volume * config.aspirate.pre_wet.current_volume_fraction  # todo: is zero test correct / needed?
                 )
-                pre_wet_rate = 1  # to do: alternative choice is 'rate'
+                pre_wet_rate = config.aspirate.pre_wet.rate_func(rate)
                 self.tip_wetness = TipWetness.WETTING
                 info(pretty.format('prewetting tip in well {0} vol={1:n}', well.get_name(), pre_wet_volume))
-                for i in range(config.aspirate.pre_wet_count):
+                for i in range(config.aspirate.pre_wet.count):
                     self.aspirate(volume=pre_wet_volume, location=location, rate=pre_wet_rate, pre_wet=False)
-                    self.dispense(volume=pre_wet_volume, location=location, rate=pre_wet_rate, full_dispense=(i+1 == config.aspirate.pre_wet_count))  # todo: review full_dispense
+                    self.dispense(volume=pre_wet_volume, location=location, rate=pre_wet_rate, full_dispense=(i+1 == config.aspirate.pre_wet.count))  # todo: review full_dispense
                 self.tip_wetness = TipWetness.WET
 
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume,
