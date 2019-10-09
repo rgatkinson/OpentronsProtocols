@@ -1631,9 +1631,9 @@ num_masses = 6       # across columns
 mass_incr_vol = 200
 
 start_tip = 'A1'
-tips_vol = '1000'
-pipette_vol = '1000'
-pipette_mount = 'left'
+tips_vol = '300'
+pipette_vol = '50'
+pipette_mount = 'right'
 
 ########################################################################################################################
 # Labware
