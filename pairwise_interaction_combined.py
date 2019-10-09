@@ -52,8 +52,6 @@ config.aspirate.pre_wet = Config()
 config.aspirate.pre_wet.default = True
 config.aspirate.pre_wet.count = 3
 config.aspirate.pre_wet.max_volume_fraction = 1  # https://github.com/Opentrons/opentrons/issues/2901 would pre-wet only 2/3, but why not everything?
-config.aspirate.pre_wet.current_volume_fraction = 0.75
-config.aspirate.pre_wet.requested_volume_fraction = 0.75
 config.aspirate.pre_wet.rate_func = lambda aspirate_rate: 1  # could instead just use the aspirate
 
 config.dispense = Config()
@@ -762,6 +760,11 @@ def note_liquid(location, name=None, initial_volume=None, min_volume=None, conce
 ########################################################################################################################
 
 class WellVolume(object):
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Construction
+    #-------------------------------------------------------------------------------------------------------------------
+
     def __init__(self, well=None):
         self.well = well
         self.initial_volume_known = False
@@ -779,8 +782,12 @@ class WellVolume(object):
             self.initial_volume_known = True
             self.initial_volume = initial_volume
 
+    #-------------------------------------------------------------------------------------------------------------------
+    # Accessing
+    #-------------------------------------------------------------------------------------------------------------------
+
     @property
-    def current_volume(self):
+    def current_volume(self):  # may be interval
         return self.initial_volume + self.cum_delta
 
     @property
@@ -792,12 +799,27 @@ class WellVolume(object):
             return vol
 
     @property
+    def available_volume_min(self):
+        return max(0, self.current_volume_min - self._min_aspiratable_volume)
+
+    @property
     def min_volume(self):  # minimum historically seen
         return self.initial_volume + self.min_delta
 
     @property
-    def max_volume(self):
+    def max_volume(self):  # maximum historically seen
         return self.initial_volume + self.max_delta
+
+    @property
+    def _min_aspiratable_volume(self):
+        if self.well is None:
+            return 0
+        else:
+            return get_well_geometry(self.well).min_aspiratable_volume
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Actions
+    #-------------------------------------------------------------------------------------------------------------------
 
     def aspirate(self, volume):
         assert volume >= 0
@@ -831,12 +853,17 @@ def get_well_volume(well):
 
 # region Well Geometry
 class WellGeometry(object):
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Construction
+    #-------------------------------------------------------------------------------------------------------------------
+
     def __init__(self, well):
         self.well = well
 
-    @abstractmethod
-    def depth_from_volume(self, volume):
-        pass
+    #-------------------------------------------------------------------------------------------------------------------
+    # Accessing
+    #-------------------------------------------------------------------------------------------------------------------
 
     @property
     @abstractmethod
@@ -844,7 +871,7 @@ class WellGeometry(object):
         pass
 
     @property
-    def min_aspirate_vol(self):  # minimum volume we can aspirate from (i.e.: we leave at least this much behind)
+    def min_aspiratable_volume(self):  # minimum volume we can aspirate from (i.e.: we leave at least this much behind)
         return 0
 
     @property
@@ -852,7 +879,15 @@ class WellGeometry(object):
     def well_depth(self):  # not yet actually used, nor fully elaborated
         return 0
 
-    def min_depth_from_volume(self, volume):
+    #-------------------------------------------------------------------------------------------------------------------
+    # Calculations
+    #-------------------------------------------------------------------------------------------------------------------
+
+    @abstractmethod
+    def depth_from_volume(self, volume):  # best calc'n of depth from the given volume. may be an interval
+        pass
+
+    def depth_from_volume_min(self, volume):  # lowest possible depth for the given volume
         vol = self.depth_from_volume(volume)
         if is_interval(vol):
             return vol.infimum
@@ -890,7 +925,7 @@ class IdtTubeWellGeometry(WellGeometry):
         return 2153.47
 
     @property
-    def min_aspirate_vol(self):
+    def min_aspiratable_volume(self):
         return 75  # a rough estimate
 
 
@@ -1233,7 +1268,7 @@ class EnhancedPipette(Pipette):
         well, _ = unpack_location(location)
 
         current_well_volume = get_well_volume(well).current_volume_min
-        needed_well_volume = get_well_geometry(well).min_aspirate_vol + volume;
+        needed_well_volume = get_well_geometry(well).min_aspiratable_volume + volume;
         if current_well_volume < needed_well_volume:
             msg = pretty.format('aspirating too much from well={0} have={1:n} need={2:n}', well.get_name(), current_well_volume, needed_well_volume)
             warn(msg)
@@ -1246,8 +1281,7 @@ class EnhancedPipette(Pipette):
             if self.tip_wetness is TipWetness.DRY:
                 pre_wet_volume = min(
                     self.max_volume * config.aspirate.pre_wet.max_volume_fraction,
-                    volume * config.aspirate.pre_wet.requested_volume_fraction if current_well_volume == 0 else current_well_volume * config.aspirate.pre_wet.current_volume_fraction  # todo: is zero test correct / needed?
-                )
+                    max(volume, get_well_volume(well).available_volume_min))
                 pre_wet_rate = config.aspirate.pre_wet.rate_func(rate)
                 self.tip_wetness = TipWetness.WETTING
                 info(pretty.format('prewetting tip in well {0} vol={1:n}', well.get_name(), pre_wet_volume))
@@ -1318,7 +1352,7 @@ class EnhancedPipette(Pipette):
         if isinstance(location, Placeable):
             well = location; assert isWell(well)
             well_vol = get_well_volume(well).current_volume_min
-            well_depth = get_well_geometry(well).min_depth_from_volume(well_vol if aspirate_volume is None else well_vol - aspirate_volume)
+            well_depth = get_well_geometry(well).depth_from_volume_min(well_vol if aspirate_volume is None else well_vol - aspirate_volume)
             z = well_depth - self._top_clearance(well, well_depth,
                                                  clearance=(0 if clearances is None else clearances.top_clearance) + extra_clearance,
                                                  factor=1 if clearances is None else clearances.top_clearance_factor)
@@ -1758,8 +1792,8 @@ wells_to_verify = [master_mix, strand_a, strand_b, diluted_strand_a, diluted_str
 # Remember initial liquid names and volumes
 log('Liquid Names')
 note_liquid(location=water, name='Water', min_volume=7000)  # volume is rough guess
-assert strand_a_min_vol >= strand_dilution_source_vol + get_well_geometry(strand_a).min_aspirate_vol
-assert strand_b_min_vol >= strand_dilution_source_vol + get_well_geometry(strand_b).min_aspirate_vol
+assert strand_a_min_vol >= strand_dilution_source_vol + get_well_geometry(strand_a).min_aspiratable_volume
+assert strand_b_min_vol >= strand_dilution_source_vol + get_well_geometry(strand_b).min_aspiratable_volume
 note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, min_volume=strand_a_min_vol)  # i.e.: we have enough, just not specified how much
 note_liquid(location=strand_b, name='StrandB', concentration=strand_b_conc, min_volume=strand_b_min_vol)  # ditto
 note_liquid(location=diluted_strand_a, name='Diluted StrandA')
@@ -1862,7 +1896,7 @@ def createMasterMix():
                 cur_vol = tubes[tube_index][1]
                 min_vol = max(p50_min_vol,
                               cur_vol / config.min_aspirate_factor_hack,  # tolerance is proportional to specification of volume. can probably make better guess
-                              get_well_geometry(cur_well).min_aspirate_vol)
+                              get_well_geometry(cur_well).min_aspiratable_volume)
                 tube_index = tube_index + 1
             this_vol = min(xfer_vol_remaining, cur_vol - min_vol)
             assert this_vol >= p50_min_vol  # TODO: is this always the case?
