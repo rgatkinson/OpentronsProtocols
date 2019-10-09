@@ -40,8 +40,13 @@ config.aspirate.bottom_clearance = 1.0  # see Pipette._position_for_aspirate
 config.aspirate.top_clearance = 3.5
 config.aspirate.top_clearance_factor = 10.0
 config.aspirate.extra_top_clearance_name = 'extra_aspirate_top_clearance'
-config.aspirate.pre_wet_default = False
-config.aspirate.pre_wet_count = 3
+config.aspirate.pre_wet = Config()
+config.aspirate.pre_wet.default = True
+config.aspirate.pre_wet.count = 3
+config.aspirate.pre_wet.max_volume_fraction = 1  # https://github.com/Opentrons/opentrons/issues/2901 would pre-wet only 2/3, but why not everything?
+config.aspirate.pre_wet.current_volume_fraction = 0.75
+config.aspirate.pre_wet.requested_volume_fraction = 0.75
+config.aspirate.pre_wet.rate_func = lambda aspirate_rate: 1  # could instead just use the aspirate
 
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
@@ -976,15 +981,23 @@ class EnhancedPipette(Pipette):
         parentInst.__class__ = EnhancedPipette
         return parentInst
 
+    class AspirateParamsHack(object):
+        def __init__(self) -> None:
+            self.pre_wet_during_transfer = None
+
+    class DispenseParamsHack(object):
+        def __init__(self) -> None:
+            self.full_dispense_from_dispense = False
+            self.full_dispense_during_transfer_kw = '_do_full_dispense'  # as opposed to merely requesting it when possible
+            self.full_dispense_during_transfer = False
+            self.fully_dispensed = False
+
     # noinspection PyMissingConstructor
     def __init__(self, parentInst):
         self.prev_aspirated_location = None
-        self.full_dispense_during_transfer = False
-        self.full_dispense_explicit_dispense = False
-        self.full_dispense_dispensed = False
+        self.aspirate_params_hack = EnhancedPipette.AspirateParamsHack()
+        self.dispense_params_hack = EnhancedPipette.DispenseParamsHack()
         self.tip_wetness = TipWetness.NONE
-        self.pre_wet_during_transfer = None
-        pass
 
     #-------------------------------------------------------------------------------------------------------------------
     # Rates and speeds
@@ -1091,6 +1104,9 @@ class EnhancedPipette(Pipette):
                 if not seen_aspirate:
                     assert i == 0
 
+                    if kwargs.get('pre_wet', None) and kwargs.get('mix_before', None):
+                        warn("simultaneous use of 'pre_wet' and 'mix_before' is not tested")
+
                     if (kwargs.get('allow_carryover', False) and config.enhanced_options) and zeroify(self.current_volume) > 0:
                         this_aspirated_location, __ = unpack_location(aspirate['location'])
                         if self.prev_aspirated_location is this_aspirated_location:
@@ -1141,7 +1157,7 @@ class EnhancedPipette(Pipette):
                     warn(pretty.format('current {0:n} uL will truncate dispense of {1:n} uL', self.current_volume, dispense['volume']))
 
                 can_full_dispense = self.current_volume - dispense['volume'] <= 0
-                kwargs['_full_dispense_during_transfer'] = (kwargs.get('full_dispense', False) and config.enhanced_options) and can_full_dispense
+                kwargs[self.dispense_params_hack.full_dispense_during_transfer_kw] = (kwargs.get('full_dispense', False) and config.enhanced_options) and can_full_dispense  # todo: can't we just set self.full_dispense_params.transfer directly?
                 self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
 
                 do_touch = touch_tip or touch_tip is 0
@@ -1215,22 +1231,21 @@ class EnhancedPipette(Pipette):
             warn(msg)
 
         if pre_wet is None:
-            pre_wet = self.pre_wet_during_transfer
+            pre_wet = self.aspirate_params_hack.pre_wet_during_transfer
         if pre_wet is None:
-            pre_wet = config.aspirate.pre_wet_default  # todo: prewetting might not work well with mixing during transfer, we're off by default for now at least
+            pre_wet = config.aspirate.pre_wet.default
         if pre_wet and config.enhanced_options:
             if self.tip_wetness is TipWetness.DRY:
-                # see also https://github.com/Opentrons/opentrons/issues/2901
                 pre_wet_volume = min(
-                    self.max_volume * 2 / 3,
-                    volume * 3 / 4 if current_well_volume == 0 else current_well_volume * 3 / 4  # todo: is zero test correct / needed?
+                    self.max_volume * config.aspirate.pre_wet.max_volume_fraction,
+                    volume * config.aspirate.pre_wet.requested_volume_fraction if current_well_volume == 0 else current_well_volume * config.aspirate.pre_wet.current_volume_fraction  # todo: is zero test correct / needed?
                 )
-                pre_wet_rate = rate  # todo: or 1?
+                pre_wet_rate = config.aspirate.pre_wet.rate_func(rate)
                 self.tip_wetness = TipWetness.WETTING
                 info(pretty.format('prewetting tip in well {0} vol={1:n}', well.get_name(), pre_wet_volume))
-                for i in range(config.aspirate.pre_wet_count):
+                for i in range(config.aspirate.pre_wet.count):
                     self.aspirate(volume=pre_wet_volume, location=location, rate=pre_wet_rate, pre_wet=False)
-                    self.dispense(volume=pre_wet_volume, location=location, rate=pre_wet_rate, full_dispense=(i+1 == config.aspirate.pre_wet_count))  # todo: review full_dispense
+                    self.dispense(volume=pre_wet_volume, location=location, rate=pre_wet_rate, full_dispense=(i+1 == config.aspirate.pre_wet.count))  # todo: review full_dispense
                 self.tip_wetness = TipWetness.WET
 
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume,
@@ -1244,10 +1259,10 @@ class EnhancedPipette(Pipette):
         if volume != 0:
             self.prev_aspirated_location = well
 
-    def _aspirate_during_transfer(self, vol, loc, **kwargs):  # funky param passing to self.aspirate
-        self.pre_wet_during_transfer = kwargs.get('pre_wet', None)
+    def _aspirate_during_transfer(self, vol, loc, **kwargs):
+        self.aspirate_params_hack.pre_wet_during_transfer = kwargs.get('pre_wet', None)
         super()._aspirate_during_transfer(vol, loc, **kwargs)
-        self.pre_wet_during_transfer = None
+        self.aspirate_params_hack.pre_wet_during_transfer = None
 
     def dispense(self, volume=None, location=None, rate=1.0, full_dispense: bool = False):
         if not helpers.is_number(volume):  # recapitulate super
@@ -1261,34 +1276,34 @@ class EnhancedPipette(Pipette):
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None,
                                                        clearances=config.dispense,
                                                        extra_clearance=getattr(well, config.dispense.extra_top_clearance_name, 0))
-        self.full_dispense_explicit_dispense = (full_dispense and config.enhanced_options)  # funky way of passing parameter to _dispense_plunger_position()
+        self.dispense_params_hack.full_dispense_from_dispense = (full_dispense and config.enhanced_options)
         super().dispense(volume=volume, location=location, rate=rate)
-        self.full_dispense_explicit_dispense = False
-        if self.full_dispense_dispensed:
+        self.dispense_params_hack.full_dispense_from_dispense = False
+        if self.dispense_params_hack.fully_dispensed:
             assert self.current_volume == 0
             if self.current_volume == 0:
                 pass  # nothing to do: the next self._position_for_aspirate will reposition for us: 'if pipette is currently empty, ensure the plunger is at "bottom"'
             else:
                 raise NotImplementedError
-            self.full_dispense_dispensed = False
+            self.dispense_params_hack.fully_dispensed = False
         # track volume
         well, __ = unpack_location(location)
         get_well_volume(well).dispense(volume)
 
     def _dispense_during_transfer(self, vol, loc, **kwargs):
-        self.full_dispense_during_transfer = kwargs.get('_full_dispense_during_transfer', False)  # funky way of passing parameter to _dispense_plunger_position()
+        self.dispense_params_hack.full_dispense_during_transfer = kwargs.get(self.dispense_params_hack.full_dispense_during_transfer_kw, False)
         super()._dispense_during_transfer(vol, loc, **kwargs)
-        self.full_dispense_during_transfer = False
+        self.dispense_params_hack.full_dispense_during_transfer = False
 
     def _dispense_plunger_position(self, ul):
         mm_from_vol = super()._dispense_plunger_position(ul)  # retrieve position historically used
-        if config.dispense.enable_full_dispense and (self.full_dispense_explicit_dispense or self.full_dispense_during_transfer):
+        if config.dispense.enable_full_dispense and (self.dispense_params_hack.full_dispense_from_dispense or self.dispense_params_hack.full_dispense_during_transfer):
             mm_from_blow = self._get_plunger_position('blow_out')
             info(pretty.format('dispensing to mm={0:n} instead of mm={1:n}', mm_from_blow, mm_from_vol))
-            self.full_dispense_dispensed = True  # funky return value
+            self.dispense_params_hack.fully_dispensed = True
             return mm_from_blow
         else:
-            self.full_dispense_dispensed = False  # funky return value
+            self.dispense_params_hack.fully_dispensed = False
             return mm_from_vol
 
     def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, clearances=None, extra_clearance=0, allow_above=False):
@@ -1415,7 +1430,7 @@ class EnhancedPipette(Pipette):
         delay = fetch('delay')
         initial_turnover = fetch('initial_turnover')
         max_tip_cycles = fetch('max_tip_cycles', fpu.infinity)
-        pre_wet = fetch('pre_wet', False)  # not much point in pre-wetting during mixing; save some time, simpler
+        pre_wet = fetch('pre_wet', False)  # not much point in pre-wetting during mixing; save some time, simpler. but we do so if asked
 
         well_vol = get_well_volume(well).current_volume_min
         well_depth = get_well_geometry(well).depth_from_volume(well_vol)
