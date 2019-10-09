@@ -1827,15 +1827,14 @@ def diluteStrands():
     log('Moving water for diluting Strands A and B')
     p50.transfer(strand_dilution_water_vol, water, [diluted_strand_a, diluted_strand_b],
                  new_tip='once',  # can reuse for all diluent dispensing since dest tubes are initially empty
-                 trash=config.trash_control,
-                 pre_wet=True
+                 trash=config.trash_control
                  )
     log('Diluting Strand A')
-    p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=config.trash_control, pre_wet=True, keep_last_tip=True)
+    p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=config.trash_control, keep_last_tip=True)
     p50.layered_mix([diluted_strand_a], 'Mixing Diluted Strand A', incr=2)
 
     log('Diluting Strand B')
-    p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=config.trash_control, pre_wet=True, keep_last_tip=True)
+    p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=config.trash_control, keep_last_tip=True)
     p50.layered_mix([diluted_strand_b], 'Mixing Diluted Strand B', incr=2)
 
 
@@ -1875,14 +1874,14 @@ def createMasterMix():
         p50.layered_mix([master_mix], incr=2, initial_turnover=master_mix_evagreen_vol * 1.2, max_tip_cycles=config.layered_mix.max_tip_cycles_large)
 
     log('Creating Master Mix: Water')
-    p50.transfer(master_mix_common_water_vol, water, master_mix, pre_wet=True, trash=config.trash_control)
+    p50.transfer(master_mix_common_water_vol, water, master_mix, trash=config.trash_control)
 
     log('Creating Master Mix: Buffer')
-    transfer_multiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', pre_wet=True, keep_last_tip=True)  # 'once' because we've only got water & buffer in context
+    transfer_multiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', keep_last_tip=True)  # 'once' because we've only got water & buffer in context
     p50.done_tip()  # EvaGreen needs a new tip
 
     log('Creating Master Mix: EvaGreen')
-    transfer_multiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always', pre_wet=True, keep_last_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
+    transfer_multiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always', keep_last_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
 
     mix_master_mix()
 
@@ -1898,8 +1897,7 @@ def plateEverythingAndMix():
     p50.distribute(master_mix_per_well, master_mix, usedWells(),
                    new_tip='once',
                    disposal_vol=p50_disposal_vol,
-                   trash=config.trash_control,
-                   pre_wet=True)
+                   trash=config.trash_control)
 
     log('Plating per-well water')
     # Plate per-well water. We save tips by being happy to pollute our water trough with a bit of master mix.
@@ -1917,8 +1915,7 @@ def plateEverythingAndMix():
                    disposal_vol=p50_disposal_vol,
                    trash=config.trash_control,
                    allow_blow_elision=allow_blow_elision,
-                   allow_carryover=allow_carryover,
-                   pre_wet=True)
+                   allow_carryover=allow_carryover)
 
     # Plate strand A
     # All plate wells at this point only have water and master mix, so we can't get cross-plate-well
@@ -1946,8 +1943,7 @@ def plateEverythingAndMix():
                      trash=config.trash_control,
                      allow_blow_elision=allow_blow_elision,
                      allow_carryover=allow_carryover,
-                     full_dispense=True,
-                     pre_wet=True)
+                     full_dispense=True)
     p10.done_tip()
     p50.done_tip()
 
@@ -1969,7 +1965,7 @@ def plateEverythingAndMix():
             if volume != 0:
                 log("Plating Strand B: well='%s' vol=%d pipette=%s" % (well.get_name(), volume, p.name))
                 p.pick_up_tip()
-                p.transfer(volume, diluted_strand_b, well, new_tip='never', full_dispense=True, pre_wet=True)
+                p.transfer(volume, diluted_strand_b, well, new_tip='never', full_dispense=True)
             if p is p50:
                 mix_plate_well(well, drop_tip=False)
                 mixed_wells.add(well)
