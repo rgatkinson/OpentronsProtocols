@@ -1433,23 +1433,26 @@ class EnhancedPipette(Pipette):
                     dispense_rate=None,
                     initial_turnover=None,
                     max_tip_cycles=None):
-        if drop_tip is None:
-            drop_tip = config.layered_mix.drop_tip
 
-        for well in wells:
-            self._layered_mix_one(well, msg=msg,
-                                  count=count,
-                                  min_incr=min_incr,
-                                  incr=incr,
-                                  count_per_incr=count_per_incr,
-                                  volume=volume,
-                                  delay=delay,
-                                  apirate_rate=aspirate_rate,
-                                  dispense_rate=dispense_rate,
-                                  initial_turnover=initial_turnover,
-                                  max_tip_cycles=max_tip_cycles)
-        if drop_tip:
-            self.done_tip()
+        def do_layered_mix():
+            local_drop_tip = drop_tip if drop_tip is not None else config.layered_mix.drop_tip
+
+            for well in wells:
+                self._layered_mix_one(well, msg=msg,
+                                      count=count,
+                                      min_incr=min_incr,
+                                      incr=incr,
+                                      count_per_incr=count_per_incr,
+                                      volume=volume,
+                                      delay=delay,
+                                      apirate_rate=aspirate_rate,
+                                      dispense_rate=dispense_rate,
+                                      initial_turnover=initial_turnover,
+                                      max_tip_cycles=max_tip_cycles)
+            if local_drop_tip:
+                self.done_tip()
+
+        log_while(f'{msg} {[well.get_name() for well in wells]}', do_layered_mix)
 
     def _top_clearance(self, well, depth, clearance, factor):
         if clearance < 0:
@@ -1480,7 +1483,7 @@ class EnhancedPipette(Pipette):
         well_depth_after_asp = get_well_geometry(well).depth_from_volume(well_vol - volume)
         msg = pretty.format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_aspirate={4:n}", msg, well.get_name(), well_vol, well_depth, well_depth_after_asp)
         if msg is not None:
-            log(msg)
+            info(msg)
         y_min = y = config.layered_mix.aspirate_bottom_clearance
         y_max = well_depth_after_asp - self._top_clearance(well, well_depth_after_asp, clearance=config.layered_mix.top_clearance, factor=config.layered_mix.top_clearance_factor)
         if count is not None:
@@ -1598,15 +1601,6 @@ def get_location_path(location):
         location.location_path = result
     return result
 
-def format_log_msg(msg: str, prefix="***********", suffix=' ***********'):
-    return "%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix)
-
-def log(msg: str, prefix="***********", suffix=' ***********'):
-    robot.comment(format_log_msg(msg, prefix=prefix, suffix=suffix))
-
-def info(msg):
-    log(msg, prefix='info:', suffix='')
-
 # enhance robot.comment to take an optional func param to call while the comment is 'in effect'
 @opentrons.commands.publish.both(command=opentrons.commands.comment)
 def robot_comment_while(self, msg, **kwargs):
@@ -1615,9 +1609,20 @@ def robot_comment_while(self, msg, **kwargs):
         func()
 opentrons.legacy_api.robot.Robot.comment = robot_comment_while
 
+def format_log_msg(msg: str, prefix="***********", suffix=' ***********'):
+    return "%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix)
+
+def log(msg: str, prefix="***********", suffix=' ***********'):
+    robot.comment(format_log_msg(msg, prefix=prefix, suffix=suffix))
+
+def log_while(msg: str, func, prefix="***********", suffix=' ***********'):
+    robot.comment(format_log_msg(msg, prefix=prefix, suffix=suffix), func=func)
+
+def info(msg):
+    log(msg, prefix='info:', suffix='')
+
 def info_while(msg, func):
-    msg = format_log_msg(msg, prefix='info:', suffix='')
-    robot.comment(msg, func=func)
+    log_while(msg, func, prefix='info:', suffix='')
 
 def warn(msg: str, prefix="***********", suffix=' ***********'):
     log(msg, prefix=prefix + " WARNING:", suffix=suffix)
