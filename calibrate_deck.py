@@ -76,7 +76,7 @@ config.layered_mix.count = None  # so we default to using incr, not count
 config.layered_mix.min_incr = 0.5
 config.layered_mix.count_per_incr = 2
 config.layered_mix.delay = 750
-config.layered_mix.drop_tip = True
+config.layered_mix.drop_tip = True  # todo: change to keep_last_tip
 config.layered_mix.initial_turnover = None
 config.layered_mix.max_tip_cycles = None
 config.layered_mix.max_tip_cycles_large = None
@@ -1427,7 +1427,7 @@ class EnhancedPipette(Pipette):
                     incr=None,
                     count_per_incr=None,
                     volume=None,
-                    drop_tip=None,
+                    drop_tip=None,  # todo: change to keep_last_tip, add ability to control tip changing per well
                     delay=None,
                     aspirate_rate=None,
                     dispense_rate=None,
