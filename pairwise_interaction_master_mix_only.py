@@ -2,6 +2,14 @@
 @author Robert Atkinson
 """
 
+from opentrons.commands.commands import stringify_location
+
+metadata = {
+    'protocolName': 'Pairwise Interaction: Dilute & Master & Plate',
+    'author': 'Robert Atkinson <bob@theatkinsons.org>',
+    'description': 'Study the interaction of two DNA strands'
+}
+
 # region Enhancements
 
 import enum
@@ -1681,3 +1689,245 @@ def verify_well_locations(well_list: List[Well], pipette: EnhancedPipette):
 # endregion Other Enhancements Stuff
 
 # endregion Enhancements
+
+########################################################################################################################
+# Configurable protocol parameters
+########################################################################################################################
+
+# Volumes of master mix ingredients. These are minimums in each tube.
+buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
+evagreen_volumes = [600]            # B1, B2, etc in screwcap rack
+
+strand_a_conc = '10uM'  # '8.820 uM'  # Note: we'll use more Strand A than Strand B because of disposal_volumes
+strand_b_conc = '10uM'  # '9.117 uM'
+strand_a_min_vol = 600  # set as best one can
+strand_b_min_vol = 600  # set as best one can
+
+# Tip usage
+p10_start_tip = 'A9'
+p50_start_tip = 'A1'
+config.trash_control = True
+
+# Diluting each strand
+strand_dilution_factor = 25.0 / 9.0  # per Excel worksheet
+strand_dilution_vol = 1225
+
+# Master mix, values per Excel worksheet
+master_mix_buffer_vol = 1645.06
+master_mix_evagreen_vol = 411.264
+master_mix_common_water_vol = 685.44
+master_mix_vol = master_mix_buffer_vol + master_mix_evagreen_vol + master_mix_common_water_vol
+
+# Define the volumes of diluted strands we will use
+strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
+num_replicates = 3
+columns_per_plate = 12
+rows_per_plate = 8
+per_well_water_volumes = [
+    [56, 54, 51, 48],
+    [54, 52, 49, 46],
+    [51, 49, 46, 43],
+    [48, 46, 43, 40],
+    [32, 28, 24, 16],
+    [28, 24, 20, 12],
+    [24, 20, 16, 8],
+    [16, 12, 8, 0]]
+assert len(per_well_water_volumes) == rows_per_plate
+assert len(per_well_water_volumes[0]) * num_replicates == columns_per_plate
+
+
+# Optimization Control (needs cleaning up)
+allow_blow_elision = True
+allow_carryover = allow_blow_elision
+
+########################################################################################################################
+## Protocol
+########################################################################################################################
+
+
+# compute derived constants
+strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
+strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
+
+########################################################################################################################
+# Labware
+########################################################################################################################
+
+# Configure the tips
+tips300a = labware.load('opentrons_96_tiprack_300ul', 1)
+
+# Configure the pipettes.
+p50 = EnhancedPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a]))
+
+# Blow out faster than default in an attempt to avoid hanging droplets on the pipettes after blowout
+p50.set_flow_rate(blow_out=p50.get_flow_rates()['blow_out'] * config.blow_out_rate_factor)
+
+# Control tip usage
+p50.start_at_tip(tips300a[p50_start_tip])
+
+# Custom disposal volumes to minimize reagent usage
+p50_disposal_vol = 5
+p10_disposal_vol = 1
+
+# All the labware containers
+temp_slot = 10
+temp_module = modules.load('tempdeck', temp_slot)
+screwcap_rack = labware.load('opentrons_24_aluminumblock_generic_2ml_screwcap', temp_slot, label='screwcap_rack', share=True)
+falcon_rack = labware.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 5, label='falcon_rack')
+plate = labware.load('biorad_96_wellplate_200ul_pcr', 3, label='plate')
+trough = labware.load('usascientific_12_reservoir_22ml', 6, label='trough')
+
+# Name specific places in the labware containers
+water = trough['A1']
+buffers = list(zip(screwcap_rack.rows(0), buffer_volumes))
+evagreens = list(zip(screwcap_rack.rows(1), evagreen_volumes))
+master_mix = falcon_rack['A1']  # note: this needs tape around it's mid-section to keep it in the holder!
+
+# Define geometries
+for well, __ in buffers:
+    well.geometry = IdtTubeWellGeometry(well)
+for well, __ in evagreens:
+    well.geometry = IdtTubeWellGeometry(well)
+master_mix.geometry = FalconTube15mlGeometry(master_mix)
+for well in plate.wells():
+    well.geometry = Biorad96WellPlateWellGeometry(well)
+
+wells_to_verify = [master_mix, plate.wells('A1'), plate.wells('A12'), plate.wells('H1'), plate.wells('H12')]
+
+# Remember initial liquid names and volumes
+log('Liquid Names')
+note_liquid(location=water, name='Water', min_volume=7000)  # volume is rough guess
+note_liquid(location=master_mix, name='Master Mix')
+for buffer in buffers:
+    note_liquid(location=buffer[0], name='Buffer', initial_volume=buffer[1], concentration='5x')
+for evagreen in evagreens:
+    note_liquid(location=evagreen[0], name='Evagreen', initial_volume=evagreen[1], concentration='20x')
+
+# Clean up namespace
+del well
+
+########################################################################################################################
+# Well & Pipettes
+########################################################################################################################
+
+num_samples_per_row = columns_per_plate // num_replicates
+
+# Into which wells should we place the n'th sample size of strand A
+def calculateStrandAWells(iSample: int) -> List[types.Location]:
+    row_first = 0 if iSample < num_samples_per_row else num_samples_per_row
+    col_first = (num_replicates * iSample) % columns_per_plate
+    result = []
+    for row in range(row_first, row_first + min(num_samples_per_row, len(strand_volumes))):
+        for col in range(col_first, col_first + num_replicates):
+            result.append(plate.rows(row).wells(col))
+    return result
+
+
+# Into which wells should we place the n'th sample size of strand B
+def calculateStrandBWells(iSample: int) -> List[types.Location]:
+    if iSample < num_samples_per_row:
+        col_max = num_replicates * (len(strand_volumes) if len(strand_volumes) < num_samples_per_row else num_samples_per_row)
+    else:
+        col_max = num_replicates * (0 if len(strand_volumes) < num_samples_per_row else len(strand_volumes) - num_samples_per_row)
+    result = []
+    for col in range(0, col_max):
+        result.append(plate.rows(iSample).wells(col))
+    return result
+
+
+# What wells are at all used here?
+def usedWells() -> List[types.Location]:
+    result = []
+    for n in range(0, len(strand_volumes)):
+        result.extend(calculateStrandAWells(n))
+    return result
+
+
+# Figuring out what pipettes should pipette what volumes
+p10_max_vol = 10
+p50_min_vol = 5
+def usesP10(queriedVol, count, allow_zero):
+    return (allow_zero or 0 < queriedVol) and (queriedVol < p50_min_vol or queriedVol * count <= p10_max_vol)
+
+
+########################################################################################################################
+# Making master mix and diluting strands
+########################################################################################################################
+
+def createMasterMix():
+    # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
+    p50.layered_mix([buffer for buffer, __ in buffers], incr=2)
+
+    # transfer from multiple source wells, each with a current defined volume
+    def transfer_multiple(msg, xfer_vol_remaining, tubes, dest, new_tip, *args, **kwargs):
+        tube_index = 0
+        cur_well = None
+        cur_vol = 0
+        min_vol = 0
+        while xfer_vol_remaining > 0:
+            if xfer_vol_remaining < p50_min_vol:
+                warn("remaining transfer volume of %f too small; ignored" % xfer_vol_remaining)
+                return
+            # advance to next tube if there's not enough in this tube
+            while cur_well is None or cur_vol <= min_vol:
+                if tube_index >= len(tubes):
+                    fatal('%s: more reagent needed' % msg)
+                cur_well = tubes[tube_index][0]
+                cur_vol = tubes[tube_index][1]
+                min_vol = max(p50_min_vol,
+                              cur_vol / config.min_aspirate_factor_hack,  # tolerance is proportional to specification of volume. can probably make better guess
+                              get_well_geometry(cur_well).min_aspiratable_volume)
+                tube_index = tube_index + 1
+            this_vol = min(xfer_vol_remaining, cur_vol - min_vol)
+            assert this_vol >= p50_min_vol  # TODO: is this always the case?
+            log('%s: xfer %f from %s in %s to %s in %s' % (msg, this_vol, cur_well, cur_well.parent, dest, dest.parent))
+            p50.transfer(this_vol, cur_well, dest, trash=config.trash_control, new_tip=new_tip, **kwargs)
+            xfer_vol_remaining -= this_vol
+            cur_vol -= this_vol
+
+    def mix_master_mix():
+        log('Mixing Master Mix')
+        p50.layered_mix([master_mix], incr=2, initial_turnover=master_mix_evagreen_vol * 1.2, max_tip_cycles=config.layered_mix.max_tip_cycles_large)
+
+    log('Creating Master Mix: Water')
+    p50.transfer(master_mix_common_water_vol, water, master_mix, trash=config.trash_control)
+
+    log('Creating Master Mix: Buffer')
+    transfer_multiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', keep_last_tip=True)  # 'once' because we've only got water & buffer in context
+    p50.done_tip()  # EvaGreen needs a new tip
+
+    log('Creating Master Mix: EvaGreen')
+    transfer_multiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always', keep_last_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
+
+    mix_master_mix()
+
+
+########################################################################################################################
+# Plating
+########################################################################################################################
+
+def plateEverythingAndMix():
+    # Plate master mix
+    log('Plating Master Mix')
+    master_mix_per_well = 28
+    p50.distribute(master_mix_per_well, master_mix, usedWells(),
+                   new_tip='once',
+                   disposal_vol=p50_disposal_vol,
+                   trash=config.trash_control)
+
+
+########################################################################################################################
+# Off to the races
+########################################################################################################################
+
+master_and_dilutions_made = False
+verify_well_locations(wells_to_verify, p50)
+
+if not master_and_dilutions_made:
+    createMasterMix()
+else:
+    note_liquid(location=master_mix, name=None, initial_volume=master_mix_vol)
+
+robot.pause('Pausing before plating: weigh master mix tube now')
+plateEverythingAndMix()
+verify_well_locations(wells_to_verify, p50)
