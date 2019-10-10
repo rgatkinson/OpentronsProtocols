@@ -24,7 +24,7 @@ from typing import List
 
 import opentrons
 from opentrons import labware, instruments, robot, modules, types
-from opentrons.commands.commands import stringify_location, make_command, command_types
+from opentrons.commands import stringify_location, make_command, command_types
 from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
@@ -1482,48 +1482,51 @@ class EnhancedPipette(Pipette):
         well_depth = get_well_geometry(well).depth_from_volume(well_vol)
         well_depth_after_asp = get_well_geometry(well).depth_from_volume(well_vol - volume)
         msg = pretty.format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_aspirate={4:n}", msg, well.get_name(), well_vol, well_depth, well_depth_after_asp)
-        if msg is not None:
-            info(msg)
-        y_min = y = config.layered_mix.aspirate_bottom_clearance
-        y_max = well_depth_after_asp - self._top_clearance(well, well_depth_after_asp, clearance=config.layered_mix.top_clearance, factor=config.layered_mix.top_clearance_factor)
-        if count is not None:
-            if count <= 1:
-                y_max = y_min
-                y_incr = 1  # just so we only go one time through the loop
-            else:
-                y_incr = (y_max - y_min) / (count-1)
-                y_incr = max(y_incr, min_incr)
-        else:
-            assert incr is not None
-            y_incr = incr
 
-        def do_layer(y_layer):
-            return y_layer <= y_max or is_close(y_layer, y_max)
-        first = True
-        tip_cycles = 0
-        while do_layer(y):
-            if not first:
-                self.delay(delay / 1000.0)
-            #
-            if first and initial_turnover is not None:
-                count = int(0.5 + (initial_turnover / volume))
-                count = max(count, count_per_incr)
+        def do_one():
+            count_ = count
+            y_min = y = config.layered_mix.aspirate_bottom_clearance
+            y_max = well_depth_after_asp - self._top_clearance(well, well_depth_after_asp, clearance=config.layered_mix.top_clearance, factor=config.layered_mix.top_clearance_factor)
+            if count_ is not None:
+                if count_ <= 1:
+                    y_max = y_min
+                    y_incr = 1  # just so we only go one time through the loop
+                else:
+                    y_incr = (y_max - y_min) / (count_-1)
+                    y_incr = max(y_incr, min_incr)
             else:
-                count = count_per_incr
-            if not self.has_tip:
-                self.pick_up_tip()
-            for i in range(count):
-                tip_cycles += 1
-                need_new_tip = tip_cycles >= max_tip_cycles
-                full_dispense = need_new_tip or (not do_layer(y + y_incr) and i == count - 1)
-                self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', config.layered_mix.aspirate_rate_factor), pre_wet=pre_wet)
-                self.dispense(volume, well.bottom(y_max), rate=fetch('dispense_rate', config.layered_mix.dispense_rate_factor), full_dispense=full_dispense)
-                if need_new_tip:
-                    self.done_tip()
-                    tip_cycles = 0
-            #
-            y += y_incr
-            first = False
+                assert incr is not None
+                y_incr = incr
+
+            def do_layer(y_layer):
+                return y_layer <= y_max or is_close(y_layer, y_max)
+            first = True
+            tip_cycles = 0
+            while do_layer(y):
+                if not first:
+                    self.delay(delay / 1000.0)
+                #
+                if first and initial_turnover is not None:
+                    count_ = int(0.5 + (initial_turnover / volume))
+                    count_ = max(count_, count_per_incr)
+                else:
+                    count_ = count_per_incr
+                if not self.has_tip:
+                    self.pick_up_tip()
+                for i in range(count_):
+                    tip_cycles += 1
+                    need_new_tip = tip_cycles >= max_tip_cycles
+                    full_dispense = need_new_tip or (not do_layer(y + y_incr) and i == count_ - 1)
+                    self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', config.layered_mix.aspirate_rate_factor), pre_wet=pre_wet)
+                    self.dispense(volume, well.bottom(y_max), rate=fetch('dispense_rate', config.layered_mix.dispense_rate_factor), full_dispense=full_dispense)
+                    if need_new_tip:
+                        self.done_tip()
+                        tip_cycles = 0
+                #
+                y += y_incr
+                first = False
+
+        info_while(msg, do_one)
 
 # region Commands
 
@@ -1588,6 +1591,41 @@ opentrons.commands.dispense = command_dispense
 # endregion
 
 ########################################################################################################################
+# Logging
+########################################################################################################################
+
+def _format_log_msg(msg: str, prefix="***********", suffix=' ***********'):
+    return "%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix)
+
+def log(msg: str, prefix="***********", suffix=' ***********'):
+    robot.comment(_format_log_msg(msg, prefix=prefix, suffix=suffix))
+
+def log_while(msg: str, func, prefix="***********", suffix=' ***********'):
+    msg = _format_log_msg(msg, prefix, suffix)
+    opentrons.commands.do_publish(robot.broker, opentrons.commands.comment, f=log_while, when='before', res=None, meta=None, msg=msg)
+    if func is not None:
+        func()
+    opentrons.commands.do_publish(robot.broker, opentrons.commands.comment, f=log_while, when='after', res=None, meta=None, msg=msg)
+
+def info(msg):
+    log(msg, prefix='info:', suffix='')
+
+def info_while(msg, func):
+    log_while(msg, func, prefix='info:', suffix='')
+
+def warn(msg: str, prefix="***********", suffix=' ***********'):
+    log(msg, prefix=prefix + " WARNING:", suffix=suffix)
+
+def fatal(msg: str, prefix="***********", suffix=' ***********'):
+    formatted = _format_log_msg(msg, prefix=prefix + " FATAL ERROR:", suffix=suffix)
+    warnings.warn(formatted, stacklevel=2)
+    log(formatted, prefix='', suffix='')
+    raise RuntimeError  # could do better
+
+def silent_log(msg):
+    pass
+
+########################################################################################################################
 # Utilities
 ########################################################################################################################
 
@@ -1600,42 +1638,6 @@ def get_location_path(location):
                                        if str(item) is not None])))
         location.location_path = result
     return result
-
-# enhance robot.comment to take an optional func param to call while the comment is 'in effect'
-@opentrons.commands.publish.both(command=opentrons.commands.comment)
-def robot_comment_while(self, msg, **kwargs):
-    func = kwargs.get('func', None)
-    if func is not None:
-        func()
-opentrons.legacy_api.robot.Robot.comment = robot_comment_while
-
-def format_log_msg(msg: str, prefix="***********", suffix=' ***********'):
-    return "%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix)
-
-def log(msg: str, prefix="***********", suffix=' ***********'):
-    robot.comment(format_log_msg(msg, prefix=prefix, suffix=suffix))
-
-def log_while(msg: str, func, prefix="***********", suffix=' ***********'):
-    robot.comment(format_log_msg(msg, prefix=prefix, suffix=suffix), func=func)
-
-def info(msg):
-    log(msg, prefix='info:', suffix='')
-
-def info_while(msg, func):
-    log_while(msg, func, prefix='info:', suffix='')
-
-def warn(msg: str, prefix="***********", suffix=' ***********'):
-    log(msg, prefix=prefix + " WARNING:", suffix=suffix)
-
-def fatal(msg: str, prefix="***********", suffix=' ***********'):
-    formatted = format_log_msg(msg, prefix=prefix + " FATAL ERROR:", suffix=suffix)
-    warnings.warn(formatted, stacklevel=2)
-    log(formatted, prefix='', suffix='')
-    raise RuntimeError  # could do better
-
-def silent_log(msg):
-    pass
-
 
 def cube_root(value):
     return pow(value, 1.0/3.0)
