@@ -1754,8 +1754,8 @@ strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
 ########################################################################################################################
 
 # Configure the tips
-tips10 = labware.load('opentrons_96_tiprack_10ul', 1)
-tips300a = labware.load('opentrons_96_tiprack_300ul', 4)
+tips300a = labware.load('opentrons_96_tiprack_300ul', 1)
+tips10 = labware.load('opentrons_96_tiprack_10ul', 4)
 tips300b = labware.load('opentrons_96_tiprack_300ul', 7)
 
 # Configure the pipettes.
@@ -1945,8 +1945,7 @@ def createMasterMix():
 # Plating
 ########################################################################################################################
 
-def plateEverythingAndMix():
-    # Plate master mix
+def plateMasterMix():
     log('Plating Master Mix')
     master_mix_per_well = 28
     p50.distribute(master_mix_per_well, master_mix, usedWells(),
@@ -1954,6 +1953,7 @@ def plateEverythingAndMix():
                    disposal_vol=p50_disposal_vol,
                    trash=config.trash_control)
 
+def platePerWellWater():
     log('Plating per-well water')
     # Plate per-well water. We save tips by being happy to pollute our water trough with a bit of master mix.
     # We begin by flattening per_well_water_volumes into a column-major array
@@ -1972,6 +1972,7 @@ def plateEverythingAndMix():
                    allow_blow_elision=allow_blow_elision,
                    allow_carryover=allow_carryover)
 
+def plateStrandA():
     # Plate strand A
     # All plate wells at this point only have water and master mix, so we can't get cross-plate-well
     # contamination. We only need to worry about contaminating the Strand A source, which we accomplish
@@ -2002,6 +2003,10 @@ def plateEverythingAndMix():
     p10.done_tip()
     p50.done_tip()
 
+def mix_plate_well(well, drop_tip=True):
+    p50.layered_mix([well], incr=0.75, drop_tip=drop_tip)
+
+def plateStrandBAndMix():
     # Plate strand B and mix
     # Mixing always needs the p50, but plating may need either; optimize tip usage
     log('Plating Strand B')
@@ -2030,24 +2035,11 @@ def plateEverythingAndMix():
         if well not in mixed_wells:
             mix_plate_well(well)
 
-
-def mix_plate_well(well, drop_tip=True):
-    p50.layered_mix([well], incr=0.75, drop_tip=drop_tip)
-
-
-def debug_mix_plate():
-    wells = plate.cols(0)[0:2]
-    for well in wells:
-        get_well_volume(well).set_initial_volume(84)
-    for well in wells:
-        mix_plate_well(well)
-    p50.done_tip()
-
-def debug_test_blow():
-    p50.pick_up_tip()
-    p50.aspirate(5, location=plate.wells('A2'))
-    p50.blow_out(p50.trash_container)
-    p50.done_tip()
+def plateEverythingAndMix():
+    plateMasterMix()
+    platePerWellWater()
+    plateStrandA()
+    plateStrandBAndMix()
 
 
 ########################################################################################################################
