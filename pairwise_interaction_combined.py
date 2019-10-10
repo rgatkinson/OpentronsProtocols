@@ -24,7 +24,7 @@ from typing import List
 
 import opentrons
 from opentrons import labware, instruments, robot, modules, types
-from opentrons.commands.commands import stringify_location, make_command, command_types
+from opentrons.commands import stringify_location, make_command, command_types
 from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
@@ -1601,14 +1601,6 @@ def get_location_path(location):
         location.location_path = result
     return result
 
-# enhance robot.comment to take an optional func param to call while the comment is 'in effect'
-@opentrons.commands.publish.both(command=opentrons.commands.comment)
-def robot_comment_while(self, msg, **kwargs):
-    func = kwargs.get('func', None)
-    if func is not None:
-        func()
-opentrons.legacy_api.robot.Robot.comment = robot_comment_while
-
 def format_log_msg(msg: str, prefix="***********", suffix=' ***********'):
     return "%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix)
 
@@ -1616,7 +1608,11 @@ def log(msg: str, prefix="***********", suffix=' ***********'):
     robot.comment(format_log_msg(msg, prefix=prefix, suffix=suffix))
 
 def log_while(msg: str, func, prefix="***********", suffix=' ***********'):
-    robot.comment(format_log_msg(msg, prefix=prefix, suffix=suffix), func=func)
+    msg = format_log_msg(msg, prefix, suffix)
+    opentrons.commands.do_publish(robot.broker, opentrons.commands.comment, f=log_while, when='before', res=None, meta=None, msg=msg)
+    if func is not None:
+        func()
+    opentrons.commands.do_publish(robot.broker, opentrons.commands.comment, f=log_while, when='after', res=None, meta=None, msg=msg)
 
 def info(msg):
     log(msg, prefix='info:', suffix='')
