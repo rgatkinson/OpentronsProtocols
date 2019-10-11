@@ -2035,6 +2035,7 @@ def plateEverythingAndMix():
 
 wells_to_verify = [master_mix, water, plate.wells('A1'), plate.wells('A12'), plate.wells('H1'), plate.wells('H12')]
 verify_well_locations(wells_to_verify, p50)
+
 createMasterMix()
 robot.pause('Weigh master mix tube')
 plateMasterMix()

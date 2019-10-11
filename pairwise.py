@@ -1801,8 +1801,6 @@ master_mix.geometry = FalconTube15mlGeometry(master_mix)
 for well in plate.wells():
     well.geometry = Biorad96WellPlateWellGeometry(well)
 
-wells_to_verify = [master_mix, strand_a, strand_b, diluted_strand_a, diluted_strand_b, plate.wells('H1'), plate.wells('H12')]
-
 # Remember initial liquid names and volumes
 log('Liquid Names')
 note_liquid(location=water, name='Water', min_volume=7000)  # volume is rough guess
@@ -2033,18 +2031,10 @@ def plateEverythingAndMix():
 # Off to the races
 ########################################################################################################################
 
-master_and_dilutions_made = False
+wells_to_verify = [master_mix, strand_a, strand_b, diluted_strand_a, diluted_strand_b, plate.wells('A1'), plate.wells('A12'), plate.wells('H1'), plate.wells('H12')]
 verify_well_locations(wells_to_verify, p50)
 verify_well_locations(wells_to_verify, p10)
 
-if not master_and_dilutions_made:
-    diluteStrands()
-    createMasterMix()
-else:
-    note_liquid(location=diluted_strand_a, name=None, initial_volume=strand_dilution_vol)
-    note_liquid(location=diluted_strand_b, name=None, initial_volume=strand_dilution_vol)
-    note_liquid(location=master_mix, name=None, initial_volume=master_mix_vol)
-
+diluteStrands()
+createMasterMix()
 plateEverythingAndMix()
-verify_well_locations(wells_to_verify, p50)
-verify_well_locations(wells_to_verify, p10)
