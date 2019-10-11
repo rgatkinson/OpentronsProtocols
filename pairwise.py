@@ -38,10 +38,12 @@ class Config(object):
     pass
 
 config = Config()
-config.enhanced_options = True
+config.enable_enhancements = True
 config.trash_control = True
 config.blow_out_rate_factor = 3.0
 config.min_aspirate_factor_hack = 15.0
+config.allow_blow_elision_default = True
+config.allow_carryover_default = True
 
 config.aspirate = Config()
 config.aspirate.bottom_clearance = 1.0  # see Pipette._position_for_aspirate
@@ -59,12 +61,8 @@ config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
 config.dispense.top_clearance = 2.0
 config.dispense.top_clearance_factor = 10.0
 config.dispense.extra_top_clearance_name = 'extra_dispense_top_clearance'
-config.dispense.full_dispense_recovery_z_offset = 5
 config.dispense.full_dispense = Config()
 config.dispense.full_dispense.default = False
-
-config.simple_mix = Config()
-config.simple_mix.count = 6
 
 config.layered_mix = Config()
 config.layered_mix.top_clearance = 1.0
@@ -1152,7 +1150,7 @@ class EnhancedPipette(Pipette):
                     if kwargs.get('pre_wet', None) and kwargs.get('mix_before', None):
                         warn("simultaneous use of 'pre_wet' and 'mix_before' is not tested")
 
-                    if (kwargs.get('allow_carryover', False) and config.enhanced_options) and zeroify(self.current_volume) > 0:
+                    if (kwargs.get('allow_carryover', config.allow_carryover_default) and config.enable_enhancements) and zeroify(self.current_volume) > 0:
                         this_aspirated_location, __ = unpack_location(aspirate['location'])
                         if self.prev_aspirated_location is this_aspirated_location:
                             if have_disposal_vol:
@@ -1209,16 +1207,16 @@ class EnhancedPipette(Pipette):
                 do_touch = touch_tip or touch_tip is 0
                 is_last_step = step is plan[-1]
                 if is_last_step or plan[i + 1].get('aspirate'):
-                    do_drop = not is_last_step or not (kwargs.get('retain_tip', False) and config.enhanced_options)
+                    do_drop = not is_last_step or not (kwargs.get('keep_last_tip', False) and config.enable_enhancements)
                     # original always blew here. there are several reasons we could still be forced to blow
                     do_blow = not is_distribute  # other modes (are there any?) we're not sure about
                     do_blow = do_blow or kwargs.get('blow_out', False)  # for compatibility
                     do_blow = do_blow or do_touch  # for compatibility
-                    do_blow = do_blow or not (kwargs.get('allow_blow_elision', False) and config.enhanced_options)
+                    do_blow = do_blow or not (kwargs.get('allow_blow_elision', config.allow_blow_elision_default) and config.enable_enhancements)
                     if not do_blow:
                         if is_last_step:
                             if self.current_volume > 0:
-                                if not (kwargs.get('allow_carryover', False) and config.enhanced_options):
+                                if not (kwargs.get('allow_carryover', config.allow_carryover_default) and config.enable_enhancements):
                                     do_blow = True
                                 elif self.current_volume > kwargs.get('disposal_vol', 0):
                                     warn(pretty.format('carried over {0:n} uL to next operation', self.current_volume))
@@ -1280,7 +1278,7 @@ class EnhancedPipette(Pipette):
             pre_wet = self.aspirate_params_hack.pre_wet_during_transfer
         if pre_wet is None:
             pre_wet = config.aspirate.pre_wet.default
-        if pre_wet and config.enhanced_options:
+        if pre_wet and config.enable_enhancements:
             if self.tip_wetness is TipWetness.DRY:
                 pre_wet_volume = min(
                     self.max_volume * config.aspirate.pre_wet.max_volume_fraction,
@@ -1345,7 +1343,7 @@ class EnhancedPipette(Pipette):
 
     def _dispense_plunger_position(self, ul):
         mm_from_vol = super()._dispense_plunger_position(ul)  # retrieve position historically used
-        if config.enhanced_options and (self.dispense_params_hack.full_dispense_from_dispense or self.dispense_params_hack.full_dispense_during_transfer):
+        if config.enable_enhancements and (self.dispense_params_hack.full_dispense_from_dispense or self.dispense_params_hack.full_dispense_during_transfer):
             mm_from_blow = self._get_plunger_position('blow_out')
             info(pretty.format('dispensing to mm={0:n} instead of mm={1:n}', mm_from_blow, mm_from_vol))
             self.dispense_params_hack.fully_dispensed = True
@@ -1741,10 +1739,6 @@ assert len(per_well_water_volumes) == rows_per_plate
 assert len(per_well_water_volumes[0]) * num_replicates == columns_per_plate
 
 
-# Optimization Control (needs cleaning up)
-allow_blow_elision = True
-allow_carryover = allow_blow_elision
-
 ########################################################################################################################
 ## Protocol
 ########################################################################################################################
@@ -1974,8 +1968,8 @@ def platePerWellWater():
                    new_tip='once',
                    disposal_vol=p50_disposal_vol,
                    trash=config.trash_control,
-                   allow_blow_elision=allow_blow_elision,
-                   allow_carryover=allow_carryover)
+                   allow_blow_elision=True,
+                   allow_carryover=True)
 
 def plateStrandA():
     # Plate strand A
@@ -2002,8 +1996,8 @@ def plateStrandA():
                      new_tip='never',
                      disposal_vol=disposal_vol,
                      trash=config.trash_control,
-                     allow_blow_elision=allow_blow_elision,
-                     allow_carryover=allow_carryover,
+                     allow_blow_elision=True,
+                     allow_carryover=True,
                      full_dispense=True)
     p10.done_tip()
     p50.done_tip()
