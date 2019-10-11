@@ -76,7 +76,7 @@ config.layered_mix.count = None  # so we default to using incr, not count
 config.layered_mix.min_incr = 0.5
 config.layered_mix.count_per_incr = 2
 config.layered_mix.delay = 750
-config.layered_mix.drop_tip = True  # todo: change to keep_last_tip
+config.layered_mix.keep_last_tip = False
 config.layered_mix.initial_turnover = None
 config.layered_mix.max_tip_cycles = None
 config.layered_mix.max_tip_cycles_large = None
@@ -1427,7 +1427,7 @@ class EnhancedPipette(Pipette):
                     incr=None,
                     count_per_incr=None,
                     volume=None,
-                    drop_tip=None,  # todo: change to keep_last_tip, add ability to control tip changing per well
+                    keep_last_tip=None,  # todo: add ability to control tip changing per well
                     delay=None,
                     aspirate_rate=None,
                     dispense_rate=None,
@@ -1435,7 +1435,7 @@ class EnhancedPipette(Pipette):
                     max_tip_cycles=None):
 
         def do_layered_mix():
-            local_drop_tip = drop_tip if drop_tip is not None else config.layered_mix.drop_tip
+            local_keep_last_tip = keep_last_tip if keep_last_tip is not None else config.layered_mix.keep_last_tip
 
             for well in wells:
                 self._layered_mix_one(well, msg=msg,
@@ -1449,7 +1449,7 @@ class EnhancedPipette(Pipette):
                                       dispense_rate=dispense_rate,
                                       initial_turnover=initial_turnover,
                                       max_tip_cycles=max_tip_cycles)
-            if local_drop_tip:
+            if not local_keep_last_tip:
                 self.done_tip()
 
         log_while(f'{msg} {[well.get_name() for well in wells]}', do_layered_mix)
@@ -2003,8 +2003,8 @@ def plateStrandA():
     p10.done_tip()
     p50.done_tip()
 
-def mix_plate_well(well, drop_tip=True):
-    p50.layered_mix([well], incr=0.75, drop_tip=drop_tip)
+def mix_plate_well(well, keep_last_tip=False):
+    p50.layered_mix([well], incr=0.75, keep_last_tip=keep_last_tip)
 
 def plateStrandBAndMix():
     # Plate strand B and mix
@@ -2027,7 +2027,7 @@ def plateStrandBAndMix():
                 p.pick_up_tip()
                 p.transfer(volume, diluted_strand_b, well, new_tip='never', full_dispense=True)
             if p is p50:
-                mix_plate_well(well, drop_tip=False)
+                mix_plate_well(well, keep_last_tip=True)
                 mixed_wells.add(well)
             p.done_tip()
 
