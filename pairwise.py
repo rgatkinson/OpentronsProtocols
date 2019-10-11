@@ -1967,9 +1967,7 @@ def platePerWellWater():
     p50.distribute(water_volumes, water, plate.wells(),
                    new_tip='once',
                    disposal_vol=p50_disposal_vol,
-                   trash=config.trash_control,
-                   allow_blow_elision=True,
-                   allow_carryover=True)
+                   trash=config.trash_control)
 
 def plateStrandA():
     # Plate strand A
@@ -1996,8 +1994,6 @@ def plateStrandA():
                      new_tip='never',
                      disposal_vol=disposal_vol,
                      trash=config.trash_control,
-                     allow_blow_elision=True,
-                     allow_carryover=True,
                      full_dispense=True)
     p10.done_tip()
     p50.done_tip()
