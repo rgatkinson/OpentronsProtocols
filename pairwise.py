@@ -55,6 +55,7 @@ config.aspirate.pre_wet.default = True
 config.aspirate.pre_wet.count = 3
 config.aspirate.pre_wet.max_volume_fraction = 1  # https://github.com/Opentrons/opentrons/issues/2901 would pre-wet only 2/3, but why not everything?
 config.aspirate.pre_wet.rate_func = lambda aspirate_rate: 1  # could instead just use the aspirate
+# todo: add aspirate pause?
 
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
