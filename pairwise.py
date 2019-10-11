@@ -1947,10 +1947,10 @@ def createMasterMix():
 def plateMasterMix():
     log('Plating Master Mix')
     master_mix_per_well = 28
-    p50.distribute(master_mix_per_well, master_mix, usedWells(),
-                   new_tip='once',
-                   disposal_vol=p50_disposal_vol,
-                   trash=config.trash_control)
+    p50.transfer(master_mix_per_well, master_mix, usedWells(),
+                 new_tip='once',
+                 trash=config.trash_control,
+                 full_dispense=True)
 
 def platePerWellWater():
     log('Plating per-well water')
