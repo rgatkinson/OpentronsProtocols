@@ -30,10 +30,12 @@ class Config(object):
     pass
 
 config = Config()
-config.enhanced_options = True
+config.enable_enhancements = True
 config.trash_control = True
 config.blow_out_rate_factor = 3.0
 config.min_aspirate_factor_hack = 15.0
+config.allow_blow_elision_default = True
+config.allow_carryover_default = True
 
 config.aspirate = Config()
 config.aspirate.bottom_clearance = 1.0  # see Pipette._position_for_aspirate
@@ -51,11 +53,8 @@ config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
 config.dispense.top_clearance = 2.0
 config.dispense.top_clearance_factor = 10.0
 config.dispense.extra_top_clearance_name = 'extra_dispense_top_clearance'
-config.dispense.enable_full_dispense = True
-config.dispense.full_dispense_recovery_z_offset = 5
-
-config.simple_mix = Config()
-config.simple_mix.count = 6
+config.dispense.full_dispense = Config()
+config.dispense.full_dispense.default = False
 
 config.layered_mix = Config()
 config.layered_mix.top_clearance = 1.0
@@ -68,7 +67,7 @@ config.layered_mix.count = None  # so we default to using incr, not count
 config.layered_mix.min_incr = 0.5
 config.layered_mix.count_per_incr = 2
 config.layered_mix.delay = 750
-config.layered_mix.drop_tip = True  # todo: change to keep_last_tip
+config.layered_mix.keep_last_tip = False
 config.layered_mix.initial_turnover = None
 config.layered_mix.max_tip_cycles = None
 config.layered_mix.max_tip_cycles_large = None
@@ -1018,12 +1017,13 @@ class EnhancedPipette(Pipette):
 
     class AspirateParamsHack(object):
         def __init__(self) -> None:
+            self.pre_wet_during_transfer_kw = '_do_pre_wet_during_transfer'
             self.pre_wet_during_transfer = None
 
     class DispenseParamsHack(object):
         def __init__(self) -> None:
             self.full_dispense_from_dispense = False
-            self.full_dispense_during_transfer_kw = '_do_full_dispense'  # as opposed to merely requesting it when possible
+            self.full_dispense_during_transfer_kw = '_do_full_dispense_during_transfer'
             self.full_dispense_during_transfer = False
             self.fully_dispensed = False
 
@@ -1142,7 +1142,7 @@ class EnhancedPipette(Pipette):
                     if kwargs.get('pre_wet', None) and kwargs.get('mix_before', None):
                         warn("simultaneous use of 'pre_wet' and 'mix_before' is not tested")
 
-                    if (kwargs.get('allow_carryover', False) and config.enhanced_options) and zeroify(self.current_volume) > 0:
+                    if (kwargs.get('allow_carryover', config.allow_carryover_default) and config.enable_enhancements) and zeroify(self.current_volume) > 0:
                         this_aspirated_location, __ = unpack_location(aspirate['location'])
                         if self.prev_aspirated_location is this_aspirated_location:
                             if have_disposal_vol:
@@ -1185,6 +1185,7 @@ class EnhancedPipette(Pipette):
                           self.has_disposal_vol(plan, i, step_info_map, **kwargs),
                           aspirate['volume']))
                     self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
+                kwargs[self.aspirate_params_hack.pre_wet_during_transfer_kw] = not not kwargs.get('pre_wet', config.aspirate.pre_wet.default)
                 self._aspirate_during_transfer(aspirate['volume'], aspirate['location'], **kwargs)
 
             if dispense:
@@ -1192,22 +1193,22 @@ class EnhancedPipette(Pipette):
                     warn(pretty.format('current {0:n} uL will truncate dispense of {1:n} uL', self.current_volume, dispense['volume']))
 
                 can_full_dispense = self.current_volume - dispense['volume'] <= 0
-                kwargs[self.dispense_params_hack.full_dispense_during_transfer_kw] = (kwargs.get('full_dispense', False) and config.enhanced_options) and can_full_dispense  # todo: can't we just set self.full_dispense_params.transfer directly? no: because of mix_before (and maybe mix_after)
+                kwargs[self.dispense_params_hack.full_dispense_during_transfer_kw] = not not (kwargs.get('full_dispense', config.dispense.full_dispense.default) and can_full_dispense)
                 self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
 
                 do_touch = touch_tip or touch_tip is 0
                 is_last_step = step is plan[-1]
                 if is_last_step or plan[i + 1].get('aspirate'):
-                    do_drop = not is_last_step or not (kwargs.get('retain_tip', False) and config.enhanced_options)
+                    do_drop = not is_last_step or not (kwargs.get('keep_last_tip', False) and config.enable_enhancements)
                     # original always blew here. there are several reasons we could still be forced to blow
                     do_blow = not is_distribute  # other modes (are there any?) we're not sure about
                     do_blow = do_blow or kwargs.get('blow_out', False)  # for compatibility
                     do_blow = do_blow or do_touch  # for compatibility
-                    do_blow = do_blow or not (kwargs.get('allow_blow_elision', False) and config.enhanced_options)
+                    do_blow = do_blow or not (kwargs.get('allow_blow_elision', config.allow_blow_elision_default) and config.enable_enhancements)
                     if not do_blow:
                         if is_last_step:
                             if self.current_volume > 0:
-                                if not (kwargs.get('allow_carryover', False) and config.enhanced_options):
+                                if not (kwargs.get('allow_carryover', config.allow_carryover_default) and config.enable_enhancements):
                                     do_blow = True
                                 elif self.current_volume > kwargs.get('disposal_vol', 0):
                                     warn(pretty.format('carried over {0:n} uL to next operation', self.current_volume))
@@ -1269,7 +1270,7 @@ class EnhancedPipette(Pipette):
             pre_wet = self.aspirate_params_hack.pre_wet_during_transfer
         if pre_wet is None:
             pre_wet = config.aspirate.pre_wet.default
-        if pre_wet and config.enhanced_options:
+        if pre_wet and config.enable_enhancements:
             if self.tip_wetness is TipWetness.DRY:
                 pre_wet_volume = min(
                     self.max_volume * config.aspirate.pre_wet.max_volume_fraction,
@@ -1295,8 +1296,9 @@ class EnhancedPipette(Pipette):
             self.prev_aspirated_location = well
 
     def _aspirate_during_transfer(self, vol, loc, **kwargs):
-        self.aspirate_params_hack.pre_wet_during_transfer = kwargs.get('pre_wet', None)
-        super()._aspirate_during_transfer(vol, loc, **kwargs)
+        assert kwargs.get(self.aspirate_params_hack.pre_wet_during_transfer_kw) is not None
+        self.aspirate_params_hack.pre_wet_during_transfer = kwargs.get(self.aspirate_params_hack.pre_wet_during_transfer_kw)
+        super()._aspirate_during_transfer(vol, loc, **kwargs)  # might 'mix_before' todo: is that ok? seems like it is...
         self.aspirate_params_hack.pre_wet_during_transfer = None
 
     def dispense(self, volume=None, location=None, rate=1.0, full_dispense: bool = False):
@@ -1311,7 +1313,7 @@ class EnhancedPipette(Pipette):
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None,
                                                        clearances=config.dispense,
                                                        extra_clearance=getattr(well, config.dispense.extra_top_clearance_name, 0))
-        self.dispense_params_hack.full_dispense_from_dispense = (full_dispense and config.enhanced_options)
+        self.dispense_params_hack.full_dispense_from_dispense = full_dispense
         super().dispense(volume=volume, location=location, rate=rate)
         self.dispense_params_hack.full_dispense_from_dispense = False
         if self.dispense_params_hack.fully_dispensed:
@@ -1326,13 +1328,14 @@ class EnhancedPipette(Pipette):
         get_well_volume(well).dispense(volume)
 
     def _dispense_during_transfer(self, vol, loc, **kwargs):
-        self.dispense_params_hack.full_dispense_during_transfer = kwargs.get(self.dispense_params_hack.full_dispense_during_transfer_kw, False)
-        super()._dispense_during_transfer(vol, loc, **kwargs)
+        assert kwargs.get(self.dispense_params_hack.full_dispense_during_transfer_kw) is not None
+        self.dispense_params_hack.full_dispense_during_transfer = kwargs.get(self.dispense_params_hack.full_dispense_during_transfer_kw)
+        super()._dispense_during_transfer(vol, loc, **kwargs)  # might 'mix_after' todo: is that ok? probably: we'd just do full_dispense on all of those too?
         self.dispense_params_hack.full_dispense_during_transfer = False
 
     def _dispense_plunger_position(self, ul):
         mm_from_vol = super()._dispense_plunger_position(ul)  # retrieve position historically used
-        if config.dispense.enable_full_dispense and (self.dispense_params_hack.full_dispense_from_dispense or self.dispense_params_hack.full_dispense_during_transfer):
+        if config.enable_enhancements and (self.dispense_params_hack.full_dispense_from_dispense or self.dispense_params_hack.full_dispense_during_transfer):
             mm_from_blow = self._get_plunger_position('blow_out')
             info(pretty.format('dispensing to mm={0:n} instead of mm={1:n}', mm_from_blow, mm_from_vol))
             self.dispense_params_hack.fully_dispensed = True
@@ -1419,7 +1422,7 @@ class EnhancedPipette(Pipette):
                     incr=None,
                     count_per_incr=None,
                     volume=None,
-                    drop_tip=None,  # todo: change to keep_last_tip, add ability to control tip changing per well
+                    keep_last_tip=None,  # todo: add ability to control tip changing per well
                     delay=None,
                     aspirate_rate=None,
                     dispense_rate=None,
@@ -1427,7 +1430,7 @@ class EnhancedPipette(Pipette):
                     max_tip_cycles=None):
 
         def do_layered_mix():
-            local_drop_tip = drop_tip if drop_tip is not None else config.layered_mix.drop_tip
+            local_keep_last_tip = keep_last_tip if keep_last_tip is not None else config.layered_mix.keep_last_tip
 
             for well in wells:
                 self._layered_mix_one(well, msg=msg,
@@ -1441,7 +1444,7 @@ class EnhancedPipette(Pipette):
                                       dispense_rate=dispense_rate,
                                       initial_turnover=initial_turnover,
                                       max_tip_cycles=max_tip_cycles)
-            if local_drop_tip:
+            if not local_keep_last_tip:
                 self.done_tip()
 
         log_while(f'{msg} {[well.get_name() for well in wells]}', do_layered_mix)
