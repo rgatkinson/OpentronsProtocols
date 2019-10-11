@@ -62,7 +62,7 @@ config.dispense.top_clearance = 2.0
 config.dispense.top_clearance_factor = 10.0
 config.dispense.extra_top_clearance_name = 'extra_dispense_top_clearance'
 config.dispense.full_dispense = Config()
-config.dispense.full_dispense.default = False
+config.dispense.full_dispense.default = False  # todo: should this be 'True'?
 
 config.layered_mix = Config()
 config.layered_mix.top_clearance = 1.0
