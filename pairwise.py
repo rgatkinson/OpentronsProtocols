@@ -59,8 +59,9 @@ config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
 config.dispense.top_clearance = 2.0
 config.dispense.top_clearance_factor = 10.0
 config.dispense.extra_top_clearance_name = 'extra_dispense_top_clearance'
-config.dispense.enable_full_dispense = True
 config.dispense.full_dispense_recovery_z_offset = 5
+config.dispense.full_dispense = Config()
+config.dispense.full_dispense.default = False
 
 config.simple_mix = Config()
 config.simple_mix.count = 6
@@ -1026,12 +1027,13 @@ class EnhancedPipette(Pipette):
 
     class AspirateParamsHack(object):
         def __init__(self) -> None:
+            self.pre_wet_during_transfer_kw = '_do_pre_wet_during_transfer'
             self.pre_wet_during_transfer = None
 
     class DispenseParamsHack(object):
         def __init__(self) -> None:
             self.full_dispense_from_dispense = False
-            self.full_dispense_during_transfer_kw = '_do_full_dispense'  # as opposed to merely requesting it when possible
+            self.full_dispense_during_transfer_kw = '_do_full_dispense_during_transfer'
             self.full_dispense_during_transfer = False
             self.fully_dispensed = False
 
@@ -1193,6 +1195,7 @@ class EnhancedPipette(Pipette):
                           self.has_disposal_vol(plan, i, step_info_map, **kwargs),
                           aspirate['volume']))
                     self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
+                kwargs[self.aspirate_params_hack.pre_wet_during_transfer_kw] = not not kwargs.get('pre_wet', config.aspirate.pre_wet.default)
                 self._aspirate_during_transfer(aspirate['volume'], aspirate['location'], **kwargs)
 
             if dispense:
@@ -1200,7 +1203,7 @@ class EnhancedPipette(Pipette):
                     warn(pretty.format('current {0:n} uL will truncate dispense of {1:n} uL', self.current_volume, dispense['volume']))
 
                 can_full_dispense = self.current_volume - dispense['volume'] <= 0
-                kwargs[self.dispense_params_hack.full_dispense_during_transfer_kw] = (kwargs.get('full_dispense', False) and config.enhanced_options) and can_full_dispense  # todo: can't we just set self.full_dispense_params.transfer directly? no: because of mix_before (and maybe mix_after)
+                kwargs[self.dispense_params_hack.full_dispense_during_transfer_kw] = not not (kwargs.get('full_dispense', config.dispense.full_dispense.default) and can_full_dispense)
                 self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
 
                 do_touch = touch_tip or touch_tip is 0
@@ -1303,7 +1306,8 @@ class EnhancedPipette(Pipette):
             self.prev_aspirated_location = well
 
     def _aspirate_during_transfer(self, vol, loc, **kwargs):
-        self.aspirate_params_hack.pre_wet_during_transfer = kwargs.get('pre_wet', None)
+        assert kwargs.get(self.aspirate_params_hack.pre_wet_during_transfer_kw) is not None
+        self.aspirate_params_hack.pre_wet_during_transfer = kwargs.get(self.aspirate_params_hack.pre_wet_during_transfer_kw)
         super()._aspirate_during_transfer(vol, loc, **kwargs)
         self.aspirate_params_hack.pre_wet_during_transfer = None
 
@@ -1319,7 +1323,7 @@ class EnhancedPipette(Pipette):
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None,
                                                        clearances=config.dispense,
                                                        extra_clearance=getattr(well, config.dispense.extra_top_clearance_name, 0))
-        self.dispense_params_hack.full_dispense_from_dispense = (full_dispense and config.enhanced_options)
+        self.dispense_params_hack.full_dispense_from_dispense = full_dispense
         super().dispense(volume=volume, location=location, rate=rate)
         self.dispense_params_hack.full_dispense_from_dispense = False
         if self.dispense_params_hack.fully_dispensed:
@@ -1334,13 +1338,14 @@ class EnhancedPipette(Pipette):
         get_well_volume(well).dispense(volume)
 
     def _dispense_during_transfer(self, vol, loc, **kwargs):
-        self.dispense_params_hack.full_dispense_during_transfer = kwargs.get(self.dispense_params_hack.full_dispense_during_transfer_kw, False)
+        assert kwargs.get(self.dispense_params_hack.full_dispense_during_transfer_kw) is not None
+        self.dispense_params_hack.full_dispense_during_transfer = kwargs.get(self.dispense_params_hack.full_dispense_during_transfer_kw)
         super()._dispense_during_transfer(vol, loc, **kwargs)
         self.dispense_params_hack.full_dispense_during_transfer = False
 
     def _dispense_plunger_position(self, ul):
         mm_from_vol = super()._dispense_plunger_position(ul)  # retrieve position historically used
-        if config.dispense.enable_full_dispense and (self.dispense_params_hack.full_dispense_from_dispense or self.dispense_params_hack.full_dispense_during_transfer):
+        if config.enhanced_options and (self.dispense_params_hack.full_dispense_from_dispense or self.dispense_params_hack.full_dispense_during_transfer):
             mm_from_blow = self._get_plunger_position('blow_out')
             info(pretty.format('dispensing to mm={0:n} instead of mm={1:n}', mm_from_blow, mm_from_vol))
             self.dispense_params_hack.fully_dispensed = True
@@ -2014,7 +2019,6 @@ def plateStrandBAndMix():
     for iVolume in range(0, len(strand_volumes)):
         dest_wells = calculateStrandBWells(iVolume)
         volume = strand_volumes[iVolume]
-        # if strand_volumes[index] == 0: continue  # don't skip: we want to mix
         if usesP10(volume, len(dest_wells), allow_zero=True):
             p = p10
         else:
