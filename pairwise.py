@@ -1306,7 +1306,7 @@ class EnhancedPipette(Pipette):
     def _aspirate_during_transfer(self, vol, loc, **kwargs):
         assert kwargs.get(self.aspirate_params_hack.pre_wet_during_transfer_kw) is not None
         self.aspirate_params_hack.pre_wet_during_transfer = kwargs.get(self.aspirate_params_hack.pre_wet_during_transfer_kw)
-        super()._aspirate_during_transfer(vol, loc, **kwargs)
+        super()._aspirate_during_transfer(vol, loc, **kwargs)  # might 'mix_before' todo: is that ok? seems like it is...
         self.aspirate_params_hack.pre_wet_during_transfer = None
 
     def dispense(self, volume=None, location=None, rate=1.0, full_dispense: bool = False):
@@ -1338,7 +1338,7 @@ class EnhancedPipette(Pipette):
     def _dispense_during_transfer(self, vol, loc, **kwargs):
         assert kwargs.get(self.dispense_params_hack.full_dispense_during_transfer_kw) is not None
         self.dispense_params_hack.full_dispense_during_transfer = kwargs.get(self.dispense_params_hack.full_dispense_during_transfer_kw)
-        super()._dispense_during_transfer(vol, loc, **kwargs)
+        super()._dispense_during_transfer(vol, loc, **kwargs)  # might 'mix_after' todo: is that ok? probably: we'd just do full_dispense on all of those too?
         self.dispense_params_hack.full_dispense_during_transfer = False
 
     def _dispense_plunger_position(self, ul):
@@ -1964,10 +1964,10 @@ def platePerWellWater():
                 index = (iCol * num_replicates + iReplicate) * rows_per_plate + iRow
                 water_volumes[index] = volume
 
-    p50.distribute(water_volumes, water, plate.wells(),
-                   new_tip='once',
-                   disposal_vol=p50_disposal_vol,
-                   trash=config.trash_control)
+    p50.transfer(water_volumes, water, plate.wells(),
+                 new_tip='once',
+                 trash=config.trash_control,
+                 full_dispense=True)
 
 def plateStrandA():
     # Plate strand A
