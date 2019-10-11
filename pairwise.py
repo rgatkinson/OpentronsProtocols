@@ -1763,9 +1763,10 @@ strand_dilution_factor = 25.0 / 9.0  # per Excel worksheet
 strand_dilution_vol = 1225
 
 # Master mix, values per Excel worksheet
-master_mix_buffer_vol = 1645.06
-master_mix_evagreen_vol = 411.264
-master_mix_common_water_vol = 685.44
+mm_overhead_factor = 1.0375
+master_mix_buffer_vol = 1612.8 * mm_overhead_factor
+master_mix_evagreen_vol = 403.2 * mm_overhead_factor
+master_mix_common_water_vol = 672 * mm_overhead_factor
 master_mix_vol = master_mix_buffer_vol + master_mix_evagreen_vol + master_mix_common_water_vol
 
 # Define the volumes of diluted strands we will use
