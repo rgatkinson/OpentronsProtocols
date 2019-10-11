@@ -1769,10 +1769,6 @@ p50.set_flow_rate(blow_out=p50.get_flow_rates()['blow_out'] * config.blow_out_ra
 p10.start_at_tip(tips10[p10_start_tip])
 p50.start_at_tip(tips300a[p50_start_tip])
 
-# Custom disposal volumes to minimize reagent usage
-p50_disposal_vol = 5
-p10_disposal_vol = 1
-
 # All the labware containers
 temp_slot = 10
 temp_module = modules.load('tempdeck', temp_slot)
@@ -1984,15 +1980,12 @@ def plateStrandA():
         if volume == 0: continue
         if usesP10(volume, len(dest_wells), allow_zero=False):
             p = p10
-            disposal_vol = p10_disposal_vol
         else:
             p = p50
-            disposal_vol = p50_disposal_vol
         log('Plating Strand A: volume %d with %s' % (volume, p.name))
         volumes = [volume] * len(dest_wells)
-        p.distribute(volumes, diluted_strand_a, dest_wells,
+        p.transfer(volumes, diluted_strand_a, dest_wells,
                      new_tip='never',
-                     disposal_vol=disposal_vol,
                      trash=config.trash_control,
                      full_dispense=True)
     p10.done_tip()
