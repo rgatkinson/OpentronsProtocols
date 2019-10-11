@@ -1746,7 +1746,7 @@ def verify_well_locations(well_list: List[Well], pipette: EnhancedPipette):
 
 # Volumes of master mix ingredients. These are minimums in each tube.
 buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
-evagreen_volumes = [600]            # B1, B2, etc in screwcap rack
+evagreen_volumes = [1000]            # B1, B2, etc in screwcap rack
 
 strand_a_conc = '10uM'  # '8.820 uM'  # Note: we'll use more Strand A than Strand B because of disposal_volumes
 strand_b_conc = '10uM'  # '9.117 uM'
@@ -1754,8 +1754,8 @@ strand_a_min_vol = 600  # set as best one can
 strand_b_min_vol = 600  # set as best one can
 
 # Tip usage
-p10_start_tip = 'A9'
-p50_start_tip = 'A9'
+p10_start_tip = 'A1'
+p50_start_tip = 'A1'
 config.trash_control = True
 
 # Diluting each strand
