@@ -5,6 +5,7 @@
 #
 import argparse
 import sys
+from typing import Optional
 
 import opentrons.simulate
 from opentrons.legacy_api.containers import Slot
@@ -212,6 +213,44 @@ def warn(msg: str, prefix="***********", suffix=' ***********'):
 
 
 ########################################################################################################################
+# Hardware augmentation
+#
+# * allow for mounting specific instrument versions on the robot
+########################################################################################################################
+
+from opentrons.drivers.smoothie_drivers.driver_3_0 import SmoothieDriver_3_0_0
+class EnhancedSimulatingSmoothieDriver(SmoothieDriver_3_0_0):
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Construction
+    #-------------------------------------------------------------------------------------------------------------------
+
+    def __new__(cls, parentInst):
+        parentInst.__class__ = EnhancedSimulatingSmoothieDriver
+        return parentInst
+
+    # noinspection PyMissingConstructor
+    def __init__(self, parentInst):
+        self.simulated_mountings = dict()
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Accessing
+    #-------------------------------------------------------------------------------------------------------------------
+
+    @staticmethod
+    def mount(instrument_model, mount):
+        self = robot._driver
+        self.simulated_mountings[mount] = {'instrument_model': instrument_model}
+
+    def read_pipette_model(self, mount) -> Optional[str]:
+        if self.simulating:
+            if mount in self.simulated_mountings:
+                return self.simulated_mountings[mount]['instrument_model']
+        return super().read_pipette_model(mount)
+
+robot._driver = EnhancedSimulatingSmoothieDriver(robot._driver)
+
+########################################################################################################################
 # Analyzing
 ########################################################################################################################
 
@@ -312,7 +351,21 @@ def main() -> int:
         '-v', '--version', action='version',
         version=f'%(prog)s {opentrons.__version__}',
         help='Print the opentrons package version and exit')
+    parser.add_argument(
+        '--mount_left',
+        type=str
+    )
+    parser.add_argument(
+        '--mount_right',
+        type=str
+    )
     args = parser.parse_args()
+    if args.mount_left or args.mount_right:
+        if args.mount_left:
+            EnhancedSimulatingSmoothieDriver.mount(args.mount_left, 'left')
+        if args.mount_right:
+            EnhancedSimulatingSmoothieDriver.mount(args.mount_right, 'right')
+        robot.reset()
 
     run_log = opentrons.simulate.simulate(args.protocol, log_level=args.log_level)
     analysis = analyzeRunLog(run_log)
