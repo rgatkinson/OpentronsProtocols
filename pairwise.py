@@ -909,7 +909,7 @@ class UnknownWellGeometry(WellGeometry):
         return interval([0, self.well_depth])
 
     def volume_from_depth(self, depth):
-        raise interval([0, self.well_capacity])
+        return interval([0, self.well_capacity])
 
     @property
     def well_capacity(self):
