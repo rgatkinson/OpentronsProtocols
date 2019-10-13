@@ -861,21 +861,15 @@ class WellGeometry(object):
     #-------------------------------------------------------------------------------------------------------------------
 
     @property
-    @abstractmethod
-    def well_capacity(self):
-        pass
+    def well_capacity(self):  # default to what Opentrons gave us
+        result = self.well.max_volume()
+        if result is None:
+            result = fpu.infinity
+        return result
 
     @property
-    def min_aspiratable_volume(self):  # minimum volume we can aspirate from (i.e.: we leave at least this much behind)
-        return 0
-
-    @property
-    def well_depth(self):
-        return self.well.z_size()  # default to what Opentrons gave us
-
-    #-------------------------------------------------------------------------------------------------------------------
-    # Calculations
-    #-------------------------------------------------------------------------------------------------------------------
+    def well_depth(self):  # default to what Opentrons gave us
+        return self.well.z_size()
 
     @abstractmethod
     def depth_from_volume(self, volume):  # best calc'n of depth from the given volume. may be an interval
@@ -884,6 +878,14 @@ class WellGeometry(object):
     @abstractmethod
     def volume_from_depth(self, depth):
         pass
+
+    @property
+    def min_aspiratable_volume(self):  # minimum volume we can aspirate from (i.e.: we leave at least this much behind when aspirating)
+        return 0
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Calculations
+    #-------------------------------------------------------------------------------------------------------------------
 
     def depth_from_volume_min(self, volume):  # lowest possible depth for the given volume
         vol = self.depth_from_volume(volume)
@@ -902,13 +904,6 @@ class UnknownWellGeometry(WellGeometry):
 
     def volume_from_depth(self, depth):
         return interval([0, self.well_capacity])
-
-    @property
-    def well_capacity(self):
-        result = self.well.max_volume()
-        if result is None:
-            result = fpu.infinity
-        return result
 
 
 # Calculated from Mathematica models. We use fittedIdtTube.
