@@ -29,6 +29,8 @@ from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
 from opentrons.legacy_api.containers.placeable import unpack_location, Well, Placeable
+from opentrons.trackers import pose_tracker
+from opentrons.util.vector import Vector
 
 ########################################################################################################################
 # Enhancements Configuration
@@ -1578,19 +1580,32 @@ class EnhancedPipette(Pipette):
 
         info_while(msg, do_one)
 
+    #-------------------------------------------------------------------------------------------------------------------
+    # Movement
+    #-------------------------------------------------------------------------------------------------------------------
+
+    def tip_coords_absolute(self):
+        xyz = pose_tracker.absolute(self.robot.poses, self)
+        return Vector(xyz)
+
 # region Commands
 
 # Enhance well name to include any label that might be present
 
-def get_labelled_well_name(self):
+def Well_get_name(self):
     result = super(Well, self).get_name()
     label = getattr(self, 'label', None)
     if label is not None:
         result += ' (' + label + ')'
     return result
 
-Well.get_name = get_labelled_well_name
+def Well_top_coords_absolute(self):
+    xyz = pose_tracker.absolute(robot.poses, self)
+    return Vector(xyz)
+
 Well.has_labelled_well_name = True
+Well.get_name = Well_get_name
+Well.top_coords_absolute = Well_top_coords_absolute
 
 
 # Hook commands to provide more informative text
@@ -1730,8 +1745,16 @@ def verify_well_locations(well_list: List[Well], pipette: EnhancedPipette):
         picked_tip = True
 
     for well in well_list:
-        pipette.move_to(well.top())
-        robot.pause(f'verify location: {well.get_name()} in {well.parent.get_name()}')
+        move_to_loc = well.top()
+        pipette.move_to(move_to_loc)
+        #
+        well_top_coords_absolute = well.top_coords_absolute()
+        _, top_coords = unpack_location(well.top())
+        _, move_to_coords = unpack_location(move_to_loc)
+        intended_coords = well_top_coords_absolute + (move_to_coords - top_coords)
+        tip_coords = pipette.tip_coords_absolute()
+        #
+        robot.pause(pretty.format('verify location: {0} in {1} loc={2} tip={3}', well.get_name(), well.parent.get_name(), intended_coords, tip_coords))
 
     if picked_tip:
         pipette.return_tip()  # we didn't dirty it, we can always re-use it todo: enhance return_tip() to adjust iterator so that next pick can pick up again

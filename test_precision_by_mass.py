@@ -29,6 +29,8 @@ from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
 from opentrons.legacy_api.containers.placeable import unpack_location, Well, Placeable
+from opentrons.trackers import pose_tracker
+from opentrons.util.vector import Vector
 
 ########################################################################################################################
 # Enhancements Configuration
@@ -55,6 +57,8 @@ config.aspirate.pre_wet.default = True
 config.aspirate.pre_wet.count = 3
 config.aspirate.pre_wet.max_volume_fraction = 1  # https://github.com/Opentrons/opentrons/issues/2901 would pre-wet only 2/3, but why not everything?
 config.aspirate.pre_wet.rate_func = lambda aspirate_rate: 1  # could instead just use the aspirate
+config.aspirate.pause = Config()
+config.aspirate.pause.ms_default = 500
 
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
@@ -62,7 +66,7 @@ config.dispense.top_clearance = 2.0
 config.dispense.top_clearance_factor = 10.0
 config.dispense.extra_top_clearance_name = 'extra_dispense_top_clearance'
 config.dispense.full_dispense = Config()
-config.dispense.full_dispense.default = False
+config.dispense.full_dispense.default = False  # todo: should this be 'True'?
 
 config.layered_mix = Config()
 config.layered_mix.top_clearance = 1.0
@@ -74,7 +78,7 @@ config.layered_mix.incr = 1.0
 config.layered_mix.count = None  # so we default to using incr, not count
 config.layered_mix.min_incr = 0.5
 config.layered_mix.count_per_incr = 2
-config.layered_mix.delay = 750
+config.layered_mix.ms_pause = 750
 config.layered_mix.keep_last_tip = False
 config.layered_mix.initial_turnover = None
 config.layered_mix.max_tip_cycles = None
@@ -1027,6 +1031,8 @@ class EnhancedPipette(Pipette):
         def __init__(self) -> None:
             self.pre_wet_during_transfer_kw = '_do_pre_wet_during_transfer'
             self.pre_wet_during_transfer = None
+            self.ms_pause_during_transfer_kw = '_do_pause_during_transfer'
+            self.ms_pause_during_transfer = None
 
     class DispenseParamsHack(object):
         def __init__(self) -> None:
@@ -1041,6 +1047,7 @@ class EnhancedPipette(Pipette):
         self.aspirate_params_hack = EnhancedPipette.AspirateParamsHack()
         self.dispense_params_hack = EnhancedPipette.DispenseParamsHack()
         self.tip_wetness = TipWetness.NONE
+        self.mixes_in_progress = list()
 
     #-------------------------------------------------------------------------------------------------------------------
     # Rates and speeds
@@ -1194,6 +1201,7 @@ class EnhancedPipette(Pipette):
                           aspirate['volume']))
                     self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
                 kwargs[self.aspirate_params_hack.pre_wet_during_transfer_kw] = not not kwargs.get('pre_wet', config.aspirate.pre_wet.default)
+                kwargs[self.aspirate_params_hack.ms_pause_during_transfer_kw] = kwargs.get('pause', config.aspirate.pause.ms_default)
                 self._aspirate_during_transfer(aspirate['volume'], aspirate['location'], **kwargs)
 
             if dispense:
@@ -1260,7 +1268,7 @@ class EnhancedPipette(Pipette):
     # Aspirate and dispense
     #-------------------------------------------------------------------------------------------------------------------
 
-    def aspirate(self, volume=None, location=None, rate=1.0, pre_wet=None):
+    def aspirate(self, volume=None, location=None, rate=1.0, pre_wet=None, pause=None):
         if not helpers.is_number(volume):  # recapitulate super
             if volume and not location:
                 location = volume
@@ -1297,6 +1305,14 @@ class EnhancedPipette(Pipette):
                                                        extra_clearance=getattr(well, config.aspirate.extra_top_clearance_name, 0))
         super().aspirate(volume=volume, location=location, rate=rate)
 
+        # if we're asked to, pause after aspiration to let liquid rise
+        if pause is None:
+            pause = self.aspirate_params_hack.ms_pause_during_transfer
+        if pause is None:
+            pause = config.aspirate.pause.ms_default
+        if config.enable_enhancements and pause and not self.is_mix_in_progress():
+            self.delay(pause / 1000.0)
+
         # track volume todo: what if we're doing an air gap
         well, __ = unpack_location(location)
         get_well_volume(well).aspirate(volume)
@@ -1305,9 +1321,12 @@ class EnhancedPipette(Pipette):
 
     def _aspirate_during_transfer(self, vol, loc, **kwargs):
         assert kwargs.get(self.aspirate_params_hack.pre_wet_during_transfer_kw) is not None
+        assert kwargs.get(self.aspirate_params_hack.ms_pause_during_transfer_kw) is not None
         self.aspirate_params_hack.pre_wet_during_transfer = kwargs.get(self.aspirate_params_hack.pre_wet_during_transfer_kw)
+        self.aspirate_params_hack.ms_pause_during_transfer = kwargs.get(self.aspirate_params_hack.ms_pause_during_transfer_kw)
         super()._aspirate_during_transfer(vol, loc, **kwargs)  # might 'mix_before' todo: is that ok? seems like it is...
         self.aspirate_params_hack.pre_wet_during_transfer = None
+        self.aspirate_params_hack.ms_pause_during_transfer = None
 
     def dispense(self, volume=None, location=None, rate=1.0, full_dispense: bool = False):
         if not helpers.is_number(volume):  # recapitulate super
@@ -1423,6 +1442,34 @@ class EnhancedPipette(Pipette):
     # Mixing
     #-------------------------------------------------------------------------------------------------------------------
 
+    def _mix_during_transfer(self, mix, loc, **kwargs):
+        self.begin_internal_mix(True)
+        super()._mix_during_transfer(mix, loc, **kwargs)
+        self.end_internal_mix(True)
+
+    def mix(self, repetitions=1, volume=None, location=None, rate=1.0):
+        self.begin_internal_mix(False)
+        result = super().mix(repetitions, volume, location, rate)
+        self.end_internal_mix(False)
+        return result
+
+    def begin_internal_mix(self, during_transfer: bool):
+        self.mixes_in_progress.append('internal_transfer_mix' if bool else 'internal_mix')
+
+    def end_internal_mix(self, during_transfer: bool):
+        top = self.mixes_in_progress.pop()
+        assert top == ('internal_transfer_mix' if bool else 'internal_mix')
+
+    def begin_layered_mix(self):
+        self.mixes_in_progress.append('layered_mix')
+
+    def end_layered_mix(self):
+        top = self.mixes_in_progress.pop()
+        assert top == 'layered_mix'
+
+    def is_mix_in_progress(self):
+        return len(self.mixes_in_progress) > 0
+
     # If count is provided, we do (at most) that many asp/disp cycles, clamped to an increment of min_incr
     def layered_mix(self, wells, msg='Mixing',
                     count=None,
@@ -1438,6 +1485,7 @@ class EnhancedPipette(Pipette):
                     max_tip_cycles=None):
 
         def do_layered_mix():
+            self.begin_layered_mix()
             local_keep_last_tip = keep_last_tip if keep_last_tip is not None else config.layered_mix.keep_last_tip
 
             for well in wells:
@@ -1454,6 +1502,7 @@ class EnhancedPipette(Pipette):
                                       max_tip_cycles=max_tip_cycles)
             if not local_keep_last_tip:
                 self.done_tip()
+            self.end_layered_mix()
 
         log_while(f'{msg} {[well.get_name() for well in wells]}', do_layered_mix)
 
@@ -1476,7 +1525,7 @@ class EnhancedPipette(Pipette):
         count_per_incr = fetch('count_per_incr')
         count = fetch('count')
         min_incr = fetch('min_incr')
-        delay = fetch('delay')
+        ms_pause = fetch('ms_pause')
         initial_turnover = fetch('initial_turnover')
         max_tip_cycles = fetch('max_tip_cycles', fpu.infinity)
         pre_wet = fetch('pre_wet', False)  # not much point in pre-wetting during mixing; save some time, simpler. but we do so if asked
@@ -1507,7 +1556,7 @@ class EnhancedPipette(Pipette):
             tip_cycles = 0
             while do_layer(y):
                 if not first:
-                    self.delay(delay / 1000.0)
+                    self.delay(ms_pause / 1000.0)  # pause to let dispensed liquid disperse
                 #
                 if first and initial_turnover is not None:
                     count_ = int(0.5 + (initial_turnover / volume))
@@ -1531,19 +1580,32 @@ class EnhancedPipette(Pipette):
 
         info_while(msg, do_one)
 
+    #-------------------------------------------------------------------------------------------------------------------
+    # Movement
+    #-------------------------------------------------------------------------------------------------------------------
+
+    def tip_coords_absolute(self):
+        xyz = pose_tracker.absolute(self.robot.poses, self)
+        return Vector(xyz)
+
 # region Commands
 
 # Enhance well name to include any label that might be present
 
-def get_labelled_well_name(self):
+def Well_get_name(self):
     result = super(Well, self).get_name()
     label = getattr(self, 'label', None)
     if label is not None:
         result += ' (' + label + ')'
     return result
 
-Well.get_name = get_labelled_well_name
+def Well_top_coords_absolute(self):
+    xyz = pose_tracker.absolute(robot.poses, self)
+    return Vector(xyz)
+
 Well.has_labelled_well_name = True
+Well.get_name = Well_get_name
+Well.top_coords_absolute = Well_top_coords_absolute
 
 
 # Hook commands to provide more informative text
@@ -1683,8 +1745,16 @@ def verify_well_locations(well_list: List[Well], pipette: EnhancedPipette):
         picked_tip = True
 
     for well in well_list:
-        pipette.move_to(well.top())
-        robot.pause(f'verify location: {well.get_name()} in {well.parent.get_name()}')
+        move_to_loc = well.top()
+        pipette.move_to(move_to_loc)
+        #
+        well_top_coords_absolute = well.top_coords_absolute()
+        _, top_coords = unpack_location(well.top())
+        _, move_to_coords = unpack_location(move_to_loc)
+        intended_coords = well_top_coords_absolute + (move_to_coords - top_coords)
+        tip_coords = pipette.tip_coords_absolute()
+        #
+        robot.pause(pretty.format('verify location: {0} in {1} loc={2} tip={3}', well.get_name(), well.parent.get_name(), intended_coords, tip_coords))
 
     if picked_tip:
         pipette.return_tip()  # we didn't dirty it, we can always re-use it todo: enhance return_tip() to adjust iterator so that next pick can pick up again
