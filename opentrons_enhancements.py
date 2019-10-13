@@ -37,7 +37,7 @@ config.trash_control = True
 config.blow_out_rate_factor = 3.0
 config.min_aspirate_factor_hack = 15.0
 config.allow_blow_elision_default = True
-config.allow_carryover_default = True
+config.allow_overspill_default = True
 
 config.aspirate = Config()
 config.aspirate.bottom_clearance = 1.0  # see Pipette._position_for_aspirate
@@ -1162,7 +1162,7 @@ class EnhancedPipette(Pipette):
     # New kw args:
     #   'keep_last_tip': if true, then tip is not dropped at end of transfer
     #   'full_dispense': if true, and if a dispense empties the pipette, then dispense to blow_out 'position' instead of 'bottom' position
-    #   'allow_carryover': if true, we allow carry over of disposal_vol from one run of (asp, disp+) to the next
+    #   'allow_overspill': if true, we allow over spill (of disposal_vol) from one run of (asp, disp+) to the next
     #   'allow_blow_elision': if true, then blow-outs which are not logically needed (such as before a tip drop) are elided
     def _run_transfer_plan(self, tips, plan, **kwargs):
         air_gap = kwargs.get('air_gap', 0)
@@ -1184,7 +1184,7 @@ class EnhancedPipette(Pipette):
                 # *always* record on aspirates so we can test has_disposal_vol on subsequent dispenses
                 have_disposal_vol = self.has_disposal_vol(plan, i, step_info_map, **kwargs)
 
-                # we might have carryover from a previous transfer.
+                # we might have overspill from a previous transfer.
                 if self.current_volume > 0:
                     info(pretty.format('carried over {0:n} uL from prev operation', self.current_volume))
 
@@ -1194,7 +1194,7 @@ class EnhancedPipette(Pipette):
                     if kwargs.get('pre_wet', None) and kwargs.get('mix_before', None):
                         warn("simultaneous use of 'pre_wet' and 'mix_before' is not tested")
 
-                    if (kwargs.get('allow_carryover', config.allow_carryover_default) and config.enable_enhancements) and zeroify(self.current_volume) > 0:
+                    if (kwargs.get('allow_overspill', config.allow_overspill_default) and config.enable_enhancements) and zeroify(self.current_volume) > 0:
                         this_aspirated_location, __ = unpack_location(aspirate['location'])
                         if self.prev_aspirated_location is this_aspirated_location:
                             if have_disposal_vol:
@@ -1208,18 +1208,18 @@ class EnhancedPipette(Pipette):
                                     extra = self.current_volume - aspirate['volume']
                                     assert zeroify(extra) > 0
                             else:
-                                info(pretty.format("carryover of {0:n} uL isn't for disposal", self.current_volume))
+                                info(pretty.format("overspill of {0:n} uL isn't for disposal", self.current_volume))
                                 extra = self.current_volume
                         else:
                             # different locations; can't re-use
                             info('this aspirate is from location different than current pipette contents')
                             extra = self.current_volume
                         if zeroify(extra) > 0:
-                            # quiet_log('blowing out carryover of %s uL' % format_number(self.current_volume))
+                            # quiet_log('blowing out overspill of %s uL' % format_number(self.current_volume))
                             self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
 
                     elif zeroify(self.current_volume) > 0:
-                        info(pretty.format('blowing out unexpected carryover of {0:n} uL', self.current_volume))
+                        info(pretty.format('blowing out unexpected overspill of {0:n} uL', self.current_volume))
                         self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
 
                 seen_aspirate = True
@@ -1261,14 +1261,14 @@ class EnhancedPipette(Pipette):
                     if not do_blow:
                         if is_last_step:
                             if self.current_volume > 0:
-                                if not (kwargs.get('allow_carryover', config.allow_carryover_default) and config.enable_enhancements):
+                                if not (kwargs.get('allow_overspill', config.allow_overspill_default) and config.enable_enhancements):
                                     do_blow = True
                                 elif self.current_volume > kwargs.get('disposal_vol', 0):
                                     warn(pretty.format('carried over {0:n} uL to next operation', self.current_volume))
                                 else:
                                     info(pretty.format('carried over {0:n} uL to next operation', self.current_volume))
                         else:
-                            # if we can, account for any carryover in the next aspirate
+                            # if we can, account for any overspill in the next aspirate
                             if self.current_volume > 0:
                                 if self.has_disposal_vol(plan, i + 1, step_info_map, **kwargs):
                                     next_aspirate = plan[i + 1].get('aspirate'); assert next_aspirate
@@ -1283,8 +1283,8 @@ class EnhancedPipette(Pipette):
                                     else:
                                         do_blow = True  # different aspirate locations
                                 else:
-                                    # Next aspirate doesn't *want* our carryover, so we don't reduce his
-                                    # volume. But it's harmless to just leave the carryover present; might
+                                    # Next aspirate doesn't *want* our overspill, so we don't reduce his
+                                    # volume. But it's harmless to just leave the overspill present; might
                                     # be useful down the line
                                     pass
                             else:
