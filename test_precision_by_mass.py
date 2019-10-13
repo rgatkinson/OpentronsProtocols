@@ -862,7 +862,7 @@ class WellGeometry(object):
     #-------------------------------------------------------------------------------------------------------------------
 
     def __init__(self, well):
-        self.well = well
+        self.well: Well = well
 
     #-------------------------------------------------------------------------------------------------------------------
     # Accessing
@@ -878,9 +878,8 @@ class WellGeometry(object):
         return 0
 
     @property
-    # @abstractmethod
-    def well_depth(self):  # not yet actually used, nor fully elaborated
-        return 0
+    def well_depth(self):
+        return self.well.z_size()  # default to what Opentrons gave us
 
     #-------------------------------------------------------------------------------------------------------------------
     # Calculations
@@ -888,6 +887,10 @@ class WellGeometry(object):
 
     @abstractmethod
     def depth_from_volume(self, volume):  # best calc'n of depth from the given volume. may be an interval
+        pass
+
+    @abstractmethod
+    def volume_from_depth(self, depth):
         pass
 
     def depth_from_volume_min(self, volume):  # lowest possible depth for the given volume
@@ -903,7 +906,10 @@ class UnknownWellGeometry(WellGeometry):
         super().__init__(well)
 
     def depth_from_volume(self, volume):
-        return interval([0, self.well_capacity])
+        return interval([0, self.well_depth])
+
+    def volume_from_depth(self, depth):
+        raise interval([0, self.well_capacity])
 
     @property
     def well_capacity(self):
@@ -911,78 +917,120 @@ class UnknownWellGeometry(WellGeometry):
         return self.well.properties.get('total-liquid-volume', fpu.infinity)
 
 
+# Calculated from Mathematica models. We use fittedIdtTube.
 class IdtTubeWellGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
     def depth_from_volume(self, volume):
-        # Calculated from Mathematica models. We use fittedIdtTube.
         if volume <= 0.0:
             return 0.0
         if volume <= 67.1109:
             return 0.909568 * cube_root(volume)
-        return 3.69629 - 0.0183591 * (67.1109 - volume)
+        return 2.46419 + 0.0183591 * volume
+
+    def volume_from_depth(self, depth):
+        if depth <= 0:
+            return 0
+        if depth <= 3.69629:
+            return 1.32891 * cube(depth)
+        return -134.222 + 54.4688 * depth
 
     @property
     def well_capacity(self):
         return 2153.47
 
     @property
+    def well_depth(self):
+        return 42
+
+    @property
     def min_aspiratable_volume(self):
-        return 75  # a rough estimate
+        return 75  # a rough estimate, but seems functionally useful
 
 
+# Calculated from Mathematica models, specifically modelBioRad3[]
 class Biorad96WellPlateWellGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
     def depth_from_volume(self, volume):
-        # Calculated from Mathematica models, specifically modelBioRad3[]
         if volume <= 0.0:
             return 0.0
         if volume <= 122.784:
             return -8.57618 + 3.10509 * cube_root(21.0698 + 1.34645 * volume)
-        return 9.16092 - 0.0427095 * (122.784 - volume)
+        return 3.91689 + 0.0427095 * volume
+
+    def volume_from_depth(self, depth):
+        if depth <= 0.0:
+            return 0.0
+        if depth <= 9.16092:
+            return depth * (5.47391 + (0.638269 + 0.0248078 * depth) * depth)
+        return -91.7099 + 23.414 * depth
 
     @property
     def well_capacity(self):
         return 255.051
 
+    @property
+    def well_depth(self):
+        return 14.81
 
+
+# Calculated from Mathematica models. We use fittedEppendorf1$5ml
 class Eppendorf1point5mlTubeGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
     def depth_from_volume(self, volume):
-        # Calculated from Mathematica models. We use fittedEppendorf1$5ml
         if volume <= 0:
             return 0
         if volume <= 0.550217:
             raise NotImplementedError
-        if volume <= 575.33:
+        if volume <= 575.88:
             return -13.8495 + 2.9248 * cube_root(157.009 + 2.14521 * volume)
         return -216.767 + 20.2694 * cube_root(1376.83 + 0.33533 * volume)
+
+    def volume_from_depth(self, depth):
+        if depth <= 0:
+            return 0
+        if depth < 1.96886:
+            raise NotImplementedError
+        if depth <= 18.8106:
+            return -23.6979 + depth * (10.7209 + (0.774099 + 0.0186313 * depth) * depth)
+        return -458.451 + depth * (50.4795 + (0.232875 + 0.000358103 * depth) * depth)
 
     @property
     def well_capacity(self):
         return 1801.76
 
+    @property
+    def well_depth(self):
+        return 37.8
 
+
+# Calculated from Mathematica models fitted to empirical depth vs volume measurements
 class FalconTube15mlGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
     def depth_from_volume(self, volume):
-        # Calculated from Mathematica models fitted to empirical depth vs volume measurements
         if volume <= 0.0:
             return 0.0
         if volume <= 1232.34:
             return -4.60531 + 1.42955 * cube_root(33.4335 + 5.25971 * volume)
         return -803.774 + 27.1004 * cube_root(27390.9 + 0.738644 * volume)
 
+    def volume_from_depth(self, depth):
+        if depth <= 0:
+            return 0.0
+        if depth <= 22.0945:
+            return depth * (4.14078 + (0.899131 + 0.0650793 * depth) * depth)
+        return -1761.24 + depth * (131.833 + (0.164018 + 0.0000680198 * depth) * depth)
+
     @property
     def well_capacity(self):
-        return 16278.1  # compare to 15000 in opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical
+        return 16202.8  # compare to 15000 in opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical
 
     @property
     def well_depth(self):
@@ -1703,6 +1751,12 @@ def get_location_path(location):
                                        if str(item) is not None])))
         location.location_path = result
     return result
+
+def square(value):
+    return value * value
+
+def cube(value):
+    return value * value * value
 
 def cube_root(value):
     return pow(value, 1.0/3.0)
