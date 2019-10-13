@@ -1,12 +1,15 @@
 Notebook[{
+Cell[BoxData["\[AliasDelimiter]"], \
+"Input",ExpressionUUID->"bd252b08-45d4-47fb-b3f8-5220b713d54b"],
 
 Cell[CellGroupData[{
+
 Cell["Well Geometry", \
 "Title",ExpressionUUID->"39796d72-87ca-4320-97ff-a98d4bd016ce"],
 
 Cell["\<\
 Robert Atkinson
-08 Oct 2019\
+12 Oct 2019\
 \>", "Author",ExpressionUUID->"05aea015-05f3-4e99-899d-20a8cd5792a1"],
 
 Cell["We explore the geometry of various labware.", \
@@ -165,7 +168,90 @@ Cell[BoxData[{
   RowBox[{"toRadian", "[", "deg_", "]"}], " ", ":=", " ", 
   RowBox[{
    RowBox[{"deg", " ", "/", " ", "180"}], " ", "*", " ", 
-   "Pi"}]}]}], "Input",ExpressionUUID->"2bbc42e7-5161-4850-a96b-3fb814745a8d"]
+   "Pi"}]}]}], "Input",ExpressionUUID->"2bbc42e7-5161-4850-a96b-3fb814745a8d"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"unboundQ", "[", "x_Symbol", "]"}], " ", ":=", " ", "True"}], "\n", 
+ RowBox[{
+  RowBox[{"unboundQ", "[", "_", "]"}], " ", ":=", " ", "False"}], "\n", 
+ RowBox[{
+  RowBox[{"unboundQ", "[", "E", "]"}], " ", ":=", " ", "False"}], "\n", 
+ RowBox[{
+  RowBox[{"unboundQ", "[", "I", "]"}], " ", ":=", " ", "False"}], "\n", 
+ RowBox[{
+  RowBox[{"unboundQ", "[", "Pi", "]"}], " ", ":=", " ", "False"}], "\n", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"unboundQ", "[", "\[Pi]", "]"}], " ", ":=", " ", "False"}], 
+  "\n"}], "\n", 
+ RowBox[{
+  RowBox[{"variables", "[", "expr_", "]"}], " ", ":=", " ", 
+  RowBox[{"variables", "[", 
+   RowBox[{"expr", ",", " ", 
+    RowBox[{"{", "}"}]}], "]"}]}], "\n", 
+ RowBox[{
+  RowBox[{"variables", "[", 
+   RowBox[{"expr_", ",", " ", "except_"}], "]"}], " ", ":=", " ", "\n", " ", 
+  RowBox[{"Complement", "[", "\n", "  ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"Reap", "[", 
+       RowBox[{"Scan", "[", 
+        RowBox[{
+         RowBox[{
+          RowBox[{"(", 
+           RowBox[{"If", "[", 
+            RowBox[{
+             RowBox[{"unboundQ", "[", "#", "]"}], ",", " ", 
+             RowBox[{"Sow", "[", "#", "]"}]}], "]"}], ")"}], " ", "&"}], ",", 
+         " ", "expr", ",", " ", "Infinity"}], "]"}], "]"}], "[", 
+      RowBox[{"[", 
+       RowBox[{"2", ",", " ", "1"}], "]"}], "]"}], " ", "//", " ", "\n", 
+     "   ", "Union"}], ",", " ", "except"}], 
+   "]"}]}]}], "Input",ExpressionUUID->"8fd2fa68-86de-4381-bd21-52f2d089b894"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Shape Utilities", \
+"Section",ExpressionUUID->"74671b0c-3da3-4376-b124-bba07699ac4b"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"volumeFromDepthUsingInverse", "[", 
+   RowBox[{"shape_", ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+  RowBox[{
+   RowBox[{"InverseFunction", "[", 
+    RowBox[{"Function", "[", 
+     RowBox[{"v", ",", " ", 
+      RowBox[{"depthFromVolume", "[", 
+       RowBox[{"shape", ",", " ", "v"}], "]"}]}], "]"}], "]"}], "[", "depth", 
+   "]"}]}]], "Input",ExpressionUUID->"a893b0b4-cc83-4573-a91c-a99d2f96e1b0"],
+
+Cell[BoxData[{
+ RowBox[{"Clear", "[", "genericVolumeFromDepthUsingInverse", 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
+   RowBox[{"genericShape_", ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", "result", "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"result", " ", "=", " ", 
+      RowBox[{"FullSimplify", "[", 
+       RowBox[{
+        RowBox[{"volumeFromDepthUsingInverse", "[", 
+         RowBox[{"genericShape", ",", " ", "depth"}], "]"}], ",", " ", 
+        RowBox[{"assumptions", "[", "genericShape", "]"}]}], "]"}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
+       RowBox[{"genericShape", ",", " ", "depth"}], "]"}], " ", "=", " ", 
+      "result"}], ";", "\[IndentingNewLine]", "result"}]}], 
+   "]"}]}]}], "Input",ExpressionUUID->"01203d0f-6f73-43d7-a6ac-5d5039ab00cf"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -756,7 +842,88 @@ Cell[BoxData[{
     RowBox[{
      RowBox[{"cone", "[", 
       RowBox[{"h", ",", "r"}], "]"}], ",", " ", "volume"}], "]"}]}], 
-  ";"}]}], "Input",ExpressionUUID->"b28a6672-c170-4dc0-b84d-7f97d9cc597f"]
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"depthFromVolume", "[", 
+    RowBox[{
+     RowBox[{"cone", "[", 
+      RowBox[{"h", ",", " ", "\[Alpha]", ",", " ", "apexangle"}], "]"}], ",", 
+     " ", "volume"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"depthFromVolume", "[", 
+    RowBox[{
+     RowBox[{"cone", "[", 
+      RowBox[{"h", ",", " ", "\[Beta]", ",", "baseangle"}], "]"}], ",", " ", 
+     "volume"}], "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"b28a6672-c170-4dc0-b84d-7f97d9cc597f"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"c", ":", 
+     RowBox[{"cone", "[", 
+      RowBox[{"h_", ",", " ", "r_"}], "]"}]}], ",", " ", "depth_"}], "]"}], 
+  " ", ":=", " ", 
+  RowBox[{
+   RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
+    RowBox[{
+     RowBox[{"cone", "[", 
+      RowBox[{"hh", ",", "rr"}], "]"}], ",", " ", "dd"}], "]"}], " ", "/.", 
+   " ", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"hh", "\[Rule]", " ", "h"}], ",", " ", 
+     RowBox[{"rr", " ", "\[Rule]", " ", "r"}], ",", " ", 
+     RowBox[{"dd", " ", "\[Rule]", " ", "depth"}]}], 
+    "}"}]}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"c", ":", 
+     RowBox[{"cone", "[", 
+      RowBox[{"h_", ",", " ", "\[Alpha]_", ",", " ", "apexangle"}], "]"}]}], 
+    ",", " ", "v_"}], "]"}], ":=", " ", 
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"toCartesian", " ", "@", " ", "c"}], ",", " ", "v"}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"c", ":", 
+      RowBox[{"cone", "[", 
+       RowBox[{"h_", ",", " ", "\[Beta]_", ",", "baseangle"}], "]"}]}], ",", 
+     " ", "v_"}], "]"}], ":=", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"toCartesian", " ", "@", " ", "c"}], ",", " ", "v"}], "]"}]}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"cone", "[", 
+      RowBox[{"h", ",", "r"}], "]"}], ",", "depth"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"cone", "[", 
+      RowBox[{"h", ",", " ", "\[Alpha]", ",", " ", "apexangle"}], "]"}], ",", 
+     " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"cone", "[", 
+      RowBox[{"h", ",", " ", "\[Beta]", ",", "baseangle"}], "]"}], ",", " ", 
+     "depth"}], "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"3e10e391-98be-41fa-86d7-c2e1b93636da"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -789,10 +956,25 @@ Cell[BoxData[{
    RowBox[{"AxesLabel", "\[Rule]", 
     RowBox[{"{", 
      RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}]}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"expr", " ", "=", " ", 
+   RowBox[{"test", " ", "@", " ", 
+    RowBox[{"volumeFromDepth", "[", 
+     RowBox[{"example", ",", "depth"}], "]"}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Plot", "[", 
+  RowBox[{"expr", ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"depth", ",", " ", "0", ",", " ", 
+     RowBox[{"height", "[", "example", "]"}]}], "}"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<volume\>\""}], "}"}]}]}], 
   "]"}]}], "Input",ExpressionUUID->"0e3171ab-ef8e-4c05-bf51-94bbc9231f19"]
 }, Open  ]]
 }, Open  ]]
-}, Closed]],
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -1487,7 +1669,87 @@ Cell[BoxData[{
      RowBox[{"invertedCone", "[", 
       RowBox[{"h", ",", " ", "\[Beta]", ",", "baseangle"}], "]"}], ",", " ", 
      "volume"}], "]"}]}], 
-  ";"}]}], "Input",ExpressionUUID->"cf711b47-c540-460b-94b2-5428859d1756"]
+  ";"}]}], "Input",ExpressionUUID->"cf711b47-c540-460b-94b2-5428859d1756"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"c", ":", " ", 
+     RowBox[{"invertedCone", "[", 
+      RowBox[{"h_", ",", " ", "\[Alpha]_", ",", " ", "apexangle"}], "]"}]}], 
+    ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+  RowBox[{
+   RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
+    RowBox[{
+     RowBox[{"invertedCone", "[", 
+      RowBox[{"hh", ",", "\[Alpha]\[Alpha]", ",", " ", "apexangle"}], "]"}], 
+     ",", " ", "dd"}], "]"}], " ", "/.", " ", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"hh", "\[Rule]", " ", "h"}], ",", " ", 
+     RowBox[{"\[Alpha]\[Alpha]", " ", "\[Rule]", " ", "\[Alpha]"}], ",", " ", 
+     RowBox[{"dd", " ", "\[Rule]", " ", "depth"}]}], 
+    "}"}]}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"c", ":", " ", 
+     RowBox[{"invertedCone", "[", 
+      RowBox[{"h_", ",", " ", "\[Beta]_", ",", " ", "baseangle"}], "]"}]}], 
+    ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+  RowBox[{
+   RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
+    RowBox[{
+     RowBox[{"invertedCone", "[", 
+      RowBox[{"hh", ",", "\[Beta]\[Beta]", ",", " ", "baseangle"}], "]"}], 
+     ",", " ", "dd"}], "]"}], " ", "/.", " ", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"hh", "\[Rule]", " ", "h"}], ",", " ", 
+     RowBox[{"\[Beta]\[Beta]", " ", "\[Rule]", " ", "\[Beta]"}], ",", " ", 
+     RowBox[{"dd", " ", "\[Rule]", " ", "depth"}]}], 
+    "}"}]}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"c", ":", " ", 
+     RowBox[{"invertedCone", "[", 
+      RowBox[{"h_", ",", " ", "r_"}], "]"}]}], ",", " ", "depth_"}], "]"}], 
+  " ", ":=", " ", 
+  RowBox[{
+   RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
+    RowBox[{
+     RowBox[{"invertedCone", "[", 
+      RowBox[{"hh", ",", "rr"}], "]"}], ",", " ", "dd"}], "]"}], " ", "/.", 
+   " ", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"hh", "\[Rule]", " ", "h"}], ",", " ", 
+     RowBox[{"rr", " ", "\[Rule]", " ", "r"}], ",", " ", 
+     RowBox[{"dd", " ", "\[Rule]", " ", "depth"}]}], 
+    "}"}]}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"invertedCone", "[", 
+      RowBox[{"h", ",", " ", "\[Alpha]", ",", " ", "apexangle"}], "]"}], ",", 
+     " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"invertedCone", "[", 
+      RowBox[{"h", ",", " ", "\[Beta]", ",", " ", "baseangle"}], "]"}], ",", 
+     " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"invertedCone", "[", 
+      RowBox[{"h", ",", "r"}], "]"}], ",", " ", "depth"}], "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"e00202a6-4961-4416-b612-b5b07579dab7"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -1520,10 +1782,67 @@ Cell[BoxData[{
    RowBox[{"AxesLabel", "\[Rule]", 
     RowBox[{"{", 
      RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}]}], 
-  "]"}]}], "Input",ExpressionUUID->"eda28cd1-4ea9-4c41-851c-83ef569ccd57"]
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"expr", " ", "=", " ", 
+   RowBox[{"test", " ", "@", " ", 
+    RowBox[{"volumeFromDepth", "[", 
+     RowBox[{"example", ",", " ", "depth"}], "]"}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Plot", "[", 
+  RowBox[{"expr", ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"depth", ",", " ", "0", ",", " ", 
+     RowBox[{"height", "[", "example", "]"}]}], "}"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<volume\>\""}], "}"}]}]}], 
+  "]"}]}], "Input",ExpressionUUID->"eda28cd1-4ea9-4c41-851c-83ef569ccd57"],
+
+Cell[BoxData[{
+ RowBox[{"example", " ", "=", " ", 
+  RowBox[{"cone", "[", 
+   RowBox[{"2", ",", " ", 
+    RowBox[{"\[Pi]", "/", "6"}], ",", " ", "apexangle"}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{"{", " ", 
+  RowBox[{
+   RowBox[{"volume", "[", "example", "]"}], ",", " ", 
+   RowBox[{
+    RowBox[{"volume", "[", "example", "]"}], " ", "//", " ", "N"}]}], " ", 
+  "}"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"expr", " ", "=", " ", 
+   RowBox[{"test", " ", "@", " ", 
+    RowBox[{"depthFromVolume", "[", 
+     RowBox[{"example", ",", "v"}], "]"}]}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Plot", "[", 
+  RowBox[{"expr", ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"v", ",", " ", "0", ",", " ", 
+     RowBox[{"volume", "[", "example", "]"}]}], "}"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}]}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"expr", " ", "=", " ", 
+   RowBox[{"test", " ", "@", " ", 
+    RowBox[{"volumeFromDepth", "[", 
+     RowBox[{"example", ",", " ", "depth"}], "]"}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Plot", "[", 
+  RowBox[{"expr", ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"depth", ",", " ", "0", ",", " ", 
+     RowBox[{"height", "[", "example", "]"}]}], "}"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<volume\>\""}], "}"}]}]}], 
+  "]"}]}], "Input",ExpressionUUID->"282eb182-df4b-4463-93e5-fc1a32a32034"]
 }, Open  ]]
 }, Open  ]]
-}, Closed]],
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -1682,7 +2001,35 @@ Cell[BoxData[{
    RowBox[{"depthFromVolume", "[", 
     RowBox[{
      RowBox[{"emptyCylinder", "[", "]"}], ",", " ", "volume"}], "]"}]}], 
-  ";"}]}], "Input",ExpressionUUID->"ef46489a-deb5-41fa-888c-f96402496143"]
+  ";"}]}], "Input",ExpressionUUID->"ef46489a-deb5-41fa-888c-f96402496143"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"c", ":", " ", 
+     RowBox[{"cylinder", "[", 
+      RowBox[{"h_", ",", " ", "r_"}], "]"}]}], ",", " ", "depth_"}], "]"}], 
+  " ", ":=", " ", 
+  RowBox[{
+   RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
+    RowBox[{
+     RowBox[{"cylinder", "[", 
+      RowBox[{"hh", ",", "rr"}], "]"}], ",", " ", "dd"}], "]"}], " ", "/.", 
+   " ", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"hh", "\[Rule]", "h"}], ",", " ", 
+     RowBox[{"rr", "\[Rule]", "r"}], ",", " ", 
+     RowBox[{"dd", "\[Rule]", " ", "depth"}]}], 
+    "}"}]}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"cylinder", "[", 
+      RowBox[{"h", ",", "r"}], "]"}], ",", " ", "depth"}], "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"dceaf8ec-59ed-4a13-a1a7-e094d2a61301"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -1713,10 +2060,25 @@ Cell[BoxData[{
    RowBox[{"AxesLabel", "\[Rule]", 
     RowBox[{"{", 
      RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}]}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"expr", " ", "=", " ", 
+   RowBox[{"test", " ", "@", " ", 
+    RowBox[{"volumeFromDepth", "[", 
+     RowBox[{"example", ",", " ", "depth"}], "]"}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Plot", "[", 
+  RowBox[{"expr", ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"depth", ",", " ", "0", ",", " ", 
+     RowBox[{"height", "[", "example", "]"}]}], "}"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<volume\>\""}], "}"}]}]}], 
   "]"}]}], "Input",ExpressionUUID->"645760b4-e03e-4f17-9d9a-58f468eb9693"]
 }, Open  ]]
 }, Open  ]]
-}, Closed]],
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -3081,6 +3443,102 @@ Cell[BoxData[{
 
 Cell[CellGroupData[{
 
+Cell["Volume from Depth", \
+"Subsubsection",ExpressionUUID->"6383a0a3-a5ca-4150-bdec-2002d947ab90"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"f", ":", " ", 
+     RowBox[{"frustum", "[", 
+      RowBox[{
+      "h_", ",", " ", "rbig_", ",", " ", "\[Alpha]_", ",", "apexangle"}], 
+      "]"}]}], ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+  RowBox[{
+   RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
+    RowBox[{
+     RowBox[{"frustum", "[", 
+      RowBox[{
+      "hh", ",", "rrBig", ",", " ", "\[Alpha]\[Alpha]", ",", "apexangle"}], 
+      "]"}], ",", "dd"}], "]"}], " ", "/.", " ", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"hh", "\[Rule]", "h"}], ",", " ", 
+     RowBox[{"rrBig", "\[Rule]", "rbig"}], ",", " ", 
+     RowBox[{"\[Alpha]\[Alpha]", " ", "\[Rule]", " ", "\[Alpha]"}], ",", " ", 
+     RowBox[{"dd", "\[Rule]", " ", "depth"}]}], 
+    "}"}]}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"f", ":", " ", 
+     RowBox[{"frustum", "[", 
+      RowBox[{
+      "h_", ",", " ", "rbig_", ",", " ", "\[Beta]_", ",", " ", "baseangle"}], 
+      "]"}]}], ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+  RowBox[{
+   RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
+    RowBox[{
+     RowBox[{"frustum", "[", 
+      RowBox[{
+      "hh", ",", "rrBig", ",", " ", "\[Beta]\[Beta]", ",", " ", "baseangle"}],
+       "]"}], ",", "dd"}], "]"}], " ", "/.", " ", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"hh", "\[Rule]", "h"}], ",", " ", 
+     RowBox[{"rrBig", "\[Rule]", "rbig"}], ",", " ", 
+     RowBox[{"\[Beta]\[Beta]", " ", "\[Rule]", " ", "\[Beta]"}], ",", " ", 
+     RowBox[{"dd", "\[Rule]", " ", "depth"}]}], 
+    "}"}]}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"f", ":", " ", 
+      RowBox[{"frustum", "[", 
+       RowBox[{"h_", ",", " ", "rbig_", ",", " ", "rsmall_"}], "]"}]}], ",", 
+     " ", "depth_"}], "]"}], " ", ":=", " ", 
+   RowBox[{
+    RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
+     RowBox[{
+      RowBox[{"frustum", "[", 
+       RowBox[{"hh", ",", "rrBig", ",", "rrSmall"}], "]"}], ",", "dd"}], 
+     "]"}], " ", "/.", " ", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"hh", "\[Rule]", "h"}], ",", " ", 
+      RowBox[{"rrBig", "\[Rule]", "rbig"}], ",", " ", 
+      RowBox[{"rrSmall", "\[Rule]", " ", "rsmall"}], ",", " ", 
+      RowBox[{"dd", "\[Rule]", " ", "depth"}]}], "}"}]}]}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"frustum", "[", 
+      RowBox[{
+      "h", ",", " ", "rbig", ",", " ", "\[Alpha]", ",", " ", "apexangle"}], 
+      "]"}], ",", " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"frustum", "[", 
+      RowBox[{"h", ",", " ", "rbig", ",", " ", "\[Beta]", ",", "baseangle"}], 
+      "]"}], ",", " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"frustum", "[", 
+      RowBox[{"h", ",", " ", "rbig", ",", " ", "rsmall"}], "]"}], ",", " ", 
+     "depth"}], "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"16419e09-8c12-49e3-b2df-2b8fb72bb598"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
 Cell["Testing", \
 "Subsubsection",ExpressionUUID->"029e8a45-f9a9-4629-8d1c-8add93c5a0ed"],
 
@@ -3109,6 +3567,21 @@ Cell[BoxData[{
    RowBox[{"AxesLabel", "\[Rule]", 
     RowBox[{"{", 
      RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}]}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"expr", " ", "=", " ", 
+   RowBox[{"test", " ", "@", " ", 
+    RowBox[{"volumeFromDepth", "[", 
+     RowBox[{"example", ",", " ", "depth"}], "]"}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Plot", "[", 
+  RowBox[{"expr", ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"depth", ",", " ", "0", ",", " ", 
+     RowBox[{"height", "[", "example", "]"}]}], "}"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<volume\>\""}], "}"}]}]}], 
   "]"}]}], "Input",ExpressionUUID->"6983b8da-5f17-484d-aa8b-7fe0d57c19bd"],
 
 Cell[BoxData[{
@@ -3136,6 +3609,21 @@ Cell[BoxData[{
    RowBox[{"AxesLabel", "\[Rule]", 
     RowBox[{"{", 
      RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}]}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"expr", " ", "=", " ", 
+   RowBox[{"test", " ", "@", " ", 
+    RowBox[{"volumeFromDepth", "[", 
+     RowBox[{"example", ",", " ", "depth"}], "]"}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Plot", "[", 
+  RowBox[{"expr", ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"depth", ",", " ", "0", ",", " ", 
+     RowBox[{"height", "[", "example", "]"}]}], "}"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<volume\>\""}], "}"}]}]}], 
   "]"}]}], "Input",ExpressionUUID->"a3633461-f447-493d-886f-d7bf1fd06f05"],
 
 Cell[BoxData[{
@@ -3163,10 +3651,25 @@ Cell[BoxData[{
    RowBox[{"AxesLabel", "\[Rule]", 
     RowBox[{"{", 
      RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}]}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"expr", " ", "=", " ", 
+   RowBox[{"test", " ", "@", " ", 
+    RowBox[{"volumeFromDepth", "[", 
+     RowBox[{"example", ",", " ", "depth"}], "]"}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Plot", "[", 
+  RowBox[{"expr", ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"depth", ",", " ", "0", ",", " ", 
+     RowBox[{"height", "[", "example", "]"}]}], "}"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<volume\>\""}], "}"}]}]}], 
   "]"}]}], "Input",ExpressionUUID->"9469b866-a170-479c-bffc-09c629d76d17"]
 }, Open  ]]
 }, Open  ]]
-}, Closed]],
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -3919,7 +4422,169 @@ Cell[BoxData[{
   RowBox[{"test", " ", "@", " ", 
    RowBox[{"depthFromVolume", "[", 
     RowBox[{"generalBaseInvertedFrustum", ",", " ", "vol"}], "]"}]}], 
-  ";"}]}], "Input",ExpressionUUID->"cf8736a0-5887-43bb-b7e7-5b38b0302886"]
+  ";"}]}], "Input",ExpressionUUID->"cf8736a0-5887-43bb-b7e7-5b38b0302886"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"volumeFromDepth0", "[", 
+   RowBox[{
+    RowBox[{"f", ":", 
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{"h_", ",", " ", "rbig_", ",", " ", "rsmall_"}], "]"}]}], ",", 
+    " ", "depth_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"FullSimplify", "[", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"volume", "[", "f", "]"}], " ", "-", " ", 
+     RowBox[{"volumeFromDepth", "[", 
+      RowBox[{
+       RowBox[{"invert", "[", "f", "]"}], ",", " ", 
+       RowBox[{"h", " ", "-", "depth"}]}], "]"}]}], ",", " ", 
+    RowBox[{"assumptions", "[", "f", "]"}]}], "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"volumeFromDepth0", "[", 
+   RowBox[{
+    RowBox[{"f", ":", 
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{
+      "h_", ",", " ", "rbig_", ",", " ", "\[Alpha]_", ",", "apexangle"}], 
+      "]"}]}], ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"toCartesian", "[", "f", "]"}], ",", " ", "depth"}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"volumeFromDepth0", "[", 
+    RowBox[{
+     RowBox[{"f", ":", 
+      RowBox[{"invertedFrustum", "[", 
+       RowBox[{
+       "h_", ",", " ", "rbig_", ",", " ", "\[Beta]_", ",", "baseangle"}], 
+       "]"}]}], ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+   RowBox[{"FullSimplify", "[", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"volume", "[", "f", "]"}], " ", "-", " ", 
+      RowBox[{"volumeFromDepth", "[", 
+       RowBox[{
+        RowBox[{"invert", "[", "f", "]"}], ",", " ", 
+        RowBox[{"h", " ", "-", "depth"}]}], "]"}]}], ",", " ", 
+     RowBox[{"assumptions", "[", "f", "]"}]}], "]"}]}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth0", "[", 
+    RowBox[{
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{
+      "h", ",", " ", "rbig", ",", " ", "\[Alpha]", ",", " ", "apexangle"}], 
+      "]"}], ",", " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth0", "[", 
+    RowBox[{
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{"h", ",", " ", "rbig", ",", " ", "\[Beta]", ",", "baseangle"}], 
+      "]"}], ",", " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth0", "[", 
+    RowBox[{
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{"h", ",", " ", "rbig", ",", " ", "rsmall"}], "]"}], ",", " ", 
+     "depth"}], "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"8e3eaaac-7e12-4db4-ba70-e4f78c4c78e5"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"f", ":", " ", 
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{
+      "h_", ",", " ", "rbig_", ",", " ", "\[Alpha]_", ",", "apexangle"}], 
+      "]"}]}], ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+  RowBox[{
+   RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
+    RowBox[{
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{
+      "hh", ",", "rrBig", ",", " ", "\[Alpha]\[Alpha]", ",", "apexangle"}], 
+      "]"}], ",", "dd"}], "]"}], " ", "/.", " ", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"hh", "\[Rule]", "h"}], ",", " ", 
+     RowBox[{"rrBig", "\[Rule]", "rbig"}], ",", " ", 
+     RowBox[{"\[Alpha]\[Alpha]", " ", "\[Rule]", " ", "\[Alpha]"}], ",", " ", 
+     RowBox[{"dd", "\[Rule]", " ", "depth"}]}], 
+    "}"}]}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"f", ":", 
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{
+      "h_", ",", " ", "rbig_", ",", " ", "\[Beta]_", ",", " ", "baseangle"}], 
+      "]"}]}], ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+  RowBox[{
+   RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
+    RowBox[{
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{
+      "hh", ",", "rrBig", ",", " ", "\[Beta]\[Beta]", ",", " ", "baseangle"}],
+       "]"}], ",", "dd"}], "]"}], " ", "/.", " ", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"hh", "\[Rule]", "h"}], ",", " ", 
+     RowBox[{"rrBig", "\[Rule]", "rbig"}], ",", " ", 
+     RowBox[{"\[Beta]\[Beta]", " ", "\[Rule]", " ", "\[Beta]"}], ",", " ", 
+     RowBox[{"dd", "\[Rule]", " ", "depth"}]}], 
+    "}"}]}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"f", ":", " ", 
+      RowBox[{"invertedFrustum", "[", 
+       RowBox[{"h_", ",", " ", "rbig_", ",", " ", "rsmall_"}], "]"}]}], ",", 
+     " ", "depth_"}], "]"}], " ", ":=", " ", 
+   RowBox[{
+    RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
+     RowBox[{
+      RowBox[{"invertedFrustum", "[", 
+       RowBox[{"hh", ",", "rrBig", ",", "rrSmall"}], "]"}], ",", "dd"}], 
+     "]"}], " ", "/.", " ", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"hh", "\[Rule]", "h"}], ",", " ", 
+      RowBox[{"rrBig", "\[Rule]", "rbig"}], ",", " ", 
+      RowBox[{"rrSmall", "\[Rule]", " ", "rsmall"}], ",", " ", 
+      RowBox[{"dd", "\[Rule]", " ", "depth"}]}], "}"}]}]}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{
+      "h", ",", " ", "rbig", ",", " ", "\[Alpha]", ",", " ", "apexangle"}], 
+      "]"}], ",", " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{"h", ",", " ", "rbig", ",", " ", "\[Beta]", ",", "baseangle"}], 
+      "]"}], ",", " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{"h", ",", " ", "rbig", ",", " ", "rsmall"}], "]"}], ",", " ", 
+     "depth"}], "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"f3d05a2a-b169-40f3-a4b9-bee8fca8578a"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -3952,6 +4617,21 @@ Cell[BoxData[{
    RowBox[{"AxesLabel", "\[Rule]", 
     RowBox[{"{", 
      RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}]}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"expr", " ", "=", " ", 
+   RowBox[{"test", " ", "@", " ", 
+    RowBox[{"volumeFromDepth", "[", 
+     RowBox[{"example", ",", " ", "depth"}], "]"}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Plot", "[", 
+  RowBox[{"expr", ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"depth", ",", " ", "0", ",", " ", 
+     RowBox[{"height", "[", "example", "]"}]}], "}"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<volume\>\""}], "}"}]}]}], 
   "]"}]}], "Input",ExpressionUUID->"d33dea15-52d3-4fc6-b5eb-56f252c6effe"],
 
 Cell[BoxData[{
@@ -3979,6 +4659,21 @@ Cell[BoxData[{
    RowBox[{"AxesLabel", "\[Rule]", 
     RowBox[{"{", 
      RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}]}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"expr", " ", "=", " ", 
+   RowBox[{"test", " ", "@", " ", 
+    RowBox[{"volumeFromDepth", "[", 
+     RowBox[{"example", ",", " ", "depth"}], "]"}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Plot", "[", 
+  RowBox[{"expr", ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"depth", ",", " ", "0", ",", " ", 
+     RowBox[{"height", "[", "example", "]"}]}], "}"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<volume\>\""}], "}"}]}]}], 
   "]"}]}], "Input",ExpressionUUID->"35eda6f6-5a57-4e30-a8af-0a0babe5e1e3"],
 
 Cell[BoxData[{
@@ -4006,10 +4701,25 @@ Cell[BoxData[{
    RowBox[{"AxesLabel", "\[Rule]", 
     RowBox[{"{", 
      RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}]}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"expr", " ", "=", " ", 
+   RowBox[{"test", " ", "@", " ", 
+    RowBox[{"volumeFromDepth", "[", 
+     RowBox[{"example", ",", " ", "depth"}], "]"}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Plot", "[", 
+  RowBox[{"expr", ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"depth", ",", " ", "0", ",", " ", 
+     RowBox[{"height", "[", "example", "]"}]}], "}"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<volume\>\""}], "}"}]}]}], 
   "]"}]}], "Input",ExpressionUUID->"24e450ff-cbe2-4280-b8a6-5197e3d08812"]
 }, Open  ]]
 }, Open  ]]
-}, Closed]],
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -4054,7 +4764,7 @@ Cell[BoxData[{
     RowBox[{"sphere", "[", "r", "]"}], "]"}]}], 
   ";"}]}], "Input",ExpressionUUID->"825d670a-9fb3-4d5f-8adf-18cac6a5ea3e"]
 }, Open  ]]
-}, Closed]],
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -4436,7 +5146,63 @@ Cell[BoxData[{
       RowBox[{"r", ",", "h"}], "]"}], ",", " ", "volume"}], "]"}]}], 
   ";"}], "\[IndentingNewLine]", 
  RowBox[{"N", " ", "@", " ", 
-  "%"}]}], "Input",ExpressionUUID->"89979e70-9edb-403e-bd8d-58a960b500fc"]
+  "%"}]}], "Input",ExpressionUUID->"89979e70-9edb-403e-bd8d-58a960b500fc"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"c", ":", " ", 
+     RowBox[{"invertedSphericalCap", "[", 
+      RowBox[{"r_", ",", " ", "h_"}], "]"}]}], ",", " ", "depth_"}], "]"}], 
+  " ", ":=", " ", 
+  RowBox[{
+   RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
+    RowBox[{
+     RowBox[{"invertedSphericalCap", "[", 
+      RowBox[{"rr", ",", " ", "hh"}], "]"}], ",", " ", "dd"}], "]"}], " ", "/.",
+    " ", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"rr", " ", "\[Rule]", " ", "r"}], ",", " ", 
+     RowBox[{"hh", "\[Rule]", " ", "h"}], ",", " ", 
+     RowBox[{"dd", "\[Rule]", " ", "depth"}]}], 
+    "}"}]}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"c", ":", " ", 
+      RowBox[{"invertedSphericalCap", "[", 
+       RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "angled"}], "]"}]}], 
+     ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+   RowBox[{
+    RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
+     RowBox[{
+      RowBox[{"invertedSphericalCap", "[", 
+       RowBox[{"rr", ",", " ", "\[Alpha]\[Alpha]", ",", " ", "angled"}], 
+       "]"}], ",", " ", "dd"}], "]"}], " ", "/.", " ", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"rr", " ", "\[Rule]", " ", "r"}], ",", " ", 
+      RowBox[{"\[Alpha]\[Alpha]", " ", "\[Rule]", " ", "\[Alpha]"}], ",", " ", 
+      RowBox[{"dd", "\[Rule]", " ", "depth"}]}], "}"}]}]}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"invertedSphericalCap", "[", 
+      RowBox[{"r", ",", "h"}], "]"}], ",", " ", "depth"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", " ", "[", 
+    RowBox[{
+     RowBox[{"invertedSphericalCap", "[", 
+      RowBox[{"r", ",", " ", "\[Alpha]", ",", " ", "angled"}], "]"}], ",", 
+     " ", "depth"}], "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"04ef3025-ce77-4df1-b107-ccafe7ce2374"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -4467,10 +5233,25 @@ Cell[BoxData[{
    RowBox[{"AxesLabel", "\[Rule]", 
     RowBox[{"{", 
      RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}]}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"expr", " ", "=", " ", 
+   RowBox[{"test", " ", "@", " ", 
+    RowBox[{"volumeFromDepth", "[", 
+     RowBox[{"example", ",", " ", "depth"}], "]"}]}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Plot", "[", 
+  RowBox[{"expr", ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"depth", ",", " ", "0", ",", " ", 
+     RowBox[{"height", "[", "example", "]"}]}], "}"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<volume\>\""}], "}"}]}]}], 
   "]"}]}], "Input",ExpressionUUID->"53fd61fa-d164-4f12-a815-97b811c98e57"]
 }, Open  ]]
 }, Open  ]]
-}, Closed]],
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -4540,29 +5321,65 @@ Cell[BoxData[
      RowBox[{"unknownShape", "[", 
       RowBox[{"h_", ",", " ", "vol_"}], "]"}]}], ",", " ", "v_"}], "]"}], " ",
    ":=", " ", 
-  RowBox[{"Module", "[", 
+  RowBox[{"Piecewise", "[", 
    RowBox[{
-    RowBox[{"{", "}"}], ",", "\[IndentingNewLine]", 
-    RowBox[{"(*", 
+    RowBox[{"{", "\[IndentingNewLine]", 
      RowBox[{
-      RowBox[{"printCell", "[", 
-       RowBox[{"{", 
-        RowBox[{"depthFromVolume", ",", " ", 
-         RowBox[{"\"\<h\>\"", " ", "\[Rule]", " ", "h"}], ",", " ", 
-         RowBox[{"\"\<vol\>\"", " ", "\[Rule]", " ", "vol"}], ",", " ", 
-         RowBox[{"\"\<v\>\"", " ", "\[Rule]", " ", "v"}]}], "}"}], "]"}], 
-      ";"}], "*)"}], "\[IndentingNewLine]", 
-    RowBox[{"If", "[", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", " ", 
+        RowBox[{
+         RowBox[{"v", " ", "\[LessEqual]", " ", "0"}], " ", "||", " ", 
+         RowBox[{"h", " ", "\[LessEqual]", " ", "0"}], " ", "||", " ", 
+         RowBox[{"vol", " ", "\[LessEqual]", " ", "0"}]}]}], "}"}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{"{", 
+       RowBox[{"h", ",", " ", 
+        RowBox[{"v", " ", "\[GreaterEqual]", " ", "vol"}]}], "}"}]}], 
+     "\[IndentingNewLine]", "}"}], ",", " ", "Indeterminate"}], 
+   "]"}]}]], "Input",ExpressionUUID->"40b91c84-0d0b-4406-a2e4-fc6cd8994920"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"u", ":", " ", 
+     RowBox[{"unknownShape", "[", 
+      RowBox[{"h_", ",", " ", "vol_"}], "]"}]}], ",", " ", "depth_"}], "]"}], 
+  " ", ":=", " ", 
+  RowBox[{"Piecewise", "[", 
+   RowBox[{
+    RowBox[{"{", "\[IndentingNewLine]", 
      RowBox[{
-      RowBox[{
-       RowBox[{"v", " ", "\[LessEqual]", " ", "0"}], " ", "||", " ", 
-       RowBox[{"h", " ", "\[LessEqual]", " ", "0"}], " ", "||", " ", 
-       RowBox[{"vol", " ", "\[LessEqual]", " ", "0"}]}], ",", 
-      "\[IndentingNewLine]", "0", ",", "\[IndentingNewLine]", 
-      "Indeterminate"}], "]"}]}], 
-   "]"}]}]], "Input",ExpressionUUID->"20290e9e-85ae-4d6d-91cb-a940ba2e281b"]
+      RowBox[{"{", 
+       RowBox[{"0", ",", " ", 
+        RowBox[{
+         RowBox[{"depth", " ", "\[LessEqual]", " ", "0"}], " ", "||", " ", 
+         RowBox[{"h", " ", "\[LessEqual]", " ", "0"}], " ", "||", " ", 
+         RowBox[{"vol", " ", "\[LessEqual]", " ", "0"}]}]}], "}"}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{"{", 
+       RowBox[{"vol", ",", " ", 
+        RowBox[{"depth", " ", "\[GreaterEqual]", " ", "h"}]}], "}"}]}], 
+     "\[IndentingNewLine]", "}"}], ",", " ", "Indeterminate"}], 
+   "]"}]}]], "Input",ExpressionUUID->"cd93ea22-1889-4e7a-ae6a-c3704f5c8465"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"depthFromVolume", "[", 
+    RowBox[{
+     RowBox[{"unknownShape", "[", 
+      RowBox[{"h", ",", " ", "vol"}], "]"}], ",", " ", "v"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"volumeFromDepth", "[", 
+    RowBox[{
+     RowBox[{"unknownShape", "[", 
+      RowBox[{"h", ",", " ", "vol"}], "]"}], ",", " ", "depth"}], "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"52a90ae7-afe5-4ef4-ad7c-00a6a8b77c5f"]
 }, Open  ]]
-}, Closed]],
+}, Open  ]],
 
 Cell[CellGroupData[{
 
@@ -4834,15 +5651,92 @@ Cell[BoxData[{
         RowBox[{"{", 
          RowBox[{"dOther", ",", " ", "True"}], "}"}]}], "\[IndentingNewLine]",
         "}"}], "\[IndentingNewLine]", "]"}]}]}], "\[IndentingNewLine]", 
-   "]"}]}]}], "Input",ExpressionUUID->"822c7c9a-45a1-4985-9e6a-a5d25a917edd"]
+   "]"}]}]}], "Input",ExpressionUUID->"822c7c9a-45a1-4985-9e6a-a5d25a917edd"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"c", ":", " ", 
+     RowBox[{"conicalTestTube", "[", 
+      RowBox[{
+       RowBox[{"{", 
+        RowBox[{"idTop_", ",", " ", "idHip_", ",", " ", "idBottom_"}], "}"}], 
+       ",", " ", 
+       RowBox[{"{", 
+        RowBox[{"hTop_", ",", " ", "hBottom_"}], "}"}]}], "]"}]}], ",", " ", 
+    "depth_"}], "]"}], " ", ":=", 
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"toCanonical", " ", "@", " ", "c"}], ",", " ", "depth"}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"volumeFromDepth", "[", 
+   RowBox[{
+    RowBox[{"c", ":", " ", 
+     RowBox[{"conicalTestTube", "[", 
+      RowBox[{"cylindrical_", ",", " ", "conical_", ",", " ", "cap_"}], 
+      "]"}]}], ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+     "hCylindrical", ",", " ", "hConical", ",", " ", "hCap", ",", " ", 
+      "vFromCap", ",", " ", "vFromConical", ",", " ", "vOther", ",", " ", 
+      "result"}], "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"hCap", " ", "=", " ", 
+      RowBox[{"height", "[", "cap", "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"hConical", " ", "=", " ", 
+      RowBox[{"height", "[", "conical", "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"vFromCap", " ", "=", " ", 
+      RowBox[{"volumeFromDepth", "[", 
+       RowBox[{"cap", ",", " ", "depth"}], "]"}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"vFromConical", " ", "=", " ", 
+      RowBox[{
+       RowBox[{"volume", "[", "cap", "]"}], " ", "+", " ", 
+       RowBox[{"volumeFromDepth", "[", 
+        RowBox[{"conical", ",", " ", 
+         RowBox[{"depth", " ", "-", " ", "hCap"}]}], "]"}]}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"vOther", " ", "=", " ", 
+      RowBox[{
+       RowBox[{"volume", "[", "cap", "]"}], " ", "+", " ", 
+       RowBox[{"volume", "[", "conical", "]"}], " ", "+", " ", 
+       RowBox[{"volumeFromDepth", "[", 
+        RowBox[{"cylindrical", ",", " ", 
+         RowBox[{
+         "depth", " ", "-", " ", "hCap", " ", "-", " ", "hConical"}]}], 
+        "]"}]}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"Piecewise", "[", "\[IndentingNewLine]", 
+      RowBox[{"{", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"vFromCap", ",", " ", 
+          RowBox[{"depth", " ", "\[LessEqual]", " ", "hCap"}]}], "}"}], ",", 
+        "\[IndentingNewLine]", 
+        RowBox[{"{", 
+         RowBox[{"vFromConical", ",", " ", 
+          RowBox[{"depth", " ", "\[LessEqual]", " ", "hConical"}]}], "}"}], 
+        ",", "\[IndentingNewLine]", 
+        RowBox[{"{", 
+         RowBox[{"vOther", ",", " ", "True"}], "}"}]}], "\[IndentingNewLine]",
+        "}"}], "\[IndentingNewLine]", "]"}]}]}], "\[IndentingNewLine]", 
+   "]"}]}]}], "Input",ExpressionUUID->"356a2c95-aabd-4600-ad19-65931bc12f47"]
 }, Open  ]]
 }, Open  ]]
-}, Closed]],
+}, Open  ]],
 
 Cell[CellGroupData[{
 
 Cell["Examples", \
 "Section",ExpressionUUID->"7ede1e2a-f44b-446a-b011-142b40917c16"],
+
+Cell[BoxData[
+ RowBox[{"\"\<a\>\"", " ", "<>", " ", 
+  "\"\<b\>\""}]], \
+"Input",ExpressionUUID->"199e7488-509f-4e14-a327-7f909addcea6"],
 
 Cell[CellGroupData[{
 
@@ -5322,7 +6216,7 @@ It should be noted that the specification indicates that the upper \
 \[CloseCurlyQuote]t actually an inverted frustum but has a bit of a flare at \
 the top.\
 \>", "Text",ExpressionUUID->"256d249b-09af-426b-9593-83dcbf8dac53"]
-}, Open  ]]
+}, Closed]]
 }, Closed]],
 
 Cell[CellGroupData[{
@@ -6017,8 +6911,8 @@ Cell[BoxData[{
     RowBox[{"parts", "[", "example", "]"}], "[", "\"\<cylindrical\>\"", "]"}],
     "]"}], " ", "*", " ", 
   "2"}]}], "Input",ExpressionUUID->"cc359633-ac13-471f-98cd-b4e627c9935a"]
-}, Open  ]]
-}, Open  ]],
+}, Closed]]
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -6237,7 +7131,7 @@ Cell[BoxData[{
   RowBox[{"test", " ", "@", " ", 
    RowBox[{"volume", " ", "@", " ", "fittedIdt"}]}], 
   ";"}]}], "Input",ExpressionUUID->"e0795983-552f-487d-b98c-b389c7119e83"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -6763,7 +7657,7 @@ Cell[BoxData[
       "\[IndentingNewLine]", 
       RowBox[{"ListPlot", "[", "falconData", "]"}]}], "]"}]}]}], 
   "]"}]], "Input",ExpressionUUID->"bc443cb3-9f50-4e20-8b4e-6613d6e756cb"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -7023,7 +7917,7 @@ Cell[BoxData[
     " ", "//", " ", "Normal"}], " ", "//", " ", 
   "ColumnForm"}]], \
 "Input",ExpressionUUID->"f33ae077-a49f-4b64-8cee-64fee06939c4"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -7235,12 +8129,13 @@ Cell[BoxData[{
        RowBox[{"tubes", "[", "idtTube", "]"}], ",", " ", "250"}], "]"}]}], 
     ")"}]}], ";"}]}], \
 "Input",ExpressionUUID->"4e006680-68ec-40ef-89e5-91d06df2ea3f"]
+}, Closed]]
 }, Open  ]],
 
 Cell[CellGroupData[{
 
 Cell["For volume as parameter", \
-"Subsubsection",ExpressionUUID->"817692a6-7edd-4123-b792-c99e0121f905"],
+"Subsection",ExpressionUUID->"817692a6-7edd-4123-b792-c99e0121f905"],
 
 Cell[BoxData[{
  RowBox[{
@@ -7251,8 +8146,8 @@ Cell[BoxData[{
     RowBox[{
      RowBox[{"CellPrint", "[", 
       RowBox[{"TextCell", "[", 
-       RowBox[{"name", ",", " ", "\"\<Text\>\""}], "]"}], "]"}], ";", 
-     "\[IndentingNewLine]", 
+       RowBox[{"name", ",", " ", "\"\<Subsubsection\>\""}], "]"}], "]"}], ";",
+      "\[IndentingNewLine]", 
      RowBox[{"If", "[", 
       RowBox[{
        RowBox[{
@@ -7267,15 +8162,15 @@ Cell[BoxData[{
        RowBox[{
         RowBox[{"test", " ", "@", " ", 
          RowBox[{"N", " ", "@", " ", 
+          RowBox[{"volume", "[", 
+           RowBox[{"tubes", "[", "name", "]"}], "]"}]}]}], ";", 
+        "\[IndentingNewLine]", 
+        RowBox[{"test", " ", "@", " ", 
+         RowBox[{"N", " ", "@", " ", 
           RowBox[{"depthFromVolume", "[", 
            RowBox[{
             RowBox[{"tubes", "[", "name", "]"}], ",", " ", "vol"}], "]"}]}]}],
          ";", "\[IndentingNewLine]", 
-        RowBox[{"test", " ", "@", " ", 
-         RowBox[{"N", " ", "@", " ", 
-          RowBox[{"volume", "[", 
-           RowBox[{"tubes", "[", "name", "]"}], "]"}]}]}], ";", 
-        "\[IndentingNewLine]", 
         RowBox[{"test", " ", "@", " ", 
          RowBox[{"N", " ", "@", " ", 
           RowBox[{"depthFromVolume", "[", 
@@ -7301,16 +8196,65 @@ Cell[BoxData[{
             RowBox[{"{", 
              RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}], 
            ",", " ", 
-           RowBox[{"PlotLabel", "\[Rule]", "name"}], ",", " ", 
+           RowBox[{"PlotLabel", "\[Rule]", 
+            RowBox[{
+             RowBox[{"ToString", "[", "name", "]"}], " ", "<>", " ", 
+             "\"\<: depth from volume\>\""}]}], ",", " ", 
            RowBox[{"AxesOrigin", "\[Rule]", 
             RowBox[{"{", 
-             RowBox[{"0", ",", "0"}], "}"}]}]}], "]"}]}]}]}], 
+             RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
+           RowBox[{"ImageSize", "\[Rule]", "Large"}]}], "]"}]}], ";", 
+        "\[IndentingNewLine]", "\[IndentingNewLine]", 
+        RowBox[{"test", " ", "@", " ", 
+         RowBox[{"N", " ", "@", " ", 
+          RowBox[{"volumeFromDepth", "[", 
+           RowBox[{
+            RowBox[{"tubes", "[", "name", "]"}], ",", " ", "depth"}], 
+           "]"}]}]}], ";", "\[IndentingNewLine]", 
+        RowBox[{"test", " ", "@", " ", 
+         RowBox[{"N", " ", "@", " ", 
+          RowBox[{"volumeFromDepth", "[", 
+           RowBox[{
+            RowBox[{"tubes", "[", "name", "]"}], ",", 
+            RowBox[{"height", "[", 
+             RowBox[{"tubes", "[", "name", "]"}], "]"}]}], "]"}]}]}], ";", 
+        "\[IndentingNewLine]", 
+        RowBox[{"expr", " ", "=", " ", 
+         RowBox[{"N", " ", "@", " ", 
+          RowBox[{"volumeFromDepth", "[", 
+           RowBox[{
+            RowBox[{"tubes", "[", "name", "]"}], ",", " ", "depth"}], 
+           "]"}]}]}], ";", "\[IndentingNewLine]", 
+        RowBox[{"printCell", " ", "@", " ", 
+         RowBox[{"Plot", "[", 
+          RowBox[{"expr", ",", " ", 
+           RowBox[{"{", 
+            RowBox[{"depth", ",", " ", "0", ",", " ", 
+             RowBox[{"height", "[", 
+              RowBox[{"tubes", "[", "name", "]"}], "]"}]}], "}"}], ",", " ", 
+           RowBox[{"AxesLabel", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"\"\<depth\>\"", ",", " ", "\"\<volume\>\""}], "}"}]}], 
+           ",", " ", 
+           RowBox[{"PlotLabel", "\[Rule]", 
+            RowBox[{
+             RowBox[{"ToString", "[", "name", "]"}], "<>", " ", 
+             "\"\<: volume from depth\>\""}]}], ",", " ", 
+           RowBox[{"AxesOrigin", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
+           RowBox[{"ImageSize", "\[Rule]", "Large"}]}], "]"}]}], ";"}]}], 
       "\[IndentingNewLine]", "]"}]}]}], "]"}]}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"printAndPlot", " ", "/@", " ", 
    RowBox[{"Keys", "[", "tubes", "]"}]}], 
   ";"}]}], "Input",ExpressionUUID->"129de215-3421-42f4-8c4b-ec8a27a7a42b"]
 }, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Comparing Models", \
+"Subsection",ExpressionUUID->"195ff429-0478-417d-b861-6534fedbe351"],
 
 Cell[CellGroupData[{
 
@@ -7643,8 +8587,8 @@ Cell[BoxData[{
 }, Open  ]]
 }, Open  ]]
 },
-WindowSize->{1503, 1548},
-WindowMargins->{{Automatic, 868}, {Automatic, 0}},
+WindowSize->{1888, 1548},
+WindowMargins->{{Automatic, 483}, {Automatic, 0}},
 PrintingCopies->1,
 PrintingPageRange->{32000, 32000},
 PrintingOptions->{"Magnification"->1.,
@@ -7654,7 +8598,6 @@ PrivateNotebookOptions->{"FileOutlineCache"->False},
 CellContext->Notebook,
 CellLabelAutoDelete->True,
 TrackCellChangeTimes->False,
-Magnification:>0.9 Inherited,
 FrontEndVersion->"12.0 for Microsoft Windows (64-bit) (April 8, 2019)",
 StyleDefinitions->Notebook[{
    Cell[
