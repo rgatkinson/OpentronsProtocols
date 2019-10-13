@@ -913,8 +913,10 @@ class UnknownWellGeometry(WellGeometry):
 
     @property
     def well_capacity(self):
-        # noinspection PyBroadException
-        return self.well.properties.get('total-liquid-volume', fpu.infinity)
+        result = self.well.max_volume()
+        if result is None:
+            result = fpu.infinity
+        return result
 
 
 # Calculated from Mathematica models. We use fittedIdtTube.
