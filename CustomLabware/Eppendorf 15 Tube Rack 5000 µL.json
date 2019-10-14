@@ -1,0 +1,230 @@
+{
+    "ordering": [
+        [
+            "A1",
+            "B1",
+            "C1"
+        ],
+        [
+            "A2",
+            "B2",
+            "C2"
+        ],
+        [
+            "A3",
+            "B3",
+            "C3"
+        ],
+        [
+            "A4",
+            "B4",
+            "C4"
+        ],
+        [
+            "A5",
+            "B5",
+            "C5"
+        ]
+    ],
+    "brand": {
+        "brand": "Eppendorf",
+        "brandId": [
+            "0030108310"
+        ]
+    },
+    "metadata": {
+        "displayName": "Eppendorf 15 Tube Rack 5000 µL",
+        "displayCategory": "tubeRack",
+        "displayVolumeUnits": "µL",
+        "tags": []
+    },
+    "dimensions": {
+        "xDimension": 127.76,
+        "yDimension": 85.48,
+        "zDimension": 80.83
+    },
+    "wells": {
+        "A1": {
+            "depth": 55.03,
+            "totalLiquidVolume": 5000,
+            "shape": "circular",
+            "diameter": 13.93,
+            "x": 13.88,
+            "y": 67.74,
+            "z": 25.8
+        },
+        "B1": {
+            "depth": 55.03,
+            "totalLiquidVolume": 5000,
+            "shape": "circular",
+            "diameter": 13.93,
+            "x": 13.88,
+            "y": 42.74,
+            "z": 25.8
+        },
+        "C1": {
+            "depth": 55.03,
+            "totalLiquidVolume": 5000,
+            "shape": "circular",
+            "diameter": 13.93,
+            "x": 13.88,
+            "y": 17.74,
+            "z": 25.8
+        },
+        "A2": {
+            "depth": 55.03,
+            "totalLiquidVolume": 5000,
+            "shape": "circular",
+            "diameter": 13.93,
+            "x": 38.88,
+            "y": 67.74,
+            "z": 25.8
+        },
+        "B2": {
+            "depth": 55.03,
+            "totalLiquidVolume": 5000,
+            "shape": "circular",
+            "diameter": 13.93,
+            "x": 38.88,
+            "y": 42.74,
+            "z": 25.8
+        },
+        "C2": {
+            "depth": 55.03,
+            "totalLiquidVolume": 5000,
+            "shape": "circular",
+            "diameter": 13.93,
+            "x": 38.88,
+            "y": 17.74,
+            "z": 25.8
+        },
+        "A3": {
+            "depth": 55.03,
+            "totalLiquidVolume": 5000,
+            "shape": "circular",
+            "diameter": 13.93,
+            "x": 63.88,
+            "y": 67.74,
+            "z": 25.8
+        },
+        "B3": {
+            "depth": 55.03,
+            "totalLiquidVolume": 5000,
+            "shape": "circular",
+            "diameter": 13.93,
+            "x": 63.88,
+            "y": 42.74,
+            "z": 25.8
+        },
+        "C3": {
+            "depth": 55.03,
+            "totalLiquidVolume": 5000,
+            "shape": "circular",
+            "diameter": 13.93,
+            "x": 63.88,
+            "y": 17.74,
+            "z": 25.8
+        },
+        "A4": {
+            "depth": 55.03,
+            "totalLiquidVolume": 5000,
+            "shape": "circular",
+            "diameter": 13.93,
+            "x": 88.88,
+            "y": 67.74,
+            "z": 25.8
+        },
+        "B4": {
+            "depth": 55.03,
+            "totalLiquidVolume": 5000,
+            "shape": "circular",
+            "diameter": 13.93,
+            "x": 88.88,
+            "y": 42.74,
+            "z": 25.8
+        },
+        "C4": {
+            "depth": 55.03,
+            "totalLiquidVolume": 5000,
+            "shape": "circular",
+            "diameter": 13.93,
+            "x": 88.88,
+            "y": 17.74,
+            "z": 25.8
+        },
+        "A5": {
+            "depth": 55.03,
+            "totalLiquidVolume": 5000,
+            "shape": "circular",
+            "diameter": 13.93,
+            "x": 113.88,
+            "y": 67.74,
+            "z": 25.8
+        },
+        "B5": {
+            "depth": 55.03,
+            "totalLiquidVolume": 5000,
+            "shape": "circular",
+            "diameter": 13.93,
+            "x": 113.88,
+            "y": 42.74,
+            "z": 25.8
+        },
+        "C5": {
+            "depth": 55.03,
+            "totalLiquidVolume": 5000,
+            "shape": "circular",
+            "diameter": 13.93,
+            "x": 113.88,
+            "y": 17.74,
+            "z": 25.8
+        }
+    },
+    "groups": [
+        {
+            "metadata": {
+                "displayName": "Eppendorf 15 Tube Rack 5000 µL",
+                "displayCategory": "tubeRack",
+                "wellBottomShape": "v"
+            },
+            "brand": {
+                "brand": "Eppendorf",
+                "brandId": [
+                    "0030108310"
+                ]
+            },
+            "wells": [
+                "A1",
+                "B1",
+                "C1",
+                "A2",
+                "B2",
+                "C2",
+                "A3",
+                "B3",
+                "C3",
+                "A4",
+                "B4",
+                "C4",
+                "A5",
+                "B5",
+                "C5"
+            ]
+        }
+    ],
+    "parameters": {
+        "format": "irregular",
+        "quirks": [],
+        "isTiprack": false,
+        "isMagneticModuleCompatible": false,
+        "loadName": "eppendorf_15_tuberack_5000ul"
+    },
+    "namespace": "custom_beta",
+    "version": 1,
+    "schemaVersion": 2,
+    "cornerOffsetFromSlot": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+    }
+}
