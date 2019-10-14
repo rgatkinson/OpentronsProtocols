@@ -1829,7 +1829,7 @@ strand_b_min_vol = 600  # set as best one can
 
 # Tip usage
 p10_start_tip = 'A1'
-p50_start_tip = 'A1'
+p50_start_tip = 'G2'
 config.trash_control = True
 
 # Diluting each strand
