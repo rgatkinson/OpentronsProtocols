@@ -6,7 +6,7 @@ Cell["Well Geometry", \
 
 Cell["\<\
 Robert Atkinson
-13 Oct 2019\
+14 Oct 2019\
 \>", "Author",ExpressionUUID->"05aea015-05f3-4e99-899d-20a8cd5792a1"],
 
 Cell["We explore the geometry of various labware.", \
@@ -208,7 +208,7 @@ Cell[BoxData[{
        RowBox[{"2", ",", " ", "1"}], "]"}], "]"}], " ", "//", " ", "\n", 
      "   ", "Union"}], ",", " ", "except"}], 
    "]"}]}]}], "Input",ExpressionUUID->"8fd2fa68-86de-4381-bd21-52f2d089b894"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -249,7 +249,7 @@ Cell[BoxData[{
        RowBox[{"genericShape", ",", " ", "depth"}], "]"}], " ", "=", " ", 
       "result"}], ";", "\[IndentingNewLine]", "result"}]}], 
    "]"}]}]}], "Input",ExpressionUUID->"01203d0f-6f73-43d7-a6ac-5d5039ab00cf"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -920,7 +920,77 @@ Cell[BoxData[{
      RowBox[{"cone", "[", 
       RowBox[{"h", ",", " ", "\[Beta]", ",", "baseangle"}], "]"}], ",", " ", 
      "depth"}], "]"}]}], 
-  ";"}]}], "Input",ExpressionUUID->"3e10e391-98be-41fa-86d7-c2e1b93636da"]
+  ";"}]}], "Input",ExpressionUUID->"3e10e391-98be-41fa-86d7-c2e1b93636da"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"radiusFromDepth", "[", 
+   RowBox[{
+    RowBox[{"c", ":", 
+     RowBox[{"cone", "[", 
+      RowBox[{"h_", ",", " ", "\[Alpha]_", ",", " ", "apexangle"}], "]"}]}], 
+    ",", " ", "depth_"}], "]"}], ":=", " ", 
+  RowBox[{"Block", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"hRemaining", ",", " ", "eqn", ",", " ", "result"}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"hRemaining", " ", "=", " ", 
+      RowBox[{"h", " ", "-", "depth"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"eqn", " ", "=", " ", 
+      RowBox[{
+       RowBox[{"result", " ", "/", " ", "hRemaining"}], " ", "\[Equal]", " ", 
+       RowBox[{"Tan", "[", "\[Alpha]", "]"}]}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"result", " ", "/.", " ", 
+      RowBox[{"First", " ", "@", " ", 
+       RowBox[{"Solve", "[", 
+        RowBox[{"eqn", ",", " ", "result"}], "]"}]}]}]}]}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"radiusFromDepth", "[", 
+   RowBox[{
+    RowBox[{"c", ":", 
+     RowBox[{"cone", "[", 
+      RowBox[{"h_", ",", " ", "r_"}], "]"}]}], ",", " ", "depth_"}], "]"}], 
+  " ", ":=", " ", 
+  RowBox[{"radiusFromDepth", "[", 
+   RowBox[{
+    RowBox[{"toApexAngled", "[", "c", "]"}], ",", " ", "depth"}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"c", ":", 
+      RowBox[{"cone", "[", 
+       RowBox[{"h_", ",", " ", "\[Beta]_", ",", " ", "baseangle"}], "]"}]}], 
+     ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"toApexAngled", "[", "c", "]"}], ",", " ", "depth"}], "]"}]}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"cone", "[", 
+      RowBox[{"h", ",", " ", "\[Alpha]", ",", " ", "apexangle"}], "]"}], ",", 
+     " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"cone", "[", 
+      RowBox[{"h", ",", " ", "\[Beta]", ",", " ", "baseangle"}], "]"}], ",", 
+     " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"cone", "[", 
+      RowBox[{"h", ",", " ", "r"}], "]"}], ",", " ", "depth"}], "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"c6636688-b185-4c6a-9d45-4820ebf45d3c"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -971,7 +1041,7 @@ Cell[BoxData[{
   "]"}]}], "Input",ExpressionUUID->"0e3171ab-ef8e-4c05-bf51-94bbc9231f19"]
 }, Open  ]]
 }, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -1187,8 +1257,8 @@ Cell[BoxData[{
    RowBox[{"assumptions", "[", 
     RowBox[{"invertedCone", "[", 
      RowBox[{"h", ",", " ", "\[Beta]", ",", " ", "baseangle"}], "]"}], 
-    "]"}]}], 
-  ";"}]}], "Input",ExpressionUUID->"f5542b20-341b-4fd8-9897-6fd8eefccfbf"],
+    "]"}]}], ";"}]}], \
+"Input",ExpressionUUID->"f5542b20-341b-4fd8-9897-6fd8eefccfbf"],
 
 Cell[BoxData[{
  RowBox[{
@@ -1746,7 +1816,74 @@ Cell[BoxData[{
     RowBox[{
      RowBox[{"invertedCone", "[", 
       RowBox[{"h", ",", "r"}], "]"}], ",", " ", "depth"}], "]"}]}], 
-  ";"}]}], "Input",ExpressionUUID->"e00202a6-4961-4416-b612-b5b07579dab7"]
+  ";"}]}], "Input",ExpressionUUID->"e00202a6-4961-4416-b612-b5b07579dab7"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"radiusFromDepth", "[", 
+   RowBox[{
+    RowBox[{"c", ":", 
+     RowBox[{"invertedCone", "[", 
+      RowBox[{"h_", ",", " ", "\[Alpha]_", ",", " ", "apexangle"}], "]"}]}], 
+    ",", " ", "depth_"}], "]"}], ":=", " ", 
+  RowBox[{"Block", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"eqn", ",", " ", "result"}], "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"eqn", " ", "=", " ", 
+      RowBox[{
+       RowBox[{"result", " ", "/", " ", "depth"}], " ", "\[Equal]", " ", 
+       RowBox[{"Tan", "[", "\[Alpha]", "]"}]}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"result", " ", "/.", " ", 
+      RowBox[{"First", " ", "@", " ", 
+       RowBox[{"Solve", "[", 
+        RowBox[{"eqn", ",", " ", "result"}], "]"}]}]}]}]}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"radiusFromDepth", "[", 
+   RowBox[{
+    RowBox[{"c", ":", 
+     RowBox[{"invertedCone", "[", 
+      RowBox[{"h_", ",", " ", "r_"}], "]"}]}], ",", " ", "depth_"}], "]"}], 
+  " ", ":=", " ", 
+  RowBox[{"radiusFromDepth", "[", 
+   RowBox[{
+    RowBox[{"toApexAngled", "[", "c", "]"}], ",", " ", "depth"}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"c", ":", 
+      RowBox[{"invertedCone", "[", 
+       RowBox[{"h_", ",", " ", "\[Beta]_", ",", " ", "baseangle"}], "]"}]}], 
+     ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"toApexAngled", "[", "c", "]"}], ",", " ", "depth"}], "]"}]}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"invertedCone", "[", 
+      RowBox[{"h", ",", " ", "\[Alpha]", ",", " ", "apexangle"}], "]"}], ",", 
+     " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"invertedCone", "[", 
+      RowBox[{"h", ",", " ", "\[Beta]", ",", " ", "baseangle"}], "]"}], ",", 
+     " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"invertedCone", "[", 
+      RowBox[{"h", ",", " ", "r"}], "]"}], ",", " ", "depth"}], "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"cda09f6f-ee41-4880-bbc7-749cb340b998"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -1839,7 +1976,7 @@ Cell[BoxData[{
   "]"}]}], "Input",ExpressionUUID->"282eb182-df4b-4463-93e5-fc1a32a32034"]
 }, Open  ]]
 }, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -2026,7 +2163,17 @@ Cell[BoxData[{
     RowBox[{
      RowBox[{"cylinder", "[", 
       RowBox[{"h", ",", "r"}], "]"}], ",", " ", "depth"}], "]"}]}], 
-  ";"}]}], "Input",ExpressionUUID->"dceaf8ec-59ed-4a13-a1a7-e094d2a61301"]
+  ";"}]}], "Input",ExpressionUUID->"dceaf8ec-59ed-4a13-a1a7-e094d2a61301"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"radiusFromDepth", "[", 
+   RowBox[{
+    RowBox[{"c", ":", 
+     RowBox[{"cylinder", "[", 
+      RowBox[{"h_", ",", " ", "r_"}], "]"}]}], ",", " ", "_depth"}], "]"}], 
+  " ", ":=", " ", 
+  "r"}]], "Input",ExpressionUUID->"33af20d4-9438-44d3-bb14-201c11669413"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -2075,7 +2222,7 @@ Cell[BoxData[{
   "]"}]}], "Input",ExpressionUUID->"645760b4-e03e-4f17-9d9a-58f468eb9693"]
 }, Open  ]]
 }, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -2409,7 +2556,7 @@ Cell[BoxData[{
     RowBox[{"frustum", "[", 
      RowBox[{"h", ",", "rbig", ",", "rsmall"}], "]"}], "]"}]}], 
   ";"}]}], "Input",ExpressionUUID->"0f0b9eda-12cd-45a1-9f0d-b134567af187"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -2562,7 +2709,7 @@ Cell[BoxData[{
   RowBox[{"test", " ", "@", " ", 
    RowBox[{"toCartesian", " ", "@", " ", "%"}]}], 
   ";"}]}], "Input",ExpressionUUID->"368feb84-cda9-4cb8-80f4-ae631e545ed3"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -2849,7 +2996,7 @@ Cell[BoxData[
        RowBox[{"h", ",", " ", "r", ",", " ", "\[Beta]", ",", "baseangle"}], 
        "]"}], "]"}]}], 
     ";"}]}]}]], "Input",ExpressionUUID->"20ad7c34-c981-48f0-b1ad-ff0dc60f43d5"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -3074,7 +3221,7 @@ Cell[BoxData[{
       "h", ",", " ", "r", ",", " ", "\[Beta]", ",", " ", "baseangle"}], "]"}],
       ",", " ", "vol"}], "]"}]}], 
   ";"}]}], "Input",ExpressionUUID->"486b7795-d005-4bbf-bfe2-3e2be519cb74"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -3219,7 +3366,7 @@ Cell[BoxData[{
    RowBox[{"depthFromVolume", "[", 
     RowBox[{"generalBaseFrustum", ",", " ", "vol"}], "]"}]}], 
   ";"}]}], "Input",ExpressionUUID->"6432cfe7-9db1-4d4b-9570-5ebfb2d1caa9"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -3436,7 +3583,7 @@ Cell[BoxData[{
   RowBox[{"depthFromVolume2", "[", 
    RowBox[{"f", ",", " ", "vol"}], 
    "]"}]}]}], "Input",ExpressionUUID->"c442ce4a-c298-4e09-bb63-0d154d36a9f8"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -3532,6 +3679,90 @@ Cell[BoxData[{
       RowBox[{"h", ",", " ", "rbig", ",", " ", "rsmall"}], "]"}], ",", " ", 
      "depth"}], "]"}]}], 
   ";"}]}], "Input",ExpressionUUID->"16419e09-8c12-49e3-b2df-2b8fb72bb598"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Radius from Depth", \
+"Subsubsection",ExpressionUUID->"abbae4be-be80-48ac-b8de-ac459641fbfc"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"radiusFromDepth", "[", 
+   RowBox[{
+    RowBox[{"f", ":", 
+     RowBox[{"frustum", "[", 
+      RowBox[{
+      "h_", ",", " ", "rbig_", ",", " ", "\[Beta]_", ",", " ", "baseangle"}], 
+      "]"}]}], ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Block", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"eqn", ",", " ", "result"}], "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"eqn", " ", "=", " ", 
+      RowBox[{
+       RowBox[{"depth", " ", "/", " ", 
+        RowBox[{"(", 
+         RowBox[{"rbig", " ", "-", " ", "result"}], ")"}]}], " ", "\[Equal]", 
+       " ", 
+       RowBox[{"Tan", "[", "\[Beta]", "]"}]}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"result", " ", "/.", " ", 
+      RowBox[{"First", " ", "@", " ", 
+       RowBox[{"Solve", "[", 
+        RowBox[{"eqn", ",", " ", "result"}], "]"}]}]}]}]}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"radiusFromDepth", "[", 
+   RowBox[{
+    RowBox[{"f", ":", 
+     RowBox[{"frustum", "[", 
+      RowBox[{
+      "h_", ",", " ", "rbig_", ",", " ", "\[Alpha]_", ",", "apexangle"}], 
+      "]"}]}], ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"radiusFromDepth", "[", 
+   RowBox[{
+    RowBox[{"toBaseAngled", "[", "f", "]"}], ",", " ", "depth"}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"f", ":", 
+      RowBox[{"frustum", "[", 
+       RowBox[{"h_", ",", " ", "rbig_", ",", " ", "rsmall_"}], "]"}]}], ",", 
+     " ", "depth_"}], "]"}], " ", ":=", " ", 
+   RowBox[{"FullSimplify", "[", 
+    RowBox[{
+     RowBox[{"radiusFromDepth", "[", 
+      RowBox[{
+       RowBox[{"toBaseAngled", "[", "f", "]"}], ",", " ", "depth"}], "]"}], 
+     ",", " ", 
+     RowBox[{"assumptions", "[", "f", "]"}]}], "]"}]}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"frustum", "[", 
+      RowBox[{"h", ",", " ", "rbig", ",", " ", "\[Alpha]", ",", "apexangle"}],
+       "]"}], ",", " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"frustum", "[", 
+      RowBox[{
+      "h", ",", " ", "rbig", ",", " ", "\[Beta]", ",", " ", "baseangle"}], 
+      "]"}], ",", " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"frustum", "[", 
+      RowBox[{"h", ",", " ", "rbig", ",", " ", "rsmall"}], "]"}], ",", " ", 
+     "depth"}], "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"27b02798-e055-431b-9a7a-77a50d6e338a"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -3664,9 +3895,9 @@ Cell[BoxData[{
     RowBox[{"{", 
      RowBox[{"\"\<depth\>\"", ",", " ", "\"\<volume\>\""}], "}"}]}]}], 
   "]"}]}], "Input",ExpressionUUID->"9469b866-a170-479c-bffc-09c629d76d17"]
+}, Closed]]
 }, Open  ]]
-}, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -3762,7 +3993,7 @@ Cell[BoxData[{
   RowBox[{"frustum", "[", 
    RowBox[{"h", ",", " ", "rbig", ",", " ", "rsmall"}], 
    "]"}]}]}], "Input",ExpressionUUID->"a6739c7b-9aa3-408a-b396-b2690d6ed6d0"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -4007,7 +4238,7 @@ Cell[BoxData[{
     RowBox[{"invertedFrustum", "[", 
      RowBox[{"h", ",", "rbig", ",", "rsmall"}], "]"}], "]"}]}], 
   ";"}]}], "Input",ExpressionUUID->"4e013663-8fe4-4fb2-998f-23685bb7b498"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -4160,7 +4391,7 @@ Cell[BoxData[{
   RowBox[{"test", " ", "@", " ", 
    RowBox[{"toCartesian", " ", "@", " ", "%"}]}], 
   ";"}]}], "Input",ExpressionUUID->"e67e3e6f-7525-4885-ba45-105b17c2b4fe"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -4309,7 +4540,7 @@ Cell[BoxData[{
   RowBox[{
   "v", ",", " ", "v\[Alpha]", ",", " ", "v\[Alpha]2", ",", " ", "v\[Beta]"}], 
   "]"}]}], "Input",ExpressionUUID->"b09bcd68-9242-4bc6-8b04-967425f89911"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -4581,7 +4812,86 @@ Cell[BoxData[{
      RowBox[{"invertedFrustum", "[", 
       RowBox[{"h", ",", " ", "rbig", ",", " ", "rsmall"}], "]"}], ",", " ", 
      "depth"}], "]"}]}], 
-  ";"}]}], "Input",ExpressionUUID->"f3d05a2a-b169-40f3-a4b9-bee8fca8578a"]
+  ";"}]}], "Input",ExpressionUUID->"f3d05a2a-b169-40f3-a4b9-bee8fca8578a"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"radiusFromDepth", "[", 
+   RowBox[{
+    RowBox[{"f", ":", 
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{
+      "h_", ",", " ", "rbig_", ",", " ", "\[Beta]_", ",", " ", "baseangle"}], 
+      "]"}]}], ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Block", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"eqn", ",", " ", "result"}], "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"eqn", " ", "=", " ", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"(", 
+         RowBox[{"h", " ", "-", " ", "depth"}], ")"}], " ", "/", " ", 
+        RowBox[{"(", 
+         RowBox[{"rbig", " ", "-", " ", "result"}], ")"}]}], " ", "\[Equal]", 
+       " ", 
+       RowBox[{"Tan", "[", "\[Beta]", "]"}]}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"Simplify", "[", 
+      RowBox[{
+       RowBox[{"result", " ", "/.", " ", 
+        RowBox[{"First", " ", "@", " ", 
+         RowBox[{"Solve", "[", 
+          RowBox[{"eqn", ",", " ", "result"}], "]"}]}]}], ",", " ", 
+       RowBox[{"assumptions", "[", "f", "]"}]}], "]"}]}]}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"radiusFromDepth", "[", 
+   RowBox[{
+    RowBox[{"f", ":", 
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{
+      "h_", ",", " ", "rbig_", ",", " ", "\[Alpha]_", ",", "apexangle"}], 
+      "]"}]}], ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"radiusFromDepth", "[", 
+   RowBox[{
+    RowBox[{"toBaseAngled", "[", "f", "]"}], ",", " ", "depth"}], 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"f", ":", 
+      RowBox[{"invertedFrustum", "[", 
+       RowBox[{"h_", ",", " ", "rbig_", ",", " ", "rsmall_"}], "]"}]}], ",", 
+     " ", "depth_"}], "]"}], " ", ":=", " ", 
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"toBaseAngled", "[", "f", "]"}], ",", " ", "depth"}], "]"}]}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{"h", ",", " ", "rbig", ",", " ", "\[Alpha]", ",", "apexangle"}],
+       "]"}], ",", " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{
+      "h", ",", " ", "rbig", ",", " ", "\[Beta]", ",", " ", "baseangle"}], 
+      "]"}], ",", " ", "depth"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"radiusFromDepth", "[", 
+    RowBox[{
+     RowBox[{"invertedFrustum", "[", 
+      RowBox[{"h", ",", " ", "rbig", ",", " ", "rsmall"}], "]"}], ",", " ", 
+     "depth"}], "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"e9dae895-24c7-49c6-b924-a136a853649a"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -4714,9 +5024,9 @@ Cell[BoxData[{
     RowBox[{"{", 
      RowBox[{"\"\<depth\>\"", ",", " ", "\"\<volume\>\""}], "}"}]}]}], 
   "]"}]}], "Input",ExpressionUUID->"24e450ff-cbe2-4280-b8a6-5197e3d08812"]
+}, Closed]]
 }, Open  ]]
-}, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -4761,7 +5071,7 @@ Cell[BoxData[{
     RowBox[{"sphere", "[", "r", "]"}], "]"}]}], 
   ";"}]}], "Input",ExpressionUUID->"825d670a-9fb3-4d5f-8adf-18cac6a5ea3e"]
 }, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -8462,7 +8772,7 @@ Cell[BoxData[{
 }, Open  ]]
 }, Open  ]]
 },
-WindowSize->{1355, 1548},
+WindowSize->{1355, 1541},
 WindowMargins->{{Automatic, -7}, {Automatic, 0}},
 PrintingCopies->1,
 PrintingPageRange->{32000, 32000},
@@ -8473,6 +8783,7 @@ PrivateNotebookOptions->{"FileOutlineCache"->False},
 CellContext->Notebook,
 CellLabelAutoDelete->True,
 TrackCellChangeTimes->False,
+Magnification:>0.9 Inherited,
 FrontEndVersion->"12.0 for Microsoft Windows (64-bit) (April 8, 2019)",
 StyleDefinitions->Notebook[{
    Cell[
