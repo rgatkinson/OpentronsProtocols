@@ -221,8 +221,7 @@ class Fpu(object):
 fpu = Fpu()
 
 def is_indexable(value):
-    result = hasattr(type(value), '__getitem__')
-    return result
+    return hasattr(type(value), '__getitem__')
 
 def is_integer(n):
     return n.__class__ is int
@@ -1888,7 +1887,6 @@ class CustomTubeRack(object):  # todo: allow for 'height above rim when hanging'
             for well_grid in self.well_grids:
                 if well_grid.contains_indices(item_name):
                     return well_grid.__getitem__(Point(item_name) - well_grid.origin)
-        print(is_indexable(item_name))
         raise IndexError
 
     @property
