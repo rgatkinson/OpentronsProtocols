@@ -1829,7 +1829,7 @@ strand_b_min_vol = 600  # set as best one can
 
 # Tip usage
 p10_start_tip = 'A1'
-p50_start_tip = 'G2'
+p50_start_tip = 'E4'
 config.trash_control = True
 
 # Diluting each strand
@@ -1932,7 +1932,7 @@ note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, min_
 note_liquid(location=strand_b, name='StrandB', concentration=strand_b_conc, min_volume=strand_b_min_vol)  # ditto
 note_liquid(location=diluted_strand_a, name='Diluted StrandA')
 note_liquid(location=diluted_strand_b, name='Diluted StrandB')
-note_liquid(location=master_mix, name='Master Mix')
+note_liquid(location=master_mix, name='Master Mix', initial_volume=3000)
 for buffer in buffers:
     note_liquid(location=buffer[0], name='Buffer', initial_volume=buffer[1], concentration='5x')
 for evagreen in evagreens:
@@ -2063,7 +2063,7 @@ def createMasterMix():
 def plateMasterMix():
     log('Plating Master Mix')
     master_mix_per_well = 28
-    p50.transfer(master_mix_per_well, master_mix, usedWells(),
+    p50.transfer(master_mix_per_well, master_mix, plate.wells('A1'),
                  new_tip='once',
                  trash=config.trash_control,
                  full_dispense=True)
@@ -2153,10 +2153,6 @@ def plateEverythingAndMix():
 # Off to the races
 ########################################################################################################################
 
-wells_to_verify = [master_mix, water, plate.wells('A1'), plate.wells('A12'), plate.wells('H1'), plate.wells('H12')]
-verify_well_locations(wells_to_verify, p50)
-
-createMasterMix()
-robot.pause(pretty.format('Weigh master mix tube: current_volume={0:n}', get_well_volume(master_mix).current_volume))
+# robot.pause(pretty.format('Weigh master mix tube: current_volume={0:n}', get_well_volume(master_mix).current_volume))
 plateMasterMix()
 robot.pause(pretty.format('Weigh master mix tube: current_volume={0:n}', get_well_volume(master_mix).current_volume))
