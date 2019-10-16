@@ -892,6 +892,10 @@ class WellGeometry(object):
     def min_aspiratable_volume(self):  # minimum volume we can aspirate from (i.e.: we leave at least this much behind when aspirating)
         return 0
 
+    @property
+    def height_above_rack(self):  # when hanging
+        return 0
+
     @abstractmethod
     def depth_from_volume(self, volume):  # best calc'n of depth from the given volume. may be an interval
         pass
@@ -903,8 +907,6 @@ class WellGeometry(object):
     @abstractmethod
     def radius_from_depth(self, depth):
         pass
-
-    # todo: add 'height above when hanging in rack'
 
     #-------------------------------------------------------------------------------------------------------------------
     # Calculations
@@ -973,6 +975,10 @@ class IdtTubeWellGeometry(WellGeometry):
     @property
     def min_aspiratable_volume(self):
         return 75  # a rough estimate, but seems functionally useful
+
+    @property
+    def height_above_rack(self):
+        raise NotImplementedError  # we need to measure!
 
 
 # Calculated from Mathematica models, specifically modelBioRad3[]
@@ -1058,6 +1064,10 @@ class Eppendorf1point5mlTubeGeometry(WellGeometry):
     def well_diameter_at_top(self):
         return 9.41503
 
+    @property
+    def height_above_rack(self):
+        return 2
+
 
 class Eppendorf5point0mlTubeGeometry(WellGeometry):  # TODO: this data is approximate, and needs to be validated empirically
     def __init__(self, well):
@@ -1101,6 +1111,10 @@ class Eppendorf5point0mlTubeGeometry(WellGeometry):  # TODO: this data is approx
     @property
     def well_diameter_at_top(self):
         return 14.8
+
+    @property
+    def height_above_rack(self):
+        return 2.2
 
 
 # Calculated from Mathematica models fitted to empirical depth vs volume measurements
