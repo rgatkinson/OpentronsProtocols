@@ -1297,10 +1297,10 @@ class EnhancedPipette(Pipette):
                                     pass
                             else:
                                 pass  # currently empty
-                    if do_blow:
-                        self._blowout_during_transfer(dispense['location'], **kwargs)
                     if do_touch:
                         self.touch_tip(touch_tip)
+                    if do_blow:
+                        self._blowout_during_transfer(dispense['location'], **kwargs)
                     if do_drop:
                         tips = self._drop_tip_during_transfer(tips, i, total_transfers, **kwargs)
                 else:
