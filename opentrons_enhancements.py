@@ -827,7 +827,7 @@ class WellVolume(object):
         assert volume >= 0
         if not self.initial_volume_known:
             self.set_initial_volume(interval([volume,
-                                              fpu.infinity if self.well is None else get_well_volume(self.well).capacity]))
+                                              fpu.infinity if self.well is None else get_well_geometry(self.well).well_capacity]))
         self._track_volume(-volume)
 
     def dispense(self, volume):
@@ -1412,10 +1412,10 @@ class EnhancedPipette(Pipette):
                                     pass
                             else:
                                 pass  # currently empty
-                    if do_blow:
-                        self._blowout_during_transfer(dispense['location'], **kwargs)
                     if do_touch:
                         self.touch_tip(touch_tip)
+                    if do_blow:
+                        self._blowout_during_transfer(dispense['location'], **kwargs)
                     if do_drop:
                         tips = self._drop_tip_during_transfer(tips, i, total_transfers, **kwargs)
                 else:

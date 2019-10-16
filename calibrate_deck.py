@@ -12,8 +12,10 @@ metadata = {
 
 # region Enhancements
 
+import collections
 import enum
 import json
+import math
 import string
 import warnings
 from abc import abstractmethod
@@ -218,6 +220,9 @@ class Fpu(object):
 
 
 fpu = Fpu()
+
+def is_indexable(value):
+    return hasattr(type(value), '__getitem__')
 
 def is_integer(n):
     return n.__class__ is int
@@ -759,8 +764,10 @@ def note_liquid(location, name=None, initial_volume=None, min_volume=None, conce
     robot.comment('Liquid: %s' % serialized)
 
 ########################################################################################################################
-# Well enhancements
+# Well Enhancements
 ########################################################################################################################
+
+# region Well Enhancements
 
 class WellVolume(object):
 
@@ -828,7 +835,7 @@ class WellVolume(object):
         assert volume >= 0
         if not self.initial_volume_known:
             self.set_initial_volume(interval([volume,
-                                              fpu.infinity if self.well is None else get_well_volume(self.well).capacity]))
+                                              fpu.infinity if self.well is None else get_well_geometry(self.well).well_capacity]))
         self._track_volume(-volume)
 
     def dispense(self, volume):
@@ -854,7 +861,6 @@ def get_well_volume(well):
         well.contents = WellVolume(well)
         return well.contents
 
-# region Well Geometry
 class WellGeometry(object):
 
     #-------------------------------------------------------------------------------------------------------------------
@@ -870,14 +876,26 @@ class WellGeometry(object):
 
     @property
     def well_capacity(self):  # default to what Opentrons gave us
-        result = self.well.max_volume()
+        result = self.well.max_volume() if self.well is not None else None
         if result is None:
             result = fpu.infinity
         return result
 
     @property
     def well_depth(self):  # default to what Opentrons gave us
-        return self.well.z_size()
+        return self.well.z_size() if self.well is not None else fpu.infinity
+
+    @property
+    def well_diameter_at_top(self):
+        return self.radius_from_depth(self.well_depth) * 2  # a generic impl; subclasses can optimize
+
+    @property
+    def min_aspiratable_volume(self):  # minimum volume we can aspirate from (i.e.: we leave at least this much behind when aspirating)
+        return 0
+
+    @property
+    def height_above_rack(self):  # when hanging
+        return 0
 
     @abstractmethod
     def depth_from_volume(self, volume):  # best calc'n of depth from the given volume. may be an interval
@@ -887,9 +905,9 @@ class WellGeometry(object):
     def volume_from_depth(self, depth):
         pass
 
-    @property
-    def min_aspiratable_volume(self):  # minimum volume we can aspirate from (i.e.: we leave at least this much behind when aspirating)
-        return 0
+    @abstractmethod
+    def radius_from_depth(self, depth):
+        pass
 
     #-------------------------------------------------------------------------------------------------------------------
     # Calculations
@@ -904,7 +922,7 @@ class WellGeometry(object):
 
 
 class UnknownWellGeometry(WellGeometry):
-    def __init__(self, well):
+    def __init__(self, well=None):
         super().__init__(well)
 
     def depth_from_volume(self, volume):
@@ -912,6 +930,9 @@ class UnknownWellGeometry(WellGeometry):
 
     def volume_from_depth(self, depth):
         return interval([0, self.well_capacity])
+
+    def radius_from_depth(self, depth):
+        return self.well.properties['diameter'] / 2 if self.well is not None else fpu.infinity
 
 
 # Calculated from Mathematica models. We use fittedIdtTube.
@@ -933,6 +954,13 @@ class IdtTubeWellGeometry(WellGeometry):
             return 1.32891 * cube(depth)
         return -134.222 + 54.4688 * depth
 
+    def radius_from_depth(self, depth):
+        if depth <= 0:
+            return 0
+        if depth <= 3.69629:
+            return 1.1265 * depth
+        return 4.16389
+
     @property
     def well_capacity(self):
         return 2153.47
@@ -942,8 +970,16 @@ class IdtTubeWellGeometry(WellGeometry):
         return 42
 
     @property
+    def well_diameter_at_top(self):
+        return 8.32778
+
+    @property
     def min_aspiratable_volume(self):
         return 75  # a rough estimate, but seems functionally useful
+
+    @property
+    def height_above_rack(self):
+        raise NotImplementedError  # we need to measure!
 
 
 # Calculated from Mathematica models, specifically modelBioRad3[]
@@ -965,6 +1001,13 @@ class Biorad96WellPlateWellGeometry(WellGeometry):
             return depth * (5.47391 + (0.638269 + 0.0248078 * depth) * depth)
         return -91.7099 + 23.414 * depth
 
+    def radius_from_depth(self, depth):
+        if depth <= 0:
+            return 0
+        if depth <= 9.16092:
+            return 1.32 + 0.153915 * depth
+        return 2.73
+
     @property
     def well_capacity(self):
         return 255.051
@@ -972,6 +1015,10 @@ class Biorad96WellPlateWellGeometry(WellGeometry):
     @property
     def well_depth(self):
         return 14.81
+
+    @property
+    def well_diameter_at_top(self):
+        return 5.46
 
 
 # Calculated from Mathematica models. We use fittedEppendorf1$5ml
@@ -997,6 +1044,15 @@ class Eppendorf1point5mlTubeGeometry(WellGeometry):
             return -23.6979 + depth * (10.7209 + (0.774099 + 0.0186313 * depth) * depth)
         return -458.451 + depth * (50.4795 + (0.232875 + 0.000358103 * depth) * depth)
 
+    def radius_from_depth(self, depth):
+        if depth <= 0:
+            return 0
+        if depth < 1.96866:
+            raise NotImplementedError
+        if depth <= 18.8106:
+            return 1.84731 + 0.133385 * depth
+        return 4.00851 + 0.0184922 * depth
+
     @property
     def well_capacity(self):
         return 1801.76
@@ -1004,6 +1060,62 @@ class Eppendorf1point5mlTubeGeometry(WellGeometry):
     @property
     def well_depth(self):
         return 37.8
+
+    @property
+    def well_diameter_at_top(self):
+        return 9.41503
+
+    @property
+    def height_above_rack(self):
+        return 2
+
+
+class Eppendorf5point0mlTubeGeometry(WellGeometry):  # TODO: this data is approximate, and needs to be validated empirically
+    def __init__(self, well):
+        super().__init__(well)
+
+    def depth_from_volume(self, volume):
+        if volume <= 0:
+            return 0
+        if volume <= 4.27649:
+            return 0.924121 * cube_root(volume)
+        if volume <= 1070.52:
+            return -4.3014 + 1.35221 * cube_root(58.5528 + 4.77465 * volume)
+        return -302.957 + 14.623 * cube_root(9914.27 + 0.716197 * volume)
+
+    def volume_from_depth(self, depth):  # WRONG
+        if depth <= 0:
+            return 0
+        if depth <= 1.5:
+            return 1.26711 * cube(depth)
+        if depth <= 19.08:
+            return -5.52171 + depth * (4.70188 + (1.09311 + 0.0847093 * depth) * depth)
+        return -1426.29 + depth * (122.954 + (0.405847 + 0.000446539 * depth) * depth)
+
+    def radius_from_depth(self, depth):
+        if depth <= 0:
+            return 0
+        if depth <= 1.5:
+            return 1.1 * depth
+        if depth <= 19.08:
+            return 1.22338 + 0.284414 * depth
+        return 6.256 + 0.0206498 * depth
+
+    @property
+    def well_capacity(self):
+        return 6706.91
+
+    @property
+    def well_depth(self):
+        return 55.4
+
+    @property
+    def well_diameter_at_top(self):
+        return 14.8
+
+    @property
+    def height_above_rack(self):
+        return 2.2
 
 
 # Calculated from Mathematica models fitted to empirical depth vs volume measurements
@@ -1025,6 +1137,13 @@ class FalconTube15mlGeometry(WellGeometry):
             return depth * (4.14078 + (0.899131 + 0.0650793 * depth) * depth)
         return -1761.24 + depth * (131.833 + (0.164018 + 0.0000680198 * depth) * depth)
 
+    def radius_from_depth(self, depth):
+        if depth <= 0:
+            return 0.0
+        if depth <= 22.0945:
+            return 1.14806 + 0.249291 * depth
+        return 6.47795 + 0.00805941 * depth
+
     @property
     def well_capacity(self):
         return 16202.8  # compare to 15000 in opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical
@@ -1032,6 +1151,10 @@ class FalconTube15mlGeometry(WellGeometry):
     @property
     def well_depth(self):
         return 118.07  # compare to 117.5 in opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical
+
+    @property
+    def well_diameter_at_top(self):
+        return 14.859
 
 
 def get_well_geometry(well):
@@ -1297,10 +1420,10 @@ class EnhancedPipette(Pipette):
                                     pass
                             else:
                                 pass  # currently empty
-                    if do_blow:
-                        self._blowout_during_transfer(dispense['location'], **kwargs)
                     if do_touch:
                         self.touch_tip(touch_tip)
+                    if do_blow:
+                        self._blowout_during_transfer(dispense['location'], **kwargs)
                     if do_drop:
                         tips = self._drop_tip_during_transfer(tips, i, total_transfers, **kwargs)
                 else:
@@ -1633,6 +1756,229 @@ class EnhancedPipette(Pipette):
         xyz = pose_tracker.absolute(self.robot.poses, self)
         return Vector(xyz)
 
+########################################################################################################################
+# Custom Labware
+########################################################################################################################
+
+# region Custom Labware
+
+class Point(object):
+    def __init__(self, x=0, y=0):
+        if is_indexable(x):
+            y = x[1]
+            x = x[0]
+        self.x = x
+        self.y = y
+
+    def __add__(self, p):
+        return Point(self.x + p.x, self.y + p.y)
+
+    def __radd__(self, other):
+        return self + other
+
+    def __sub__(self, p):
+        return Point(self.x - p.x, self.y - p.y)
+
+    def __mul__(self, scalar):
+        return Point(self.x * scalar, self.y * scalar)
+
+    def __rmul__(self, other):
+        return self * other
+
+    def __truediv__(self, scalar):
+        return Point(self.x / scalar, self.y / scalar)
+
+    def __getitem__(self, index):
+        if index == 0:
+            return self.x
+        if index == 1:
+            return self.y
+        raise IndexError
+
+class PointF(Point):
+    def __init__(self, x: float = 0.0, y: float = 0.0):
+        super().__init__(x,y)
+
+
+class WellGrid(object):
+    def __init__(self, grid_size: Point, incr: PointF, offset=PointF(), origin_name='A1', origin=None, well_geometry=None):
+        self.grid_size = grid_size
+        self.origin = self.well_name_to_indices(origin_name) if origin is None else origin
+        self.max = self.origin + self.grid_size
+        self.incr = incr
+        self.offset = offset
+        self.wells_matrix = self._create_wells_matrix(well_geometry)
+        self.wells_by_name = dict()
+        for row in self.wells_matrix:
+            for well_dict in row:
+                self.wells_by_name[well_dict['name']] = well_dict
+
+    def __getitem__(self, item):
+        if isinstance(item, str):
+            return self.wells_by_name[item]
+        if is_indexable(item):
+            return self.wells_matrix[item[1]][item[0]]  # item is (x,y), which is (col, row)
+        raise IndexError
+
+    @staticmethod
+    def well_name_to_indices(name):  # zero-based
+        return Point(ord(name[1]) - ord('1'), ord(name[0]) - ord('A'))
+
+    def contains_indices(self, indices):
+        return self.origin.x <= indices[0] < self.max.x and self.origin.y <= indices[1] < self.max.y
+
+    def definition_map(self, z_overall):
+        result = collections.OrderedDict()
+        for col in range(self.grid_size.x):
+            for row in range(self.grid_size.y):
+                rc = self.wells_matrix[row][col]
+                if rc['geometry'] is not None:
+                    d = dict()
+                    geometry: WellGeometry = rc['geometry']
+                    d['depth'] = geometry.well_depth
+                    d['totalLiquidVolume'] = geometry.well_capacity
+                    d['shape'] = 'circular'
+                    d['diameter'] = geometry.well_diameter_at_top
+                    d['x'] = rc['x']
+                    d['y'] = rc['y']
+                    d['z'] = z_overall - d['depth']
+                    result[rc['name']] = d
+        return result
+
+    @property
+    def well_ordering(self):  # values are well name, but in a 2D matrix
+        result = []
+        for col in range(self.grid_size.x):
+            col_result = []
+            for row in range(self.grid_size.y):
+                col_result.append(self.wells_matrix[row][col]['name'])
+            result.append(col_result)
+        return result
+
+    @property
+    def well_names(self):
+        return [well_name for column in self.well_ordering for well_name in column]
+
+    def _create_wells_matrix(self, well_geometry=None):
+        result = [None] * self.grid_size.y
+        for row in range(self.grid_size.y):
+            result[row] = [None] * self.grid_size.x
+            for col in range(self.grid_size.x):
+                d = {  # coordinate system origin is in lower left
+                    'x': self.offset.x + self.incr.x * col,
+                    'y': self.offset.y + self.incr.y * (self.grid_size.y - 1 - row),
+                    'name': chr(ord('A')+row+self.origin.x) + chr(ord('1')+col+self.origin.y),
+                    'geometry': None
+                }
+                if well_geometry is not None:
+                    d['geometry'] = well_geometry(well=None)
+                result[row][col] = d
+        return result
+
+
+class CustomTubeRack(object):  # todo: allow for 'height above rim when hanging' and tubes that are taller than the rack
+    def __init__(self, name, dimensions=None, brand=None, brandIds=None, well_grids=None):
+        assert name is not None
+        self.name = name
+        self.dimensions = dimensions if dimensions is not None else Vector(x=0, y=0, z=0)
+        self.brand = {
+            'brand': brand if brand is not None else 'Atkinson Labs'
+        }
+        if brandIds is not None:
+            self.brand['brandId'] = brandIds
+        self.metadata = {
+            'displayName': name,
+            'displayCategory': 'tubeRack',
+            'displayVolumeUnits': 'µL',
+            'tags': []
+        }
+        self.well_grids = [] if well_grids is None else well_grids
+        self.load_result = None
+
+    def __getitem__(self, item_name):
+        if isinstance(item_name, str):
+            return self.__getitem__(WellGrid.well_name_to_indices(item_name))
+        if is_indexable(item_name):
+            for well_grid in self.well_grids:
+                if well_grid.contains_indices(item_name):
+                    return well_grid.__getitem__(Point(item_name) - well_grid.origin)
+        raise IndexError
+
+    @property
+    def well_names(self):
+        result = []
+        for well_grid in self.well_grids:
+            result.extend(well_grid.well_names)
+        return result
+
+    def _definition_map(self):
+        result = collections.OrderedDict()
+        result['ordering'] = []
+        for well_grid in self.well_grids:
+            result['ordering'].extend(well_grid.well_ordering)
+        result['brand'] = self.brand
+        result['metadata'] = self.metadata
+        result['dimensions'] = {
+            'xDimension': self.dimensions.coordinates.x,
+            'yDimension': self.dimensions.coordinates.y,
+            'zDimension': self.dimensions.coordinates.z
+        }
+        result['wells'] = collections.OrderedDict()
+        for well_grid in self.well_grids:
+            for name, definition in well_grid.definition_map(self.dimensions.coordinates.z).items():
+                result['wells'][name] = definition
+        # todo: add 'groups'
+        result['parameters'] = {
+            'format': 'regular',
+            'quirks': [],
+            'isTiprack': False,
+            'isMagneticModuleCompatible': False,
+            'loadName': self.name
+        }
+        result['namespace'] = 'custom_beta'
+        result['version'] = 1
+        result['schemaVersion'] = 2
+        result['cornerOffsetFromSlot'] = {'x': 0, 'y': 0, 'z': 0}
+        return result
+
+    def load(self, slot):
+        slot = str(slot)
+        if self.load_result is None:
+            def_map = self._definition_map()
+            self.load_result = robot.add_container_by_definition(def_map, slot, label=self.name)
+            for well_name in self.well_names:
+                well = self.load_result.wells(well_name)
+                geometry = self[well_name].get('geometry', None)
+                if geometry is not None:
+                    assert geometry.well is None or geometry.well is well
+                    assert getattr(well, 'geometry', None) is None or well.geometry is geometry
+                    geometry.well = well
+                    well.geometry = geometry
+        return self.load_result
+
+class Opentrons15RackInsert(CustomTubeRack):
+    def __init__(self, name, brand=None, well_geometry=None):
+        super().__init__(
+            dimensions=Vector(127.76, 85.48, 80.83),
+            name=name,
+            brand=brand,
+            well_grids=[WellGrid(
+                grid_size=Point(5, 3),
+                incr=PointF(25.0, 25.0),
+                offset=PointF(13.88, 17.74),
+                well_geometry=well_geometry)
+            ])
+
+# test = Opentrons15RackInsert(name='Atkinson 15 Tube Rack 5000 µL', well_geometry=Eppendorf5point0mlTubeGeometry)
+# test_loaded = test.load(slot=9)
+# print(test_loaded)
+
+# endregion
+
+########################################################################################################################
+# Logging
+########################################################################################################################
+
 # region Commands
 
 # Enhance well name to include any label that might be present
@@ -1754,6 +2100,9 @@ def square(value):
 
 def cube(value):
     return value * value * value
+
+def sqrt(value):
+    return math.sqrt(value)
 
 def cube_root(value):
     return pow(value, 1.0/3.0)
