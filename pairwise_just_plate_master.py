@@ -2178,7 +2178,7 @@ strand_b_min_vol = 600  # set as best one can
 
 # Tip usage
 p10_start_tip = 'A1'
-p50_start_tip = 'G2'
+p50_start_tip = 'H2'
 config.trash_control = True
 
 # Diluting each strand
@@ -2281,7 +2281,7 @@ note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, min_
 note_liquid(location=strand_b, name='StrandB', concentration=strand_b_conc, min_volume=strand_b_min_vol)  # ditto
 note_liquid(location=diluted_strand_a, name='Diluted StrandA')
 note_liquid(location=diluted_strand_b, name='Diluted StrandB')
-note_liquid(location=master_mix, name='Master Mix')
+note_liquid(location=master_mix, name='Master Mix', min_volume=3000)
 for buffer in buffers:
     note_liquid(location=buffer[0], name='Buffer', initial_volume=buffer[1], concentration='5x')
 for evagreen in evagreens:
@@ -2502,7 +2502,7 @@ def plateEverythingAndMix():
 # Off to the races
 ########################################################################################################################
 
-wells_to_verify = [master_mix, plate.wells('A1'), plate.wells('A12'), plate.wells('H1'), plate.wells('H12')]
+# wells_to_verify = [master_mix, plate.wells('A1'), plate.wells('A12'), plate.wells('H1'), plate.wells('H12')]
 # verify_well_locations(wells_to_verify, p50)
 
 # createMasterMix()
