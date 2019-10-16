@@ -19,8 +19,7 @@ def uniq(l):
 
 
 def set_speed(rate):
-    robot.head_speed(x=(600 * rate), y=(400 * rate),
-                      z=(125 * rate), a=(125 * rate))
+    robot.head_speed(x=(600 * rate), y=(400 * rate), z=(125 * rate), a=(125 * rate))
 
 
 def run_custom_protocol(pipette_name, mount, tiprack_load_name, labware_def):
@@ -29,8 +28,7 @@ def run_custom_protocol(pipette_name, mount, tiprack_load_name, labware_def):
     test_labware = robot.add_container_by_definition(
         labware_def,
         TEST_LABWARE_SLOT,
-        label=labware_def.get('metadata', {}).get(
-            'displayName', 'test labware')
+        label=labware_def.get('metadata', {}).get('displayName', 'test labware')
     )
 
     num_cols = len(labware_def.get('ordering', [[]]))
@@ -74,7 +72,6 @@ def run_custom_protocol(pipette_name, mount, tiprack_load_name, labware_def):
         # need to interact with labware for it to show on deck map
         pipette.blow_out(well)
 
-
     set_speed(1.0)
     pipette.return_tip()
 
@@ -85,5 +82,4 @@ PIPETTE_MOUNT = 'right'
 PIPETTE_NAME = 'P300_Single'
 TIPRACK_LOADNAME = 'opentrons_96_tiprack_300ul'
 
-run_custom_protocol(PIPETTE_NAME, PIPETTE_MOUNT,
-                    TIPRACK_LOADNAME, json.loads(LABWARE_DEF))
+run_custom_protocol(PIPETTE_NAME, PIPETTE_MOUNT, TIPRACK_LOADNAME, json.loads(LABWARE_DEF))

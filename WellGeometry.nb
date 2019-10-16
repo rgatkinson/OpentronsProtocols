@@ -6,7 +6,7 @@ Cell["Well Geometry", \
 
 Cell["\<\
 Robert Atkinson
-15 Oct 2019\
+16 Oct 2019\
 \>", "Author",ExpressionUUID->"05aea015-05f3-4e99-899d-20a8cd5792a1"],
 
 Cell["We explore the geometry of various labware.", \
@@ -7007,7 +7007,9 @@ Cell["Bio-rad Deep Well Plates", \
 Cell["\<\
 The Bio-rad specs aren\[CloseCurlyQuote]t internally consistent: there\
 \[CloseCurlyQuote]s a conflict between the well diameters and height vs the \
-well angle.\
+well angle. Update: it\[CloseCurlyQuote]s now known that apparent discrepancy \
+arises from the fact that the wells in fact have a capacity larger than 200 \
+\[Mu]L.\
 \>", "Text",ExpressionUUID->"2a9f73b4-c02a-40c1-869c-ac93770c855b"],
 
 Cell["We first choose to honor the well bottom width (2.64). ", \
@@ -8483,26 +8485,77 @@ Cell[BoxData[
           RowBox[{
           "though", " ", "we", " ", "treat", " ", "it", " ", "as", " ", 
            "such"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+        RowBox[{"(*", 
+         RowBox[{
+          RowBox[{"eppendorf5$0mL", " ", "\[Rule]", " ", 
+           RowBox[{"Block", "[", 
+            RowBox[{
+             RowBox[{"{", 
+              RowBox[{
+               RowBox[{"side", "=", 
+                RowBox[{"56.7", " ", "-", " ", "55.4"}]}], ",", " ", 
+               RowBox[{"hTop", " ", "=", " ", 
+                RowBox[{"34.12", " ", "+", " ", "2.2"}]}]}], "}"}], ",", " ", 
+             "\[IndentingNewLine]", 
+             RowBox[{"toCanonical", " ", "@", " ", 
+              RowBox[{"conicalTestTube", "[", 
+               RowBox[{
+                RowBox[{"{", 
+                 RowBox[{"14.8", ",", " ", "13.3", ",", " ", "3.3"}], "}"}], 
+                ",", " ", 
+                RowBox[{"{", 
+                 RowBox[{"hTop", ",", " ", 
+                  RowBox[{"55.4", " ", "-", " ", "hTop"}]}], "}"}]}], 
+               "]"}]}]}], "]"}]}], ","}], "*)"}], "\[IndentingNewLine]", 
+        "\[IndentingNewLine]", 
         RowBox[{"eppendorf5$0mL", " ", "\[Rule]", " ", 
          RowBox[{"Block", "[", 
           RowBox[{
            RowBox[{"{", 
             RowBox[{
-             RowBox[{"side", "=", 
-              RowBox[{"56.7", " ", "-", " ", "55.4"}]}], ",", " ", 
+             RowBox[{"hTot", "=", "55.4"}], ",", " ", 
              RowBox[{"hTop", " ", "=", " ", 
-              RowBox[{"34.12", " ", "+", " ", "2.2"}]}]}], "}"}], ",", " ", 
+              RowBox[{"34.12", " ", "+", " ", "2.2"}]}], ",", 
+             RowBox[{"idTop", " ", "=", " ", "14.8"}], ",", " ", 
+             RowBox[{"idMid", " ", "=", " ", "13.3"}], ",", " ", 
+             RowBox[{"idBottom", " ", "=", " ", "3.3"}], ",", " ", "hBottom", 
+             ",", " ", "hCap", ",", " ", "hBottomAndCap"}], "}"}], ",", " ", 
            "\[IndentingNewLine]", 
-           RowBox[{"toCanonical", " ", "@", " ", 
-            RowBox[{"conicalTestTube", "[", 
+           RowBox[{
+            RowBox[{"hBottomAndCap", " ", "=", " ", 
+             RowBox[{"hTot", " ", "-", " ", "hTop"}]}], ";", 
+            "\[IndentingNewLine]", 
+            RowBox[{"hCap", " ", "=", " ", "1.5"}], ";", " ", 
+            RowBox[{"(*", 
+             RowBox[{"a", " ", "guess"}], "*)"}], "\[IndentingNewLine]", 
+            RowBox[{"conicalTestTube", "[", "\[IndentingNewLine]", 
              RowBox[{
-              RowBox[{"{", 
-               RowBox[{"14.8", ",", " ", "13.3", ",", " ", "3.3"}], "}"}], 
-              ",", " ", 
-              RowBox[{"{", 
+              RowBox[{"invertedFrustum", "[", 
                RowBox[{"hTop", ",", " ", 
-                RowBox[{"55.4", " ", "-", " ", "hTop"}]}], "}"}]}], "]"}]}]}],
-           "]"}]}], ",", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+                RowBox[{"idTop", "/", " ", "2"}], ",", " ", 
+                RowBox[{"idMid", "/", "2"}]}], "]"}], ",", 
+              "\[IndentingNewLine]", 
+              RowBox[{"invertedFrustum", "[", 
+               RowBox[{
+                RowBox[{"hBottomAndCap", " ", "-", "hCap"}], ",", " ", 
+                RowBox[{"idMid", " ", "/", "2"}], ",", " ", 
+                RowBox[{"idBottom", " ", "/", " ", "2"}]}], "]"}], ",", 
+              "\[IndentingNewLine]", 
+              RowBox[{"invertedCone", "[", 
+               RowBox[{"hCap", ",", " ", 
+                RowBox[{"idBottom", " ", "/", "2"}]}], "]"}]}], 
+             "\[IndentingNewLine]", "]"}]}]}], "\[IndentingNewLine]", "]"}]}],
+         ",", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+        RowBox[{"generic", " ", "\[Rule]", " ", 
+         RowBox[{"toCanonical", " ", "@", " ", 
+          RowBox[{"conicalTestTube", "[", 
+           RowBox[{
+            RowBox[{"{", 
+             RowBox[{"idTop", ",", " ", "idHip", ",", " ", "idBottom"}], 
+             "}"}], ",", " ", 
+            RowBox[{"{", 
+             RowBox[{"hTop", ",", " ", "hBottom"}], "}"}]}], "]"}]}]}], ",", 
+        "\[IndentingNewLine]", "\[IndentingNewLine]", 
         RowBox[{"eppendorf1$5ml", " ", "\[Rule]", " ", 
          RowBox[{"Block", "[", 
           RowBox[{
@@ -8525,30 +8578,49 @@ Cell[BoxData[
                RowBox[{"hTop", ",", " ", 
                 RowBox[{"37.8", " ", "-", " ", "hTop"}]}], "}"}]}], "]"}]}]}],
            "]"}]}], ",", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+        RowBox[{"(*", " ", 
+         RowBox[{
+         "mixure", " ", "of", " ", "measurements", " ", "and", " ", "values", 
+          " ", "from", " ", "spec", " ", "drawing"}], " ", "*)"}], 
+        "\[IndentingNewLine]", 
+        RowBox[{"(*", " ", 
+         RowBox[{"FWIW", ",", " ", 
+          RowBox[{
+           RowBox[{"Opentrons", " ", "uses", " ", "idTop"}], "=", "14.9"}], 
+          ",", " ", 
+          RowBox[{"depth", "=", 
+           RowBox[{
+            RowBox[{"117.5", ".", " ", "The"}], " ", "latter", " ", "is", " ",
+             "pretty", " ", "good"}]}], ",", " ", 
+          RowBox[{
+           RowBox[{"given", " ", "'"}], 
+           RowBox[{"a", "'"}], " ", 
+           RowBox[{"and", " ", "'"}], 
+           RowBox[{"wall", "'"}], " ", "defined", " ", "here"}], ",", " ", 
+          RowBox[{"so", " ", "our", " ", "depth", " ", 
+           RowBox[{"calc", "'"}], "s", " ", "should", " ", "be", " ", 
+           "good"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+        RowBox[{"(*", " ", 
+         RowBox[{
+          RowBox[{"note", ":", " ", 
+           RowBox[{"as", " ", "defined", " ", "here"}]}], ",", " ", 
+          RowBox[{
+          "we", " ", "only", " ", "have", " ", "14", "mL", " ", "capacity"}], 
+          ",", " ", 
+          RowBox[{"not", " ", "15", 
+           RowBox[{"mL", ".", " ", "Will"}], " ", "affect", " ", "volume", 
+           " ", "calc", " ", "but", " ", "not", " ", "depth", " ", 
+           RowBox[{"calc", "."}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+        RowBox[{"(*", 
+         RowBox[{
+          RowBox[{"2", " ", "-", " ", 
+           RowBox[{"logically", " ", "needed"}]}], ",", " ", 
+          RowBox[{"but", " ", "better", " ", "fit", " ", 
+           RowBox[{"w", "/", "o"}], " ", 
+           RowBox[{"(", 
+            RowBox[{"?", "!"}], ")"}]}]}], "*)"}], "\[IndentingNewLine]", 
         RowBox[{"falcon15ml", " ", "\[Rule]", " ", 
          RowBox[{"Module", "[", "\[IndentingNewLine]", 
-          RowBox[{"(*", " ", 
-           RowBox[{
-           "mixure", " ", "of", " ", "measurements", " ", "and", " ", 
-            "values", " ", "from", " ", "spec", " ", "drawing"}], " ", "*)"}],
-           "\[IndentingNewLine]", 
-          RowBox[{"(*", " ", 
-           RowBox[{"FWIW", ",", " ", 
-            RowBox[{
-             RowBox[{"Opentrons", " ", "uses", " ", "idTop"}], "=", "14.9"}], 
-            ",", " ", 
-            RowBox[{"depth", "=", 
-             RowBox[{
-              RowBox[{"117.5", ".", " ", "The"}], " ", "latter", " ", "is", 
-              " ", "pretty", " ", "good"}]}], ",", " ", 
-            RowBox[{
-             RowBox[{"given", " ", "'"}], 
-             RowBox[{"a", "'"}], " ", 
-             RowBox[{"and", " ", "'"}], 
-             RowBox[{"wall", "'"}], " ", "defined", " ", "here"}], ",", " ", 
-            RowBox[{"so", " ", "our", " ", "depth", " ", 
-             RowBox[{"calc", "'"}], "s", " ", "should", " ", "be", " ", 
-             "good"}]}], " ", "*)"}], "\[IndentingNewLine]", 
           RowBox[{
            RowBox[{"{", 
             RowBox[{
@@ -8588,33 +8660,13 @@ Cell[BoxData[
             "\[IndentingNewLine]", 
             RowBox[{"hBottomAndCap", " ", "=", " ", 
              RowBox[{"d", " ", "-", " ", "wallCap"}]}], ";", 
-            "\[IndentingNewLine]", 
-            RowBox[{"(*", " ", 
-             RowBox[{
-              RowBox[{"note", ":", " ", 
-               RowBox[{"as", " ", "defined", " ", "here"}]}], ",", " ", 
-              RowBox[{
-              "we", " ", "only", " ", "have", " ", "14", "mL", " ", 
-               "capacity"}], ",", " ", 
-              RowBox[{"not", " ", "15", 
-               RowBox[{"mL", ".", " ", "Will"}], " ", "affect", " ", "volume",
-                " ", "calc", " ", "but", " ", "not", " ", "depth", " ", 
-               RowBox[{"calc", "."}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
+            "\[IndentingNewLine]", "\[IndentingNewLine]", 
             RowBox[{"toCanonical", " ", "@", " ", 
              RowBox[{"conicalTestTube", "[", 
               RowBox[{
                RowBox[{"{", 
                 RowBox[{
-                 RowBox[{"b14", " ", "-", " ", 
-                  RowBox[{"(*", 
-                   RowBox[{
-                    RowBox[{"2", " ", "-", " ", 
-                    RowBox[{"logically", " ", "needed"}]}], ",", " ", 
-                    RowBox[{"but", " ", "better", " ", "fit", " ", 
-                    RowBox[{"w", "/", "o"}], " ", 
-                    RowBox[{"(", 
-                    RowBox[{"?", "!"}], ")"}]}]}], "*)"}], " ", "wall"}], ",",
-                  " ", 
+                 RowBox[{"b14", " ", "-", "  ", "wall"}], ",", " ", 
                  RowBox[{"cMeasured", "-", " ", 
                   RowBox[{"2", " ", "wall"}]}], ",", " ", 
                  RowBox[{"bottomOd", " ", "-", 
@@ -8686,26 +8738,16 @@ Cell[BoxData[
              RowBox[{"8.31", " ", "/", "2"}]}], "]"}], ",", 
            "\[IndentingNewLine]", 
            RowBox[{"emptyCylinder", "[", "]"}]}], "\[IndentingNewLine]", 
-          "]"}]}], ",", "\[IndentingNewLine]", "\[IndentingNewLine]", 
-        RowBox[{"generic", " ", "\[Rule]", " ", 
-         RowBox[{"toCanonical", " ", "@", " ", 
-          RowBox[{"conicalTestTube", "[", 
-           RowBox[{
-            RowBox[{"{", 
-             RowBox[{"idTop", ",", " ", "idHip", ",", " ", "idBottom"}], 
-             "}"}], ",", " ", 
-            RowBox[{"{", 
-             RowBox[{"hTop", ",", " ", "hBottom"}], "}"}]}], "]"}]}]}]}], 
-       "\[IndentingNewLine]", "}"}], " ", "//", " ", "Association"}]}], ")"}],
-    " ", "//", " ", "Normal"}], " ", "//", " ", 
-  "ColumnForm"}]], \
+          "]"}]}]}], "\[IndentingNewLine]", "\[IndentingNewLine]", "}"}], " ",
+       "//", " ", "Association"}]}], ")"}], " ", "//", " ", "Normal"}], " ", "//",
+   " ", "ColumnForm"}]], \
 "Input",ExpressionUUID->"f33ae077-a49f-4b64-8cee-64fee06939c4"]
 }, Open  ]]
 }, Open  ]],
 
 Cell[CellGroupData[{
 
-Cell["For volume as parameter", \
+Cell["Expressions for Copying to Python", \
 "Subsection",ExpressionUUID->"817692a6-7edd-4123-b792-c99e0121f905"],
 
 Cell[BoxData[{
@@ -8873,10 +8915,12 @@ Cell[BoxData[{
         "\[IndentingNewLine]", 
         RowBox[{"test", " ", "@", " ", 
          RowBox[{"N", " ", "@", " ", 
-          RowBox[{"radiusFromDepth", "[", 
-           RowBox[{"tube", ",", 
-            RowBox[{"height", "[", "tube", "]"}]}], "]"}]}]}], ";", 
-        "\[IndentingNewLine]", 
+          RowBox[{"(", 
+           RowBox[{"2", " ", "*", " ", 
+            RowBox[{"radiusFromDepth", "[", 
+             RowBox[{"tube", ",", 
+              RowBox[{"height", "[", "tube", "]"}]}], "]"}]}], ")"}]}]}], ";",
+         "\[IndentingNewLine]", 
         RowBox[{"expr", " ", "=", " ", 
          RowBox[{"N", " ", "@", " ", 
           RowBox[{"radiusFromDepth", "[", 
@@ -9279,8 +9323,8 @@ Cell[BoxData[{
 }, Open  ]]
 }, Open  ]]
 },
-WindowSize->{1355, 1548},
-WindowMargins->{{Automatic, 939}, {Automatic, 0}},
+WindowSize->{1264, 1548},
+WindowMargins->{{285, Automatic}, {Automatic, 0}},
 PrintingCopies->1,
 PrintingPageRange->{32000, 32000},
 PrintingOptions->{"Magnification"->1.,
