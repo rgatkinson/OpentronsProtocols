@@ -834,7 +834,7 @@ class WellVolume(object):
         assert volume >= 0
         if not self.initial_volume_known:
             self.set_initial_volume(interval([volume,
-                                              fpu.infinity if self.well is None else get_well_volume(self.well).capacity]))
+                                              fpu.infinity if self.well is None else get_well_geometry(self.well).well_capacity]))
         self._track_volume(-volume)
 
     def dispense(self, volume):

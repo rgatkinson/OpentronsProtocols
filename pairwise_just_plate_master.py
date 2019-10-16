@@ -828,7 +828,7 @@ class WellVolume(object):
         assert volume >= 0
         if not self.initial_volume_known:
             self.set_initial_volume(interval([volume,
-                                              fpu.infinity if self.well is None else get_well_volume(self.well).capacity]))
+                                              fpu.infinity if self.well is None else get_well_geometry(self.well).well_capacity]))
         self._track_volume(-volume)
 
     def dispense(self, volume):
@@ -2153,10 +2153,10 @@ def plateEverythingAndMix():
 # Off to the races
 ########################################################################################################################
 
-wells_to_verify = [master_mix, water, plate.wells('A1'), plate.wells('A12'), plate.wells('H1'), plate.wells('H12')]
+wells_to_verify = [master_mix, plate.wells('A1'), plate.wells('A12'), plate.wells('H1'), plate.wells('H12')]
 verify_well_locations(wells_to_verify, p50)
 
-createMasterMix()
+# createMasterMix()
 robot.pause(pretty.format('Weigh master mix tube: current_volume={0:n}', get_well_volume(master_mix).current_volume))
 plateMasterMix()
 robot.pause(pretty.format('Weigh master mix tube: current_volume={0:n}', get_well_volume(master_mix).current_volume))
