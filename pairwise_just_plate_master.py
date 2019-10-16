@@ -2503,9 +2503,9 @@ def plateEverythingAndMix():
 ########################################################################################################################
 
 wells_to_verify = [master_mix, plate.wells('A1'), plate.wells('A12'), plate.wells('H1'), plate.wells('H12')]
-verify_well_locations(wells_to_verify, p50)
+# verify_well_locations(wells_to_verify, p50)
 
 # createMasterMix()
-robot.pause(pretty.format('Weigh master mix tube: current_volume={0:n}', get_well_volume(master_mix).current_volume))
+# robot.pause(pretty.format('Weigh master mix tube: current_volume={0:n}', get_well_volume(master_mix).current_volume))
 plateMasterMix()
 robot.pause(pretty.format('Weigh master mix tube: current_volume={0:n}', get_well_volume(master_mix).current_volume))
