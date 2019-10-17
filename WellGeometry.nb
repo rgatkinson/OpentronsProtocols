@@ -4736,11 +4736,12 @@ Cell[BoxData[{
     RowBox[{"invert", " ", "@", " ", "f"}]}]}], 
   "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
  RowBox[{
-  RowBox[{"v", "=", 
-   RowBox[{"test", " ", "@", " ", 
-    RowBox[{"volume", "[", 
-     RowBox[{"invertedFrustum", "[", 
-      RowBox[{"h", ",", "r1", ",", "r2"}], "]"}], "]"}]}]}], ";", " ", 
+  RowBox[{
+   RowBox[{"v", "=", 
+    RowBox[{"test", " ", "@", " ", 
+     RowBox[{"volume", "[", 
+      RowBox[{"invertedFrustum", "[", 
+       RowBox[{"h", ",", "r1", ",", "r2"}], "]"}], "]"}]}]}], ";"}], " ", 
   RowBox[{"(*", " ", 
    RowBox[{"compare", " ", "to", " ", "textbook", " ", "answer", " ", 
     FractionBox["1", "3"], " ", "h", " ", "\[Pi]", " ", 
@@ -4748,8 +4749,9 @@ Cell[BoxData[{
      RowBox[{
       SuperscriptBox["r1", "2"], "+", 
       RowBox[{"r1", " ", "r2"}], "+", 
-      SuperscriptBox["r2", "2"]}], ")"}]}], " ", "*)"}], 
-  "\[IndentingNewLine]", 
+      SuperscriptBox["r2", "2"]}], ")"}]}], " ", 
+   "*)"}]}], "\[IndentingNewLine]", 
+ RowBox[{
   RowBox[{"v\[Alpha]", "=", 
    RowBox[{"test", " ", "@", " ", 
     RowBox[{"volume", "[", 
@@ -5464,8 +5466,8 @@ Cell[BoxData[{
   RowBox[{
    RowBox[{"assumptions", "[", 
     RowBox[{"invertedSphericalCap", "[", 
-     RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "angled"}], "]"}], "]"}], 
-   " ", ":=", " ", 
+     RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "\"\<angled\>\""}], "]"}],
+     "]"}], " ", ":=", " ", 
    RowBox[{
     RowBox[{"r", " ", ">", " ", "0"}], " ", "&&", " ", 
     RowBox[{"\[Alpha]", " ", "\[GreaterEqual]", " ", "0"}], " ", "&&", " ", 
@@ -5498,22 +5500,22 @@ Cell[BoxData[{
   RowBox[{"radius", "[", 
    RowBox[{"c", ":", 
     RowBox[{"invertedSphericalCap", "[", 
-     RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "angled"}], "]"}]}], 
-   "]"}], " ", ":=", " ", "r"}], "\[IndentingNewLine]", 
+     RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "\"\<angled\>\""}], 
+     "]"}]}], "]"}], " ", ":=", " ", "r"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"height", "[", 
    RowBox[{"c", ":", 
     RowBox[{"invertedSphericalCap", "[", 
-     RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "angled"}], "]"}]}], 
-   "]"}], " ", ":=", " ", 
+     RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "\"\<angled\>\""}], 
+     "]"}]}], "]"}], " ", ":=", " ", 
   RowBox[{"r", " ", "-", " ", 
    RowBox[{"r", " ", 
     RowBox[{"Sin", "[", "\[Alpha]", "]"}]}]}]}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"angle", "[", 
    RowBox[{"invertedSphericalCap", "[", 
-    RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "angled"}], "]"}], "]"}], 
-  " ", ":=", " ", 
+    RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "\"\<angled\>\""}], "]"}], 
+   "]"}], " ", ":=", " ", 
   "\[Alpha]"}]}], \
 "Input",ExpressionUUID->"47b10a0d-9ea7-4463-b5b1-3fb8e1c0de63"]
 }, Open  ]],
@@ -5544,8 +5546,8 @@ Cell[BoxData[{
   RowBox[{"toCartesian", "[", 
    RowBox[{"c", ":", 
     RowBox[{"invertedSphericalCap", "[", 
-     RowBox[{"r_", ",", "\[Alpha]_", ",", " ", "angled"}], "]"}]}], "]"}], 
-  " ", ":=", " ", 
+     RowBox[{"r_", ",", "\[Alpha]_", ",", " ", "\"\<angled\>\""}], "]"}]}], 
+   "]"}], " ", ":=", " ", 
   RowBox[{"invertedSphericalCap", "[", 
    RowBox[{"r", ",", " ", 
     RowBox[{"height", "[", "c", "]"}]}], "]"}]}], "\[IndentingNewLine]", 
@@ -5554,20 +5556,22 @@ Cell[BoxData[{
    RowBox[{"toAngled", "[", 
     RowBox[{"c", ":", 
      RowBox[{"invertedSphericalCap", "[", 
-      RowBox[{"r_", ",", "\[Alpha]_", ",", " ", "angled"}], "]"}]}], "]"}], 
-   " ", ":=", " ", "c"}], "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+      RowBox[{"r_", ",", "\[Alpha]_", ",", " ", "\"\<angled\>\""}], "]"}]}], 
+    "]"}], " ", ":=", " ", "c"}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"test", " ", "@", " ", 
    RowBox[{"toCartesian", " ", "@", " ", 
     RowBox[{"invertedSphericalCap", "[", 
-     RowBox[{"r", ",", " ", "\[Alpha]", ",", " ", "angled"}], "]"}]}]}], 
-  ";"}], "\[IndentingNewLine]", 
+     RowBox[{"r", ",", " ", "\[Alpha]", ",", " ", "\"\<angled\>\""}], 
+     "]"}]}]}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"test", " ", "@", " ", 
    RowBox[{"toAngled", " ", "@", " ", 
     RowBox[{"toCartesian", " ", "@", " ", 
      RowBox[{"invertedSphericalCap", "[", 
-      RowBox[{"r", ",", " ", "\[Alpha]", ",", " ", "angled"}], "]"}]}]}]}], 
+      RowBox[{"r", ",", " ", "\[Alpha]", ",", " ", "\"\<angled\>\""}], 
+      "]"}]}]}]}], 
   ";"}]}], "Input",ExpressionUUID->"859f4ea1-c099-4765-816d-194b0a8cea71"]
 }, Open  ]],
 
@@ -5601,8 +5605,8 @@ Cell[BoxData[{
  RowBox[{
   RowBox[{"volume", "[", 
    RowBox[{"invertedSphericalCap", "[", 
-    RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "angled"}], "]"}], "]"}], 
-  " ", ":=", " ", 
+    RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "\"\<angled\>\""}], "]"}], 
+   "]"}], " ", ":=", " ", 
   RowBox[{"Module", "[", 
    RowBox[{
     RowBox[{"{", "}"}], ",", "\[IndentingNewLine]", 
@@ -5625,8 +5629,9 @@ Cell[BoxData[{
   RowBox[{"test", " ", "@", " ", 
    RowBox[{"volume", "[", 
     RowBox[{"invertedSphericalCap", "[", 
-     RowBox[{"r", ",", "\[Alpha]", ",", " ", "angled"}], "]"}], "]"}]}], 
-  ";"}]}], "Input",ExpressionUUID->"495e4c66-df96-4a2e-9c00-ba6606b78bbf"]
+     RowBox[{"r", ",", "\[Alpha]", ",", " ", "\"\<angled\>\""}], "]"}], 
+    "]"}]}], ";"}]}], \
+"Input",ExpressionUUID->"495e4c66-df96-4a2e-9c00-ba6606b78bbf"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -5641,8 +5646,8 @@ Cell["Final", \
 
 Cell[BoxData[{
  RowBox[{
-  RowBox[{"genericSphericalCapDepthFromVolumeCartesian", "[", "]"}], " ", ":=",
-   " ", 
+  RowBox[{"genericSphericalCapDepthFromVolumeCartesian", "[", "]"}], " ", ":=", \
+" ", 
   RowBox[{"Module", "[", 
    RowBox[{
     RowBox[{"{", 
@@ -5701,8 +5706,8 @@ Cell[BoxData[
       RowBox[{
        RowBox[{"cap", " ", "=", " ", 
         RowBox[{"invertedSphericalCap", "[", 
-         RowBox[{"r", ",", " ", "\[Alpha]", ",", " ", "angled"}], "]"}]}], 
-       ";", "\[IndentingNewLine]", 
+         RowBox[{"r", ",", " ", "\[Alpha]", ",", " ", "\"\<angled\>\""}], 
+         "]"}]}], ";", "\[IndentingNewLine]", 
        RowBox[{"a", " ", "=", " ", 
         RowBox[{
          RowBox[{"assumptions", "[", "cap", "]"}], " ", "&&", " ", 
@@ -5746,8 +5751,8 @@ Cell[BoxData[{
    RowBox[{
     RowBox[{"c", ":", " ", 
      RowBox[{"invertedSphericalCap", "[", 
-      RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "angled"}], "]"}]}], ",",
-     " ", "v_"}], "]"}], " ", ":=", " ", 
+      RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "\"\<angled\>\""}], 
+      "]"}]}], ",", " ", "v_"}], "]"}], " ", ":=", " ", 
   RowBox[{"depthFromVolume", "[", 
    RowBox[{
     RowBox[{"toCartesian", " ", "@", " ", "c"}], ",", " ", "v"}], 
@@ -5829,13 +5834,14 @@ Cell[BoxData[{
     RowBox[{
      RowBox[{"c", ":", " ", 
       RowBox[{"invertedSphericalCap", "[", 
-       RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "angled"}], "]"}]}], 
-     ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+       RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "\"\<angled\>\""}], 
+       "]"}]}], ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
    RowBox[{
     RowBox[{"genericVolumeFromDepthUsingInverse", "[", 
      RowBox[{
       RowBox[{"invertedSphericalCap", "[", 
-       RowBox[{"rr", ",", " ", "\[Alpha]\[Alpha]", ",", " ", "angled"}], 
+       RowBox[{
+       "rr", ",", " ", "\[Alpha]\[Alpha]", ",", " ", "\"\<angled\>\""}], 
        "]"}], ",", " ", "dd"}], "]"}], " ", "/.", " ", 
     RowBox[{"{", 
      RowBox[{
@@ -5855,8 +5861,8 @@ Cell[BoxData[{
    RowBox[{"volumeFromDepth", " ", "[", 
     RowBox[{
      RowBox[{"invertedSphericalCap", "[", 
-      RowBox[{"r", ",", " ", "\[Alpha]", ",", " ", "angled"}], "]"}], ",", 
-     " ", "depth"}], "]"}]}], 
+      RowBox[{"r", ",", " ", "\[Alpha]", ",", " ", "\"\<angled\>\""}], "]"}], 
+     ",", " ", "depth"}], "]"}]}], 
   ";"}]}], "Input",ExpressionUUID->"04ef3025-ce77-4df1-b107-ccafe7ce2374"],
 
 Cell[BoxData[{
@@ -5902,8 +5908,8 @@ Cell[BoxData[{
     RowBox[{
      RowBox[{"c", ":", " ", 
       RowBox[{"invertedSphericalCap", "[", 
-       RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "angled"}], "]"}]}], 
-     ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
+       RowBox[{"r_", ",", " ", "\[Alpha]_", ",", " ", "\"\<angled\>\""}], 
+       "]"}]}], ",", " ", "depth_"}], "]"}], " ", ":=", " ", 
    RowBox[{"radiusFromDepth", "[", 
     RowBox[{
      RowBox[{"toCartesian", "[", "c", "]"}], ",", " ", "depth"}], "]"}]}], 
@@ -5920,8 +5926,8 @@ Cell[BoxData[{
    RowBox[{"radiusFromDepth", "[", 
     RowBox[{
      RowBox[{"invertedSphericalCap", "[", 
-      RowBox[{"r", ",", " ", "\[Alpha]", ",", " ", "angled"}], "]"}], ",", 
-     " ", "depth"}], "]"}]}], 
+      RowBox[{"r", ",", " ", "\[Alpha]", ",", " ", "\"\<angled\>\""}], "]"}], 
+     ",", " ", "depth"}], "]"}]}], 
   ";"}]}], "Input",ExpressionUUID->"52413692-20bd-4a08-8c49-56f275894d63"]
 }, Open  ]],
 
