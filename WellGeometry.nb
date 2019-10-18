@@ -208,7 +208,7 @@ Cell[BoxData[{
        RowBox[{"2", ",", " ", "1"}], "]"}], "]"}], " ", "//", " ", "\n", 
      "   ", "Union"}], ",", " ", "except"}], 
    "]"}]}]}], "Input",ExpressionUUID->"8fd2fa68-86de-4381-bd21-52f2d089b894"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -249,7 +249,7 @@ Cell[BoxData[{
        RowBox[{"genericShape", ",", " ", "depth"}], "]"}], " ", "=", " ", 
       "result"}], ";", "\[IndentingNewLine]", "result"}]}], 
    "]"}]}]}], "Input",ExpressionUUID->"01203d0f-6f73-43d7-a6ac-5d5039ab00cf"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -258,7 +258,7 @@ Cell["Cone", "Section",ExpressionUUID->"ba3070ae-c27c-4d58-875e-e5382c2c77d0"],
 Cell[CellGroupData[{
 
 Cell["Accessing", \
-"Subsection",ExpressionUUID->"83535e67-e4e6-4dcc-a592-ecdfc718e245"],
+"Subsubsection",ExpressionUUID->"83535e67-e4e6-4dcc-a592-ecdfc718e245"],
 
 Cell[BoxData[{
  RowBox[{
@@ -447,7 +447,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Conversion", \
-"Subsection",ExpressionUUID->"d6bf2bfb-41fd-42d1-be93-3cdc6faccb37"],
+"Subsubsection",ExpressionUUID->"d6bf2bfb-41fd-42d1-be93-3cdc6faccb37"],
 
 Cell[BoxData[{
  RowBox[{
@@ -666,7 +666,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Volume", \
-"Subsection",ExpressionUUID->"2e392080-fd66-4f28-bc01-4e194deadab6"],
+"Subsubsection",ExpressionUUID->"2e392080-fd66-4f28-bc01-4e194deadab6"],
 
 Cell[BoxData[{
  RowBox[{
@@ -714,12 +714,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Height and Depth", \
-"Subsection",ExpressionUUID->"4e43b5ff-f03a-486d-a8ad-cad8d66886fe"],
-
-Cell[CellGroupData[{
-
-Cell["Final", \
-"Subsubsection",ExpressionUUID->"5a07ac8d-aa42-4c68-a665-4f963dcda7ab"],
+"Subsubsection",ExpressionUUID->"4e43b5ff-f03a-486d-a8ad-cad8d66886fe"],
 
 Cell[BoxData[{
  RowBox[{
@@ -1076,7 +1071,6 @@ Cell[BoxData[{
    RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
   "]"}]}], "Input",ExpressionUUID->"0e3171ab-ef8e-4c05-bf51-94bbc9231f19"]
 }, Open  ]]
-}, Open  ]]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -1087,7 +1081,7 @@ Cell["Inverted Cone", \
 Cell[CellGroupData[{
 
 Cell["Construction & Conversion", \
-"Subsection",ExpressionUUID->"429a2e9f-ed22-41e0-9ae9-5749bc72e900"],
+"Subsubsection",ExpressionUUID->"429a2e9f-ed22-41e0-9ae9-5749bc72e900"],
 
 Cell[BoxData[{
  RowBox[{
@@ -1257,7 +1251,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Accessing", \
-"Subsection",ExpressionUUID->"489c3c73-b457-411d-9e4c-5c0a8cc7c89c"],
+"Subsubsection",ExpressionUUID->"489c3c73-b457-411d-9e4c-5c0a8cc7c89c"],
 
 Cell[BoxData[{
  RowBox[{
@@ -1436,7 +1430,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Conversion Redux", \
-"Subsection",ExpressionUUID->"e5b719cc-42db-452b-be04-b37ed947966a"],
+"Subsubsection",ExpressionUUID->"e5b719cc-42db-452b-be04-b37ed947966a"],
 
 Cell[BoxData[{
  RowBox[{
@@ -1599,7 +1593,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Volume", \
-"Subsection",ExpressionUUID->"1ae6326f-9092-46be-9bd8-a9753e254b1b"],
+"Subsubsection",ExpressionUUID->"1ae6326f-9092-46be-9bd8-a9753e254b1b"],
 
 Cell[BoxData[{
  RowBox[{
@@ -1647,12 +1641,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Height and Depth", \
-"Subsection",ExpressionUUID->"ff3f47b6-6b93-4744-af0f-058c0af8c6d3"],
-
-Cell[CellGroupData[{
-
-Cell["Final", \
-"Subsubsection",ExpressionUUID->"88b9fa6a-5dfc-40ea-9a3e-60a29ec38c46"],
+"Subsubsection",ExpressionUUID->"ff3f47b6-6b93-4744-af0f-058c0af8c6d3"],
 
 Cell[BoxData[{
  RowBox[{
@@ -2075,7 +2064,6 @@ Cell[BoxData[{
    RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
   "]"}]}], "Input",ExpressionUUID->"282eb182-df4b-4463-93e5-fc1a32a32034"]
 }, Open  ]]
-}, Open  ]]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -2086,7 +2074,7 @@ Cell["Cylinder", \
 Cell[CellGroupData[{
 
 Cell["Accessing", \
-"Subsection",ExpressionUUID->"9aa74426-8f97-4e1a-a673-b6c6286c20be"],
+"Subsubsection",ExpressionUUID->"9aa74426-8f97-4e1a-a673-b6c6286c20be"],
 
 Cell[BoxData[
  RowBox[{
@@ -2150,7 +2138,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Volume", \
-"Subsection",ExpressionUUID->"ad784929-644a-4b85-bcda-e7c523ca7cea"],
+"Subsubsection",ExpressionUUID->"ad784929-644a-4b85-bcda-e7c523ca7cea"],
 
 Cell[BoxData[{
  RowBox[{
@@ -2175,12 +2163,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Height and Depth", \
-"Subsection",ExpressionUUID->"30b784b4-6156-43b7-bd50-3cb3552d3a14"],
-
-Cell[CellGroupData[{
-
-Cell["Final", \
-"Subsubsection",ExpressionUUID->"1056974d-0cd6-40cf-b2d3-4b034b017002"],
+"Subsubsection",ExpressionUUID->"30b784b4-6156-43b7-bd50-3cb3552d3a14"],
 
 Cell[BoxData[{
  RowBox[{
@@ -2348,7 +2331,6 @@ Cell[BoxData[{
    RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
   "]"}]}], "Input",ExpressionUUID->"645760b4-e03e-4f17-9d9a-58f468eb9693"]
 }, Open  ]]
-}, Open  ]]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -2359,7 +2341,7 @@ Cell["Right Conical Frustum", \
 Cell[CellGroupData[{
 
 Cell["Accessing", \
-"Subsection",ExpressionUUID->"43b8a553-f599-44d8-9adb-205ffb2b5cd0"],
+"Subsubsection",ExpressionUUID->"43b8a553-f599-44d8-9adb-205ffb2b5cd0"],
 
 Cell[BoxData[{
  RowBox[{
@@ -2697,7 +2679,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Construction & Conversion", \
-"Subsection",ExpressionUUID->"fcff828c-bb16-4164-a190-488e96d7694b"],
+"Subsubsection",ExpressionUUID->"fcff828c-bb16-4164-a190-488e96d7694b"],
 
 Cell[BoxData[{
  RowBox[{
@@ -2852,7 +2834,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Volume", \
-"Subsection",ExpressionUUID->"d54a95d2-c602-4270-b8d7-6cb9baf5c291"],
+"Subsubsection",ExpressionUUID->"d54a95d2-c602-4270-b8d7-6cb9baf5c291"],
 
 Cell[BoxData[{
  RowBox[{
@@ -3139,234 +3121,7 @@ Cell[BoxData[
 
 Cell[CellGroupData[{
 
-Cell["Height and Depth", \
-"Subsection",ExpressionUUID->"2d0b2e68-3709-43d4-8e04-21ec0ab78e3e"],
-
-Cell[CellGroupData[{
-
-Cell["Experimenting", \
-"Subsubsection",ExpressionUUID->"9f18af75-6b07-455e-8947-eb810e72a14b"],
-
-Cell["\<\
-In the below,  the \[OpenCurlyQuote]Solve\[CloseCurlyQuote] calls generate \
-three solutions each. Which index to choose is unfortunately data-dependent.\
-\>", "Text",ExpressionUUID->"572f0b06-6181-4279-bb20-435e261af2ee"],
-
-Cell[BoxData[{
- RowBox[{
-  RowBox[{"depthFromVolumeExperiment", "[", 
-   RowBox[{
-    RowBox[{"f", ":", 
-     RowBox[{"frustum", "[", 
-      RowBox[{"h_", ",", " ", "rbig_", ",", " ", "rsmall_"}], "]"}]}], ",", 
-    " ", "vol_", ",", " ", "index_"}], "]"}], " ", ":=", " ", 
-  RowBox[{"Module", "[", 
-   RowBox[{
-    RowBox[{"{", 
-     RowBox[{"hh", ",", " ", "ff", ",", " ", "eqn", ",", " ", "solns"}], 
-     "}"}], ",", "\[IndentingNewLine]", 
-    RowBox[{"(*", " ", 
-     RowBox[{
-      RowBox[{
-       RowBox[{"we", "'"}], "re", " ", "looking", " ", "for", " ", "a", " ", 
-       "frustum", " ", "with", " ", "same", " ", "base", " ", "angle", " ", 
-       "and", " ", "bottom", " ", "radius"}], ",", " ", 
-      RowBox[{"but", " ", "different", " ", "height"}]}], " ", "*)"}], 
-    "\[IndentingNewLine]", 
-    RowBox[{
-     RowBox[{"ff", " ", "=", " ", 
-      RowBox[{"frustum", "[", 
-       RowBox[{"hh", ",", "rbig", ",", " ", 
-        RowBox[{"baseangle", "[", "f", "]"}], ",", " ", "\"\<baseangle\>\""}],
-        "]"}]}], ";", "\[IndentingNewLine]", 
-     RowBox[{"eqn", " ", "=", " ", 
-      RowBox[{"FullSimplify", "[", 
-       RowBox[{
-        RowBox[{"vol", " ", "\[Equal]", " ", 
-         RowBox[{"volume", "[", "ff", "]"}]}], ",", " ", 
-        RowBox[{
-         RowBox[{"assumptions", "[", "f", "]"}], " ", "&&", " ", 
-         RowBox[{"vol", " ", "\[GreaterEqual]", " ", "0"}]}]}], "]"}]}], ";", 
-     "\[IndentingNewLine]", 
-     RowBox[{"solns", " ", "=", " ", 
-      RowBox[{"Solve", "[", 
-       RowBox[{"eqn", ",", " ", "hh"}], "]"}]}], ";", "\[IndentingNewLine]", 
-     RowBox[{"FullSimplify", "[", 
-      RowBox[{
-       RowBox[{"hh", " ", "/.", " ", 
-        RowBox[{"solns", "[", 
-         RowBox[{"[", "index", "]"}], "]"}]}], ",", " ", 
-       RowBox[{
-        RowBox[{"assumptions", "[", "f", "]"}], " ", "&&", " ", 
-        RowBox[{"vol", " ", "\[GreaterEqual]", " ", "0"}]}]}], "]"}]}]}], 
-   "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{"depthFromVolumeExperiment", "[", 
-   RowBox[{
-    RowBox[{"f", ":", 
-     RowBox[{"frustum", "[", 
-      RowBox[{"h_", ",", " ", "rbig_", ",", " ", "rsmall_"}], "]"}]}], ",", 
-    " ", "vol_"}], "]"}], " ", ":=", " ", 
-  RowBox[{"depthFromVolumeExperiment", "[", 
-   RowBox[{"f", ",", " ", "vol", ",", " ", "1"}], 
-   "]"}]}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{"test", " ", "@", " ", 
-   RowBox[{"depthFromVolumeExperiment", "[", 
-    RowBox[{
-     RowBox[{"frustum", "[", 
-      RowBox[{"h", ",", " ", "r1", ",", " ", "r2"}], "]"}], ",", " ", "vol"}],
-     "]"}]}], 
-  ";"}]}], "Input",ExpressionUUID->"34b63a2d-a8c1-4fb0-bac8-5b4b0741a427"],
-
-Cell[BoxData[{
- RowBox[{
-  RowBox[{"depthFromVolumeExperiment", "[", 
-   RowBox[{
-    RowBox[{"f", ":", 
-     RowBox[{"frustum", "[", 
-      RowBox[{
-      "ignored_", ",", " ", "rbig_", ",", " ", "\[Alpha]_", ",", " ", 
-       "\"\<apexangle\>\""}], "]"}]}], ",", " ", "vol_", ",", " ", "index_"}],
-    "]"}], " ", ":=", " ", 
-  RowBox[{"Module", "[", 
-   RowBox[{
-    RowBox[{"{", 
-     RowBox[{"hh", ",", " ", "ff", ",", " ", "eqn", ",", " ", "solns"}], 
-     "}"}], ",", "\[IndentingNewLine]", 
-    RowBox[{"(*", " ", 
-     RowBox[{
-      RowBox[{
-       RowBox[{"we", "'"}], "re", " ", "looking", " ", "for", " ", "a", " ", 
-       "frustum", " ", "with", " ", "same", " ", "base", " ", "angle", " ", 
-       "and", " ", "bottom", " ", "radius"}], ",", " ", 
-      RowBox[{"but", " ", "different", " ", "height"}]}], " ", "*)"}], 
-    "\[IndentingNewLine]", 
-    RowBox[{
-     RowBox[{"ff", " ", "=", " ", 
-      RowBox[{"frustum", "[", 
-       RowBox[{"hh", ",", "rbig", ",", " ", 
-        RowBox[{"baseangle", "[", "f", "]"}], ",", " ", "\"\<baseangle\>\""}],
-        "]"}]}], ";", "\[IndentingNewLine]", 
-     RowBox[{"eqn", " ", "=", " ", 
-      RowBox[{"FullSimplify", "[", 
-       RowBox[{
-        RowBox[{"vol", " ", "\[Equal]", " ", 
-         RowBox[{"volume", "[", "ff", "]"}]}], ",", " ", 
-        RowBox[{
-         RowBox[{"assumptions", "[", "f", "]"}], " ", "&&", " ", 
-         RowBox[{"vol", " ", "\[GreaterEqual]", " ", "0"}]}]}], "]"}]}], ";", 
-     "\[IndentingNewLine]", 
-     RowBox[{"solns", " ", "=", " ", 
-      RowBox[{"Solve", "[", 
-       RowBox[{"eqn", ",", " ", "hh"}], "]"}]}], ";", "\[IndentingNewLine]", 
-     RowBox[{"FullSimplify", "[", 
-      RowBox[{
-       RowBox[{"hh", " ", "/.", " ", 
-        RowBox[{"solns", "[", 
-         RowBox[{"[", "index", "]"}], "]"}]}], ",", " ", 
-       RowBox[{
-        RowBox[{"assumptions", "[", "f", "]"}], " ", "&&", " ", 
-        RowBox[{"vol", " ", "\[GreaterEqual]", " ", "0"}]}]}], "]"}]}]}], 
-   "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{"depthFromVolumeExperiment", "[", 
-   RowBox[{
-    RowBox[{"f", ":", 
-     RowBox[{"frustum", "[", 
-      RowBox[{
-      "ignored_", ",", " ", "rbig_", ",", " ", "\[Alpha]_", ",", " ", 
-       "\"\<apexangle\>\""}], "]"}]}], ",", " ", "vol_"}], "]"}], " ", ":=", 
-  " ", 
-  RowBox[{"depthFromVolumeExperiment", "[", 
-   RowBox[{"f", ",", " ", "vol", ",", " ", "1"}], 
-   "]"}]}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{"test", " ", "@", " ", 
-   RowBox[{"depthFromVolumeExperiment", "[", 
-    RowBox[{
-     RowBox[{"frustum", "[", 
-      RowBox[{
-      "h", ",", " ", "r", ",", " ", "\[Alpha]", ",", " ", 
-       "\"\<apexangle\>\""}], "]"}], ",", " ", "vol"}], "]"}]}], 
-  ";"}]}], "Input",ExpressionUUID->"911ba4af-b333-4338-bc7c-42cbcba508b2"],
-
-Cell[BoxData[{
- RowBox[{
-  RowBox[{"depthFromVolumeExperiment", "[", 
-   RowBox[{
-    RowBox[{"f", ":", 
-     RowBox[{"frustum", "[", 
-      RowBox[{
-      "ignored_", ",", " ", "rbig_", ",", " ", "\[Beta]_", ",", " ", 
-       "\"\<baseangle\>\""}], "]"}]}], ",", " ", "vol_", ",", " ", "index_"}],
-    "]"}], " ", ":=", " ", 
-  RowBox[{"Module", "[", 
-   RowBox[{
-    RowBox[{"{", 
-     RowBox[{"hh", ",", " ", "ff", ",", " ", "eqn", ",", " ", "solns"}], 
-     "}"}], ",", "\[IndentingNewLine]", 
-    RowBox[{"(*", " ", 
-     RowBox[{
-      RowBox[{
-       RowBox[{"we", "'"}], "re", " ", "looking", " ", "for", " ", "a", " ", 
-       "frustum", " ", "with", " ", "same", " ", "base", " ", "angle", " ", 
-       "and", " ", "bottom", " ", "radius"}], ",", " ", 
-      RowBox[{"but", " ", "different", " ", "height"}]}], " ", "*)"}], 
-    "\[IndentingNewLine]", 
-    RowBox[{
-     RowBox[{"ff", " ", "=", " ", 
-      RowBox[{"frustum", "[", 
-       RowBox[{"hh", ",", "rbig", ",", " ", 
-        RowBox[{"baseangle", "[", "f", "]"}], ",", " ", "\"\<baseangle\>\""}],
-        "]"}]}], ";", "\[IndentingNewLine]", 
-     RowBox[{"eqn", " ", "=", " ", 
-      RowBox[{"FullSimplify", "[", 
-       RowBox[{
-        RowBox[{"vol", " ", "\[Equal]", " ", 
-         RowBox[{"volume", "[", "ff", "]"}]}], ",", " ", 
-        RowBox[{
-         RowBox[{"assumptions", "[", "f", "]"}], " ", "&&", " ", 
-         RowBox[{"vol", " ", "\[GreaterEqual]", " ", "0"}]}]}], "]"}]}], ";", 
-     "\[IndentingNewLine]", 
-     RowBox[{"solns", " ", "=", " ", 
-      RowBox[{"Solve", "[", 
-       RowBox[{"eqn", ",", " ", "hh"}], "]"}]}], ";", "\[IndentingNewLine]", 
-     RowBox[{"FullSimplify", "[", 
-      RowBox[{
-       RowBox[{"hh", " ", "/.", " ", 
-        RowBox[{"solns", "[", 
-         RowBox[{"[", "index", "]"}], "]"}]}], ",", " ", 
-       RowBox[{
-        RowBox[{"assumptions", "[", "f", "]"}], " ", "&&", " ", 
-        RowBox[{"vol", " ", "\[GreaterEqual]", " ", "0"}]}]}], "]"}]}]}], 
-   "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{"depthFromVolumeExperiment", "[", 
-   RowBox[{
-    RowBox[{"f", ":", 
-     RowBox[{"frustum", "[", 
-      RowBox[{
-      "ignored_", ",", " ", "rbig_", ",", " ", "\[Beta]_", ",", " ", 
-       "\"\<baseangle\>\""}], "]"}]}], ",", " ", "vol_"}], "]"}], " ", ":=", 
-  " ", 
-  RowBox[{"depthFromVolumeExperiment", "[", 
-   RowBox[{"f", ",", " ", "vol", ",", " ", "1"}], 
-   "]"}]}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{"test", " ", "@", " ", 
-   RowBox[{"depthFromVolumeExperiment", "[", 
-    RowBox[{
-     RowBox[{"frustum", "[", 
-      RowBox[{
-      "h", ",", " ", "r", ",", " ", "\[Beta]", ",", " ", 
-       "\"\<baseangle\>\""}], "]"}], ",", " ", "vol"}], "]"}]}], 
-  ";"}]}], "Input",ExpressionUUID->"486b7795-d005-4bbf-bfe2-3e2be519cb74"]
-}, Open  ]],
-
-Cell[CellGroupData[{
-
-Cell["Final Angled", \
+Cell["Height and Depth: Angled", \
 "Subsubsection",ExpressionUUID->"44a527b7-05dc-4f7a-b6c8-673330f82736"],
 
 Cell[BoxData[{
@@ -3513,7 +3268,7 @@ Cell[BoxData[{
 
 Cell[CellGroupData[{
 
-Cell["Final Cartesian", \
+Cell["Height and Depth: Cartesian", \
 "Subsubsection",ExpressionUUID->"6fc79875-6565-45e4-b956-17dd1d82f4de"],
 
 Cell[BoxData[{
@@ -4133,7 +3888,6 @@ Cell[BoxData[{
    RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
   "]"}]}], "Input",ExpressionUUID->"9469b866-a170-479c-bffc-09c629d76d17"]
 }, Open  ]]
-}, Open  ]]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -4144,7 +3898,7 @@ Cell["Inverted Right Conical Frustum", \
 Cell[CellGroupData[{
 
 Cell["Conversion", \
-"Subsection",ExpressionUUID->"a44dbb9e-4f84-41a7-9314-118087dcdce9"],
+"Subsubsection",ExpressionUUID->"a44dbb9e-4f84-41a7-9314-118087dcdce9"],
 
 Cell[BoxData[{
  RowBox[{
@@ -4235,7 +3989,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Accessing", \
-"Subsection",ExpressionUUID->"6bd27bfc-088a-4c43-826b-ed60d96fef6a"],
+"Subsubsection",ExpressionUUID->"6bd27bfc-088a-4c43-826b-ed60d96fef6a"],
 
 Cell[BoxData[{
  RowBox[{
@@ -4486,7 +4240,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Conversion Redux", \
-"Subsection",ExpressionUUID->"0c9bbe4a-5396-4604-99ea-159316c172f2"],
+"Subsubsection",ExpressionUUID->"0c9bbe4a-5396-4604-99ea-159316c172f2"],
 
 Cell[BoxData[{
  RowBox[{
@@ -4641,7 +4395,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Volume", \
-"Subsection",ExpressionUUID->"2e148289-c93a-41ab-80b4-44302a74b6f3"],
+"Subsubsection",ExpressionUUID->"2e148289-c93a-41ab-80b4-44302a74b6f3"],
 
 Cell[BoxData[{
  RowBox[{
@@ -4791,12 +4545,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Height and Depth", \
-"Subsection",ExpressionUUID->"8ce40834-2472-4c56-8326-bb706fce6494"],
-
-Cell[CellGroupData[{
-
-Cell["Final", \
-"Subsubsection",ExpressionUUID->"76d92242-8e9e-4b2d-a7ac-1e0bf8f558c0"],
+"Subsubsection",ExpressionUUID->"8ce40834-2472-4c56-8326-bb706fce6494"],
 
 Cell["\<\
 We\[CloseCurlyQuote]re looking for a frustum with same base angle and bottom \
@@ -5375,7 +5124,6 @@ Cell[BoxData[{
    RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
   "]"}]}], "Input",ExpressionUUID->"24e450ff-cbe2-4280-b8a6-5197e3d08812"]
 }, Open  ]]
-}, Open  ]]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -5386,7 +5134,7 @@ Cell["Sphere", \
 Cell[CellGroupData[{
 
 Cell["Accessing", \
-"Subsection",ExpressionUUID->"43c50766-aa40-48a9-87b0-b53a97a95ffe"],
+"Subsubsection",ExpressionUUID->"43c50766-aa40-48a9-87b0-b53a97a95ffe"],
 
 Cell[BoxData[{
  RowBox[{
@@ -5402,7 +5150,7 @@ Cell[BoxData[{
 Cell[CellGroupData[{
 
 Cell["Volume", \
-"Subsection",ExpressionUUID->"1eeb0226-8dd2-45b7-a42d-660021b4c4cc"],
+"Subsubsection",ExpressionUUID->"1eeb0226-8dd2-45b7-a42d-660021b4c4cc"],
 
 Cell[BoxData[{
  RowBox[{
@@ -8234,8 +7982,8 @@ Cell[BoxData[{
      RowBox[{
       RowBox[{"#", "[", 
        RowBox[{"[", "1", "]"}], "]"}], " ", "\[LessEqual]", " ", "875"}], 
-     "&"}]}], "]"}]}]}], \
-"Input",ExpressionUUID->"459936ce-da21-4400-a130-ac179bbf79ca"],
+     "&"}]}], 
+   "]"}]}]}], "Input",ExpressionUUID->"459936ce-da21-4400-a130-ac179bbf79ca"],
 
 Cell[BoxData[{
  RowBox[{
@@ -9542,7 +9290,7 @@ Cell[BoxData[{
 }, Open  ]]
 },
 WindowSize->{1528, 1541},
-WindowMargins->{{Automatic, 772}, {Automatic, 0}},
+WindowMargins->{{Automatic, 879}, {Automatic, 0}},
 PrintingCopies->1,
 PrintingPageRange->{32000, 32000},
 PrintingOptions->{"Magnification"->1.,
