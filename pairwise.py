@@ -867,7 +867,20 @@ class WellGeometry(object):
     #-------------------------------------------------------------------------------------------------------------------
 
     def __init__(self, well):
-        self.well: Well = well
+        self.__well = None
+        self.well = well
+
+    @property
+    def well(self):
+        return self.__well
+
+    @well.setter
+    def well(self, value):
+        if self.__well is not None:
+            self.__well.geometry = None
+        self.__well = value
+        if self.__well is not None:
+            self.__well.geometry = self
 
     #-------------------------------------------------------------------------------------------------------------------
     # Accessing
@@ -1157,8 +1170,7 @@ def get_well_geometry(well):
     try:
         return well.geometry
     except AttributeError:
-        well.geometry = UnknownWellGeometry(well)
-        return well.geometry
+        return UnknownWellGeometry(well)
 
 # endregion
 
@@ -1922,9 +1934,9 @@ class CustomTubeRack(object):  # todo: allow for 'height above rim when hanging'
         for well_grid in self.well_grids:
             for name, definition in well_grid.definition_map(self.dimensions.coordinates.z).items():
                 result['wells'][name] = definition
-        # todo: add 'groups'
+        # todo: add 'groups', if that's still significant / worthwhile
         result['parameters'] = {
-            'format': 'regular',
+            'format': 'irregular',  # not 'regular': per correspondence from Opentrons, this field is obsolete, and 'irregular' is best for back-compat
             'quirks': [],
             'isTiprack': False,
             'isMagneticModuleCompatible': False,
@@ -1948,13 +1960,12 @@ class CustomTubeRack(object):  # todo: allow for 'height above rim when hanging'
                     assert geometry.well is None or geometry.well is well
                     assert getattr(well, 'geometry', None) is None or well.geometry is geometry
                     geometry.well = well
-                    well.geometry = geometry
         return self.load_result
 
 class Opentrons15RackInsert(CustomTubeRack):
     def __init__(self, name, brand=None, well_geometry=None):
         super().__init__(
-            dimensions=Vector(127.76, 85.48, 80.83),
+            dimensions=Vector(127.76, 85.48, 80.83),  # todo: adjust for height-above-rim
             name=name,
             brand=brand,
             well_grids=[WellGrid(
@@ -2258,16 +2269,16 @@ master_mix = falcon_rack['A1']  # note: this needs tape around it's mid-section 
 
 # Define geometries
 for well, __ in buffers:
-    well.geometry = IdtTubeWellGeometry(well)
+    IdtTubeWellGeometry(well)
 for well, __ in evagreens:
-    well.geometry = IdtTubeWellGeometry(well)
-strand_a.geometry = Eppendorf1point5mlTubeGeometry(strand_a)
-strand_b.geometry = Eppendorf1point5mlTubeGeometry(strand_b)
-diluted_strand_a.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_a)
-diluted_strand_b.geometry = Eppendorf1point5mlTubeGeometry(diluted_strand_b)
-master_mix.geometry = FalconTube15mlGeometry(master_mix)
+    IdtTubeWellGeometry(well)
+Eppendorf1point5mlTubeGeometry(strand_a)
+Eppendorf1point5mlTubeGeometry(strand_b)
+Eppendorf1point5mlTubeGeometry(diluted_strand_a)
+Eppendorf1point5mlTubeGeometry(diluted_strand_b)
+FalconTube15mlGeometry(master_mix)
 for well in plate.wells():
-    well.geometry = Biorad96WellPlateWellGeometry(well)
+    Biorad96WellPlateWellGeometry(well)
 
 # Remember initial liquid names and volumes
 log('Liquid Names')
