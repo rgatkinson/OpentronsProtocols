@@ -924,7 +924,7 @@ class UnknownWellGeometry(WellGeometry):
     def __init__(self, well=None):
         super().__init__(well)
 
-    def depth_from_volume(self, volume):
+    def depth_from_volume(self, vol):
         return interval([0, self.well_depth])
 
     def volume_from_depth(self, depth):
@@ -939,12 +939,12 @@ class IdtTubeWellGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
-    def depth_from_volume(self, volume):
-        if volume <= 0.0:
+    def depth_from_volume(self, vol):
+        if vol <= 0.0:
             return 0.0
-        if volume <= 67.1109:
-            return 0.909568 * cube_root(volume)
-        return 2.46419 + 0.0183591 * volume
+        if vol <= 67.1109:
+            return 0.909568 * cube_root(vol)
+        return 2.46419 + 0.0183591 * vol
 
     def volume_from_depth(self, depth):
         if depth <= 0:
@@ -986,12 +986,12 @@ class Biorad96WellPlateWellGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
-    def depth_from_volume(self, volume):
-        if volume <= 0.0:
+    def depth_from_volume(self, vol):
+        if vol <= 0.0:
             return 0.0
-        if volume <= 122.784:
-            return -8.57618 + 3.10509 * cube_root(21.0698 + 1.34645 * volume)
-        return 3.91689 + 0.0427095 * volume
+        if vol <= 122.784:
+            return -8.57618 + 3.10509 * cube_root(21.0698 + 1.34645 * vol)
+        return 3.91689 + 0.0427095 * vol
 
     def volume_from_depth(self, depth):
         if depth <= 0.0:
@@ -1025,14 +1025,14 @@ class Eppendorf1point5mlTubeGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
-    def depth_from_volume(self, volume):
-        if volume <= 0:
+    def depth_from_volume(self, vol):
+        if vol <= 0:
             return 0
-        if volume <= 0.550217:
+        if vol <= 0.550217:
             raise NotImplementedError
-        if volume <= 575.88:
-            return -13.8495 + 2.9248 * cube_root(157.009 + 2.14521 * volume)
-        return -216.767 + 20.2694 * cube_root(1376.83 + 0.33533 * volume)
+        if vol <= 575.88:
+            return -13.8495 + 2.9248 * cube_root(157.009 + 2.14521 * vol)
+        return -216.767 + 20.2694 * cube_root(1376.83 + 0.33533 * vol)
 
     def volume_from_depth(self, depth):
         if depth <= 0:
@@ -1073,14 +1073,14 @@ class Eppendorf5point0mlTubeGeometry(WellGeometry):  # TODO: this data is approx
     def __init__(self, well):
         super().__init__(well)
 
-    def depth_from_volume(self, volume):
-        if volume <= 0:
+    def depth_from_volume(self, vol):
+        if vol <= 0:
             return 0
-        if volume <= 4.27649:
-            return 0.924121 * cube_root(volume)
-        if volume <= 1070.52:
-            return -4.3014 + 1.35221 * cube_root(58.5528 + 4.77465 * volume)
-        return -302.957 + 14.623 * cube_root(9914.27 + 0.716197 * volume)
+        if vol <= 4.27649:
+            return 0.924121 * cube_root(vol)
+        if vol <= 1070.52:
+            return -4.3014 + 1.35221 * cube_root(58.5528 + 4.77465 * vol)
+        return -302.957 + 14.623 * cube_root(9914.27 + 0.716197 * vol)
 
     def volume_from_depth(self, depth):  # WRONG
         if depth <= 0:
@@ -1122,12 +1122,12 @@ class FalconTube15mlGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
-    def depth_from_volume(self, volume):
-        if volume <= 0.0:
+    def depth_from_volume(self, vol):
+        if vol <= 0.0:
             return 0.0
-        if volume <= 1232.34:
-            return -4.60531 + 1.42955 * cube_root(33.4335 + 5.25971 * volume)
-        return -803.774 + 27.1004 * cube_root(27390.9 + 0.738644 * volume)
+        if vol <= 1232.34:
+            return -4.60531 + 1.42955 * cube_root(33.4335 + 5.25971 * vol)
+        return -803.774 + 27.1004 * cube_root(27390.9 + 0.738644 * vol)
 
     def volume_from_depth(self, depth):
         if depth <= 0:
@@ -2104,6 +2104,8 @@ def sqrt(value):
     return math.sqrt(value)
 
 def cube_root(value):
+    return pow(value, 1.0/3.0)
+def cubeRoot(value):
     return pow(value, 1.0/3.0)
 
 def zeroify(value, digits=2):  # clamps small values to zero, leaves others alone
