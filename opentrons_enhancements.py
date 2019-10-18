@@ -22,7 +22,7 @@ from opentrons.commands import stringify_location, make_command, command_types
 from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
-from opentrons.legacy_api.containers.placeable import unpack_location, Well, Placeable
+from opentrons.legacy_api.containers.placeable import unpack_location, Placeable, Container, Well, WellSeries
 from opentrons.trackers import pose_tracker
 from opentrons.util.vector import Vector
 
@@ -576,7 +576,7 @@ class Concentration(object):
         else:
             value = str(value)
         self.flavor = Concentration.Flavor.Molar
-        units = [('mM', 0.001), ('uM', 0.000001), ('nM', 1e-9), ('M', 1)]
+        units = [('mM', 0.001), ('uM', 0.000001), ('nM', 1e-9), ('pM', 1e-12), ('fM', 1e-15), ('M', 1)]
         for unit, factor in units:
             if value.endswith(unit):
                 quantity = value[0:-len(unit)]
@@ -627,8 +627,12 @@ class Concentration(object):
                 return emit(1e3, 'mM')
             elif test(self.value, 1e6):
                 return emit(1e6, 'uM')
-            else:
+            elif test(self.value, 1e9):
                 return emit(1e9, 'nM')
+            elif test(self.value, 1e12):
+                return emit(1e12, 'pM')
+            else:
+                return emit(1e15, 'fM')
         elif self.flavor == Concentration.Flavor.X:
             return pretty.format('{0:.3n}x', self.value)
         else:
@@ -660,11 +664,17 @@ class Mixture(object):
                     dilution_factor = volume / total_volume
                     concentration = liquid.concentration * dilution_factor
                     result += pretty.format('{0}:{1:n}={2}', liquid.name, volume, concentration)
+                elif self.is_homogeneous and liquid.concentration.flavor != Concentration.Flavor.DontCare:
+                    result += pretty.format('{0}:{1:n}={2}', liquid.name, volume, liquid.concentration)
                 else:
                     result += pretty.format('{0}:{1:n}', liquid.name, volume)
                 is_first = False
             result += ' }'
         return result
+
+    @property
+    def is_homogeneous(self):
+        return len(self.liquids) == 1
 
     @property
     def volume(self):
@@ -1639,7 +1649,7 @@ class EnhancedPipette(Pipette):
         return len(self.mixes_in_progress) > 0
 
     # If count is provided, we do (at most) that many asp/disp cycles, clamped to an increment of min_incr
-    def layered_mix(self, wells, msg='Mixing',
+    def layered_mix(self, wells, msg=None,
                     count=None,
                     min_incr=None,
                     incr=None,
@@ -1654,8 +1664,6 @@ class EnhancedPipette(Pipette):
 
         def do_layered_mix():
             self.begin_layered_mix()
-            local_keep_last_tip = keep_last_tip if keep_last_tip is not None else config.layered_mix.keep_last_tip
-
             for well in wells:
                 self._layered_mix_one(well, msg=msg,
                                       count=count,
@@ -1668,11 +1676,22 @@ class EnhancedPipette(Pipette):
                                       dispense_rate=dispense_rate,
                                       initial_turnover=initial_turnover,
                                       max_tip_cycles=max_tip_cycles)
-            if not local_keep_last_tip:
+            if not keep_last_tip:
                 self.done_tip()
             self.end_layered_mix()
 
-        log_while(f'{msg} {[well.get_name() for well in wells]}', do_layered_mix)
+        if msg is None:
+            if len(wells) == 1:
+                msg = f'Mixing {wells[0]}'
+            else:
+                msg = f'Mixing {wells}'
+        else:
+            if len(wells) == 1:
+                pass
+            else:
+                msg = f'{msg} {[well.get_name() for well in wells]}'
+        keep_last_tip = keep_last_tip if keep_last_tip is not None else config.layered_mix.keep_last_tip
+        log_while(msg, do_layered_mix)
 
     def _top_clearance(self, well, depth, clearance, factor):
         if clearance < 0:
