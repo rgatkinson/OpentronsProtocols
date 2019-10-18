@@ -934,7 +934,6 @@ class UnknownWellGeometry(WellGeometry):
         return self.well.properties['diameter'] / 2 if self.well is not None else fpu.infinity
 
 
-# Calculated from Mathematica models. We use fittedIdtTube.
 class IdtTubeWellGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
@@ -943,22 +942,22 @@ class IdtTubeWellGeometry(WellGeometry):
         if vol <= 0.0:
             return 0.0
         if vol <= 67.1109:
-            return 0.909568 * cube_root(vol)
-        return 2.46419 + 0.0183591 * vol
+            return 0.9095678851543723*cubeRoot(vol)
+        return 2.464193794602757 + 0.018359120058446303*vol
 
     def volume_from_depth(self, depth):
         if depth <= 0:
             return 0
         if depth <= 3.69629:
-            return 1.32891 * cube(depth)
-        return -134.222 + 54.4688 * depth
+            return 1.3289071745212766*cube(depth)
+        return -134.221781150621 + 54.46884147042437*depth
 
     def radius_from_depth(self, depth):
         if depth <= 0:
             return 0
         if depth <= 3.69629:
-            return 1.1265 * depth
-        return 4.16389
+            return 1.126504715663486*depth
+        return 4.163888894893057
 
     @property
     def well_capacity(self):
@@ -981,7 +980,6 @@ class IdtTubeWellGeometry(WellGeometry):
         raise NotImplementedError  # we need to measure!
 
 
-# Calculated from Mathematica models, specifically modelBioRad3[]
 class Biorad96WellPlateWellGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
@@ -990,21 +988,21 @@ class Biorad96WellPlateWellGeometry(WellGeometry):
         if vol <= 0.0:
             return 0.0
         if vol <= 122.784:
-            return -8.57618 + 3.10509 * cube_root(21.0698 + 1.34645 * vol)
-        return 3.91689 + 0.0427095 * vol
+            return -8.576177710037857 + 3.105085210707993*cubeRoot(21.069816179177707 + 1.3464508185574342*vol)
+        return 3.9168885170626426 + 0.04270953403155694*vol
 
     def volume_from_depth(self, depth):
         if depth <= 0.0:
             return 0.0
         if depth <= 9.16092:
-            return depth * (5.47391 + (0.638269 + 0.0248078 * depth) * depth)
-        return -91.7099 + 23.414 * depth
+            return depth*(5.473911039614858 + (0.6382693111883633 + 0.024807839139547*depth)*depth)
+        return -91.7099332942513 + 23.41397588793937*depth
 
     def radius_from_depth(self, depth):
         if depth <= 0:
             return 0
         if depth <= 9.16092:
-            return 1.32 + 0.153915 * depth
+            return 1.32 + 0.15391472105982892*depth
         return 2.73
 
     @property
@@ -1020,7 +1018,6 @@ class Biorad96WellPlateWellGeometry(WellGeometry):
         return 5.46
 
 
-# Calculated from Mathematica models. We use fittedEppendorf1$5ml
 class Eppendorf1point5mlTubeGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
@@ -1028,33 +1025,33 @@ class Eppendorf1point5mlTubeGeometry(WellGeometry):
     def depth_from_volume(self, vol):
         if vol <= 0:
             return 0
-        if vol <= 0.550217:
-            raise NotImplementedError
-        if vol <= 575.88:
-            return -13.8495 + 2.9248 * cube_root(157.009 + 2.14521 * vol)
-        return -216.767 + 20.2694 * cube_root(1376.83 + 0.33533 * vol)
+        if vol <= 0.67718:
+            return 3.2346271740790455/cubeRoot(-3*vol + sqrt(106.32185983362221 + 9*square(vol))) - 0.6827840632552957*cubeRoot(-3*vol + sqrt(106.32185983362221 + 9*square(vol)))
+        if vol <= 463.316:
+            return -8.597168410942386 + 2.324577069455727*cubeRoot(52.28910925575565 + 2.660323800283652*vol)
+        return -214.3418544824842 + 19.561686679619903*cubeRoot(1474.2109760964095 + 0.37305557584692783*vol)
 
     def volume_from_depth(self, depth):
         if depth <= 0:
             return 0
-        if depth < 1.96886:
-            raise NotImplementedError
-        if depth <= 18.8106:
-            return -23.6979 + depth * (10.7209 + (0.774099 + 0.0186313 * depth) * depth)
-        return -458.451 + depth * (50.4795 + (0.232875 + 0.000358103 * depth) * depth)
+        if depth <= 0.194095:
+            return 3.4691851885468576*depth + 0.5235987755982988*cube(depth)
+        if depth <= 16.6742:
+            return -0.6400085458081618 + depth*(6.6353796285770015 + (0.7718098926771707 + 0.029924965049919594*depth)*depth)
+        return -425.3442361254281 + depth*(49.356322291514765 + (0.23026917636167102 + 0.00035810267810680666*depth)*depth)
 
     def radius_from_depth(self, depth):
         if depth <= 0:
             return 0
-        if depth < 1.96866:
-            raise NotImplementedError
-        if depth <= 18.8106:
-            return 1.84731 + 0.133385 * depth
-        return 4.00851 + 0.0184922 * depth
+        if depth <= 0.194095:
+            return 2.2698281410529737*sqrt((2.2462247020231834 - 0.19409486595347666*depth)*depth)
+        if depth <= 16.6742:
+            return 1.4533089603930036 + 0.16904507285715673*depth
+        return 3.963660597359791 + 0.018492238050892146*depth
 
     @property
     def well_capacity(self):
-        return 1801.76
+        return 1788.68
 
     @property
     def well_depth(self):
@@ -1062,47 +1059,47 @@ class Eppendorf1point5mlTubeGeometry(WellGeometry):
 
     @property
     def well_diameter_at_top(self):
-        return 9.41503
+        return 9.32533
 
     @property
     def height_above_rack(self):
         return 2
 
 
-class Eppendorf5point0mlTubeGeometry(WellGeometry):  # TODO: this data is approximate, and needs to be validated empirically
+class Eppendorf5point0mlTubeGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
 
     def depth_from_volume(self, vol):
         if vol <= 0:
             return 0
-        if vol <= 4.27649:
-            return 0.924121 * cube_root(vol)
-        if vol <= 1070.52:
-            return -4.3014 + 1.35221 * cube_root(58.5528 + 4.77465 * vol)
-        return -302.957 + 14.623 * cube_root(9914.27 + 0.716197 * vol)
+        if vol <= 4.97137:
+            return 3.33494414484718/cubeRoot(-3*vol + sqrt(116.52404878202921 + 9*square(vol))) - 0.6827840632552957*cubeRoot(-3*vol + sqrt(116.52404878202921 + 9*square(vol)))
+        if vol <= 1014.06:
+            return -4.527482527717488 + 1.4293857409730928*cubeRoot(39.92570761834668 + 4.646502581189681*vol)
+        return -302.1252531106694 + 15.294554814291097*cubeRoot(8610.391237925141 + 0.6794188941067961*vol)
 
     def volume_from_depth(self, depth):  # WRONG
         if depth <= 0:
             return 0
-        if depth <= 1.5:
-            return 1.26711 * cube(depth)
-        if depth <= 19.08:
-            return -5.52171 + depth * (4.70188 + (1.09311 + 0.0847093 * depth) * depth)
-        return -1426.29 + depth * (122.954 + (0.405847 + 0.000446539 * depth) * depth)
+        if depth <= 1.16088:
+            return 3.576776614210246*depth + 0.5235987755982988*cube(depth)
+        if depth <= 19.5033:
+            return -1.7535856833793924 + depth*(4.531691130053943 + (1.000929567880315 + 0.07369287175618172*depth)*depth)
+        return -1327.949641310943 + depth*(112.65414304343028 + (0.3728723166420145 + 0.0004113882270161532*depth)*depth)
 
     def radius_from_depth(self, depth):
         if depth <= 0:
             return 0
-        if depth <= 1.5:
-            return 1.1 * depth
-        if depth <= 19.08:
-            return 1.22338 + 0.284414 * depth
-        return 6.256 + 0.0206498 * depth
+        if depth <= 1.16088:
+            return 0.9281232870726978*sqrt((3.624697354653752 - 1.1608835603563077*depth)*depth)
+        if depth <= 19.5033:
+            return 1.2010337579883252 + 0.26527628779029744*depth
+        return 5.9882324145182295 + 0.01982036374935098*depth
 
     @property
     def well_capacity(self):
-        return 6706.91
+        return 6127.44
 
     @property
     def well_depth(self):
@@ -1110,14 +1107,13 @@ class Eppendorf5point0mlTubeGeometry(WellGeometry):  # TODO: this data is approx
 
     @property
     def well_diameter_at_top(self):
-        return 14.8
+        return 14.1726
 
     @property
     def height_above_rack(self):
         return 2.2
 
 
-# Calculated from Mathematica models fitted to empirical depth vs volume measurements
 class FalconTube15mlGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
@@ -1126,22 +1122,22 @@ class FalconTube15mlGeometry(WellGeometry):
         if vol <= 0.0:
             return 0.0
         if vol <= 1232.34:
-            return -4.60531 + 1.42955 * cube_root(33.4335 + 5.25971 * vol)
-        return -803.774 + 27.1004 * cube_root(27390.9 + 0.738644 * vol)
+            return -4.605312927271903 + 1.4295474713971166*cubeRoot(33.43348831212188 + 5.259708112808352*vol)
+        return -803.7743858256094 + 27.100445027181177*cubeRoot(27390.881699748476 + 0.7386443071956942*vol)
 
     def volume_from_depth(self, depth):
         if depth <= 0:
             return 0.0
         if depth <= 22.0945:
-            return depth * (4.14078 + (0.899131 + 0.0650793 * depth) * depth)
-        return -1761.24 + depth * (131.833 + (0.164018 + 0.0000680198 * depth) * depth)
+            return depth*(4.1407799998941535 + (0.8991310830091779 + 0.06507926078773585*depth)*depth)
+        return -1761.2447144832822 + depth*(131.83324928521762 + (0.1640177288677879 + 0.00006801980413086297*depth)*depth)
 
     def radius_from_depth(self, depth):
         if depth <= 0:
             return 0.0
         if depth <= 22.0945:
-            return 1.14806 + 0.249291 * depth
-        return 6.47795 + 0.00805941 * depth
+            return 1.1480641142716852 + 0.2492912278496944*depth
+        return 6.477949256918969 + 0.008059412406212692*depth
 
     @property
     def well_capacity(self):
