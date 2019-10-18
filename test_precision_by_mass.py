@@ -2197,8 +2197,8 @@ p.start_at_tip(start_tip)
 config.trash_control = True
 
 # All the labware containers
-eppendorf_1_5_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 2, label='eppendorf_1_5_rack')
-trough = labware.load('usascientific_12_reservoir_22ml', 6, label='trough')
+eppendorf_1_5_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 5, label='eppendorf_1_5_rack')
+trough = labware.load('usascientific_12_reservoir_22ml', 9, label='trough')
 
 # Name specific places in the labware containers
 water = trough['A1']

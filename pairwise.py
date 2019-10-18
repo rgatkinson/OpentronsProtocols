@@ -2249,13 +2249,13 @@ p10.start_at_tip(tips10[p10_start_tip])
 p50.start_at_tip(tips300a[p50_start_tip])
 
 # All the labware containers
-temp_slot = 10
+temp_slot = 11
 temp_module = modules.load('tempdeck', temp_slot)
 screwcap_rack = labware.load('opentrons_24_aluminumblock_generic_2ml_screwcap', temp_slot, label='screwcap_rack', share=True)
-eppendorf_1_5_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 2, label='eppendorf_1_5_rack')
-falcon_rack = labware.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 5, label='falcon_rack')
-plate = labware.load('biorad_96_wellplate_200ul_pcr', 3, label='plate')
-trough = labware.load('usascientific_12_reservoir_22ml', 6, label='trough')
+eppendorf_1_5_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 5, label='eppendorf_1_5_rack')
+falcon_rack = labware.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 8, label='falcon_rack')
+plate = labware.load('biorad_96_wellplate_200ul_pcr', 6, label='plate')
+trough = labware.load('usascientific_12_reservoir_22ml', 9, label='trough')
 
 # Name specific places in the labware containers
 water = trough['A1']
