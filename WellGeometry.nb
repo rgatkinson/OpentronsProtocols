@@ -6331,7 +6331,7 @@ Cell[BoxData[{
 
 Cell[CellGroupData[{
 
-Cell["Modelling Specific Tubes", \
+Cell["Modelling Specific Tube Types", \
 "Section",ExpressionUUID->"7ede1e2a-f44b-446a-b011-142b40917c16"],
 
 Cell[CellGroupData[{
@@ -8284,7 +8284,7 @@ Cell[BoxData[
 
 Cell[CellGroupData[{
 
-Cell["Known Tubes", \
+Cell["Defining Tube Types", \
 "Section",ExpressionUUID->"17bde502-9c9f-436e-b428-0033d7704a2b"],
 
 Cell[CellGroupData[{
@@ -8532,14 +8532,82 @@ Cell[BoxData[{
   RowBox[{"Block", "[", 
    RowBox[{
     RowBox[{"{", 
-     RowBox[{"simplify", ",", "expr", ",", " ", "tube", ",", " ", "h"}], 
-     "}"}], ",", " ", "\[IndentingNewLine]", 
+     RowBox[{
+     "simplify", ",", " ", "cFormat", ",", " ", "expr", ",", " ", "tube", ",",
+       " ", "h"}], "}"}], ",", " ", "\[IndentingNewLine]", 
     RowBox[{
      RowBox[{
       RowBox[{"simplify", "[", "fn_", "]"}], " ", ":=", " ", 
       RowBox[{"FullSimplify", "[", 
        RowBox[{"fn", ",", " ", 
         RowBox[{"assumptions", "[", "tube", "]"}]}], "]"}]}], ";", 
+     "\[IndentingNewLine]", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"cFormat", "[", "p_Piecewise", "]"}], " ", ":=", " ", 
+      RowBox[{"Module", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{
+         "pieces", ",", " ", "default", ",", " ", "formatted", ",", " ", "op",
+           ",", " ", "rules"}], "}"}], ",", "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{"pieces", " ", "=", " ", 
+          RowBox[{"p", "[", 
+           RowBox[{"[", "1", "]"}], "]"}]}], ";", "\[IndentingNewLine]", 
+         RowBox[{"default", " ", "=", " ", 
+          RowBox[{"p", "[", 
+           RowBox[{"[", "2", "]"}], "]"}]}], ";", "\[IndentingNewLine]", 
+         RowBox[{"rules", " ", "=", " ", 
+          RowBox[{"{", " ", "\[IndentingNewLine]", 
+           RowBox[{
+            RowBox[{
+             RowBox[{"x_", "^", 
+              RowBox[{"(", 
+               RowBox[{"1", "/", "3"}], ")"}]}], " ", "\[RuleDelayed]", " ", 
+             RowBox[{"cubeRoot", "[", "x", "]"}]}], ",", " ", 
+            "\[IndentingNewLine]", 
+            RowBox[{
+             RowBox[{"x_", "^", 
+              RowBox[{"(", 
+               RowBox[{
+                RowBox[{"-", "1"}], "/", "3"}], ")"}]}], " ", 
+             "\[RuleDelayed]", " ", 
+             RowBox[{"1", " ", "/", " ", 
+              RowBox[{"cubeRoot", "[", "x", "]"}]}]}], ",", " ", 
+            "\[IndentingNewLine]", 
+            RowBox[{
+             RowBox[{"x_", "^", "2"}], " ", "\[RuleDelayed]", " ", 
+             RowBox[{"square", "[", "x", "]"}]}], ",", " ", 
+            "\[IndentingNewLine]", 
+            RowBox[{
+             RowBox[{"x_", "^", "3"}], " ", "\[RuleDelayed]", " ", 
+             RowBox[{"cube", "[", "x", "]"}]}], ",", " ", 
+            "\[IndentingNewLine]", 
+            RowBox[{
+             RowBox[{"Sqrt", "[", "x_", "]"}], " ", "\[RuleDelayed]", " ", 
+             RowBox[{"sqrt", "[", "x", "]"}]}]}], "\[IndentingNewLine]", 
+           "}"}]}], ";", "\[IndentingNewLine]", 
+         RowBox[{"op", " ", "=", " ", 
+          RowBox[{"Function", "[", 
+           RowBox[{
+            RowBox[{"{", "expr", "}"}], ",", "\[IndentingNewLine]", 
+            RowBox[{"CForm", "[", 
+             RowBox[{"expr", " ", "//.", " ", "rules"}], "]"}]}], 
+           "\[IndentingNewLine]", "]"}]}], ";", "\[IndentingNewLine]", 
+         RowBox[{"formatted", " ", "=", " ", 
+          RowBox[{
+           RowBox[{
+            RowBox[{"{", 
+             RowBox[{
+              RowBox[{"op", "[", 
+               RowBox[{"#", "[", 
+                RowBox[{"[", "1", "]"}], "]"}], "]"}], ",", 
+              RowBox[{"#", "[", 
+               RowBox[{"[", "2", "]"}], "]"}]}], "}"}], "&"}], "/@", " ", 
+           "pieces"}]}], ";", "\[IndentingNewLine]", 
+         RowBox[{"Piecewise", "[", 
+          RowBox[{"formatted", ",", " ", 
+           RowBox[{"op", "[", "default", "]"}]}], "]"}]}]}], "]"}]}], ";", 
      "\[IndentingNewLine]", "\[IndentingNewLine]", 
      RowBox[{"CellPrint", "[", 
       RowBox[{"TextCell", "[", 
@@ -8604,15 +8672,14 @@ Cell[BoxData[{
              RowBox[{"tube", ",", 
               RowBox[{"height", "[", "tube", "]"}]}], "]"}]}], ")"}]}]}], ";",
          "\[IndentingNewLine]", "\[IndentingNewLine]", 
-        RowBox[{"(*", 
-         RowBox[{
-          RowBox[{"test", " ", "@", " ", 
-           RowBox[{"N", " ", "@", " ", 
-            RowBox[{"depthFromVolume", "[", 
-             RowBox[{"tube", ",", " ", "vol"}], "]"}]}]}], ";"}], "*)"}], 
+        RowBox[{"test", " ", "@", "  ", 
+         RowBox[{"N", " ", "@", " ", 
+          RowBox[{"simplify", " ", "@", " ", 
+           RowBox[{"depthFromVolume", "[", 
+            RowBox[{"tube", ",", " ", "vol"}], "]"}]}]}]}], ";", 
         "\[IndentingNewLine]", 
         RowBox[{"test", " ", "@", " ", 
-         RowBox[{"N", " ", "@", " ", 
+         RowBox[{"cFormat", " ", "@", " ", 
           RowBox[{"simplify", " ", "@", " ", 
            RowBox[{"depthFromVolume", "[", 
             RowBox[{"tube", ",", " ", "vol"}], "]"}]}]}]}], ";", 
@@ -8641,15 +8708,14 @@ Cell[BoxData[{
              RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
            RowBox[{"ImageSize", "\[Rule]", "Large"}]}], "]"}]}], ";", 
         "\[IndentingNewLine]", "\[IndentingNewLine]", 
-        RowBox[{"(*", 
-         RowBox[{
-          RowBox[{"test", " ", "@", " ", 
-           RowBox[{"N", " ", "@", " ", 
-            RowBox[{"volumeFromDepth", "[", 
-             RowBox[{"tube", ",", " ", "depth"}], "]"}]}]}], ";"}], "*)"}], 
-        "\[IndentingNewLine]", 
         RowBox[{"test", " ", "@", " ", 
          RowBox[{"N", " ", "@", " ", 
+          RowBox[{"simplify", " ", "@", " ", 
+           RowBox[{"volumeFromDepth", "[", 
+            RowBox[{"tube", ",", " ", "depth"}], "]"}]}]}]}], ";", 
+        "\[IndentingNewLine]", 
+        RowBox[{"test", " ", "@", " ", 
+         RowBox[{"cFormat", " ", "@", " ", 
           RowBox[{"simplify", " ", "@", " ", 
            RowBox[{"volumeFromDepth", "[", 
             RowBox[{"tube", ",", " ", "depth"}], "]"}]}]}]}], ";", 
@@ -8659,18 +8725,6 @@ Cell[BoxData[{
           RowBox[{"volumeFromDepth", "[", 
            RowBox[{"tube", ",", " ", "depth"}], "]"}]}]}], ";", 
         "\[IndentingNewLine]", 
-        RowBox[{"(*", 
-         RowBox[{
-          RowBox[{"h", " ", "=", " ", 
-           RowBox[{
-            RowBox[{"height", "[", 
-             RowBox[{
-              RowBox[{"parts", "[", "tube", "]"}], "[", "\"\<cap\>\"", "]"}], 
-             "]"}], " ", "+", " ", 
-            RowBox[{"height", "[", 
-             RowBox[{
-              RowBox[{"parts", "[", "tube", "]"}], "[", "\"\<conical\>\"", 
-              "]"}], "]"}]}]}], ";"}], "*)"}], "\[IndentingNewLine]", 
         RowBox[{"printCell", " ", "@", " ", 
          RowBox[{"Plot", "[", 
           RowBox[{"expr", ",", " ", 
@@ -8690,15 +8744,14 @@ Cell[BoxData[{
              RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
            RowBox[{"ImageSize", "\[Rule]", "Large"}]}], "]"}]}], ";", 
         "\[IndentingNewLine]", "\[IndentingNewLine]", 
-        RowBox[{"(*", 
-         RowBox[{
-          RowBox[{"test", " ", "@", " ", 
-           RowBox[{"N", " ", "@", " ", 
-            RowBox[{"radiusFromDepth", "[", 
-             RowBox[{"tube", ",", " ", "depth"}], "]"}]}]}], ";"}], "*)"}], 
-        "\[IndentingNewLine]", 
         RowBox[{"test", " ", "@", " ", 
          RowBox[{"N", " ", "@", " ", 
+          RowBox[{"simplify", " ", "@", " ", 
+           RowBox[{"radiusFromDepth", "[", 
+            RowBox[{"tube", ",", " ", "depth"}], "]"}]}]}]}], ";", 
+        "\[IndentingNewLine]", 
+        RowBox[{"test", " ", "@", " ", 
+         RowBox[{"cFormat", " ", "@", " ", 
           RowBox[{"simplify", " ", "@", " ", 
            RowBox[{"radiusFromDepth", "[", 
             RowBox[{"tube", ",", " ", "depth"}], "]"}]}]}]}], ";", 
@@ -8708,18 +8761,6 @@ Cell[BoxData[{
           RowBox[{"radiusFromDepth", "[", 
            RowBox[{"tube", ",", " ", "depth"}], "]"}]}]}], ";", 
         "\[IndentingNewLine]", 
-        RowBox[{"(*", 
-         RowBox[{
-          RowBox[{"h", " ", "=", " ", 
-           RowBox[{
-            RowBox[{"height", "[", 
-             RowBox[{
-              RowBox[{"parts", "[", "tube", "]"}], "[", "\"\<cap\>\"", "]"}], 
-             "]"}], " ", "+", " ", 
-            RowBox[{"height", "[", 
-             RowBox[{
-              RowBox[{"parts", "[", "tube", "]"}], "[", "\"\<conical\>\"", 
-              "]"}], "]"}]}]}], ";"}], "*)"}], "\[IndentingNewLine]", 
         RowBox[{"printCell", " ", "@", " ", 
          RowBox[{"Plot", "[", 
           RowBox[{"expr", ",", " ", 
@@ -9120,12 +9161,12 @@ Cell[BoxData[{
         RowBox[{"volume", "[", "example1", "]"}]}], "}"}]}], "]"}]}], 
    "]"}]}]}], "Input",ExpressionUUID->"1546305e-1880-4a2c-ab31-aa655fdcb3a8"]
 }, Open  ]]
-}, Open  ]]
+}, Closed]]
 }, Open  ]]
 }, Open  ]]
 },
-WindowSize->{1528, 1541},
-WindowMargins->{{Automatic, 879}, {Automatic, 0}},
+WindowSize->{1604, 1548},
+WindowMargins->{{Automatic, 792}, {Automatic, 0}},
 PrintingCopies->1,
 PrintingPageRange->{32000, 32000},
 PrintingOptions->{"Magnification"->1.,
