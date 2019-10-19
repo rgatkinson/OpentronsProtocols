@@ -58,14 +58,14 @@ config.aspirate.pre_wet.count = 3
 config.aspirate.pre_wet.max_volume_fraction = 1  # https://github.com/Opentrons/opentrons/issues/2901 would pre-wet only 2/3, but why not everything?
 config.aspirate.pre_wet.rate_func = lambda aspirate_rate: 1  # could instead just use the aspirate
 config.aspirate.pause = Config()
-config.aspirate.pause.ms_default = 500
+config.aspirate.pause.ms_default = 750
 
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
 config.dispense.top_clearance = -2.0
 config.dispense.extra_top_clearance_name = 'extra_dispense_top_clearance'
 config.dispense.full_dispense = Config()
-config.dispense.full_dispense.default = False  # todo: should this be 'True'?
+config.dispense.full_dispense.default = True
 
 config.layered_mix = Config()
 config.layered_mix.top_clearance = -1.5  # close, so we mix top layers too
@@ -1440,20 +1440,7 @@ class EnhancedPipette(Pipette):
     # Aspirate and dispense
     #-------------------------------------------------------------------------------------------------------------------
 
-    def aspirate(self, volume=None, location=None, rate=1.0, pre_wet=None, pause=None):
-        if not helpers.is_number(volume):  # recapitulate super
-            if volume and not location:
-                location = volume
-            volume = self._working_volume - self.current_volume
-        location = location if location else self.previous_placeable
-        well, _ = unpack_location(location)
-
-        current_well_volume = get_well_volume(well).current_volume_min
-        needed_well_volume = get_well_geometry(well).min_aspiratable_volume + volume;
-        if current_well_volume < needed_well_volume:
-            msg = pretty.format('aspirating too much from well={0} have={1:n} need={2:n}', well.get_name(), current_well_volume, needed_well_volume)
-            warn(msg)
-
+    def _pre_wet(self, well, volume, location, rate, pre_wet):
         if pre_wet is None:
             pre_wet = self.aspirate_params_hack.pre_wet_during_transfer
         if pre_wet is None:
@@ -1467,23 +1454,38 @@ class EnhancedPipette(Pipette):
                 self.tip_wetness = TipWetness.WETTING
                 def do_pre_wet():
                     for i in range(config.aspirate.pre_wet.count):
-                        self.aspirate(volume=pre_wet_volume, location=location, rate=pre_wet_rate, pre_wet=False)
+                        self.aspirate(volume=pre_wet_volume, location=location, rate=pre_wet_rate, pre_wet=False, ms_pause=0)
                         self.dispense(volume=pre_wet_volume, location=location, rate=pre_wet_rate, full_dispense=(i+1 == config.aspirate.pre_wet.count))
                 info_while(pretty.format('prewetting tip in well {0} vol={1:n}', well.get_name(), pre_wet_volume), do_pre_wet)
                 self.tip_wetness = TipWetness.WET
 
+    def aspirate(self, volume=None, location=None, rate=1.0, pre_wet=None, ms_pause=None):
+        if not helpers.is_number(volume):  # recapitulate super
+            if volume and not location:
+                location = volume
+            volume = self._working_volume - self.current_volume
+        location = location if location else self.previous_placeable
+        well, _ = unpack_location(location)
+
+        current_well_volume = get_well_volume(well).current_volume_min
+        needed_well_volume = get_well_geometry(well).min_aspiratable_volume + volume;
+        if current_well_volume < needed_well_volume:
+            msg = pretty.format('aspirating too much from well={0} have={1:n} need={2:n}', well.get_name(), current_well_volume, needed_well_volume)
+            warn(msg)
+
+        self._pre_wet(well, volume, location, rate, pre_wet)
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume,
                                                        clearances=config.aspirate,
                                                        extra_clearance=getattr(well, config.aspirate.extra_top_clearance_name, 0))
         super().aspirate(volume=volume, location=location, rate=rate)
 
         # if we're asked to, pause after aspiration to let liquid rise
-        if pause is None:
-            pause = self.aspirate_params_hack.ms_pause_during_transfer
-        if pause is None:
-            pause = config.aspirate.pause.ms_default
-        if config.enable_enhancements and pause and not self.is_mix_in_progress():
-            self.delay(pause / 1000.0)
+        if ms_pause is None:
+            ms_pause = self.aspirate_params_hack.ms_pause_during_transfer
+        if ms_pause is None:
+            ms_pause = config.aspirate.pause.ms_default
+        if config.enable_enhancements and ms_pause > 0 and not self.is_mix_in_progress():
+            self.delay(ms_pause / 1000.0)
 
         # track volume todo: what if we're doing an air gap
         well, __ = unpack_location(location)
