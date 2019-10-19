@@ -2194,9 +2194,9 @@ def verify_well_locations(well_list: List[Well], pipette: EnhancedPipette):
 ########################################################################################################################
 
 # Tip usage
-p10_start_tip = 'A9'
-p50_start_tip = 'A9'
-config.trash_control = True
+p10_start_tip = 'A2'
+p50_start_tip = 'A1'
+config.trash_control = False
 
 ########################################################################################################################
 # Labware
@@ -2259,12 +2259,24 @@ def make_dilutions():
     sources = WellSeries([initial_stock]) + dilutions[0:5]
     destinations = dilutions
     for source, destination in zip(sources, destinations):
+        log(f'diluting from {source.get_name()} to {destination.get_name()}')
         p50.transfer(dilution_source_volume, source, destination, new_tip='once', keep_last_tip=True)
         p50.layered_mix([destination])
 
+def plate_dilutions():
+    tubes_to_plate = WellSeries([initial_stock]) + dilutions
+    volumes = [50, 25, 10, 5]
+    num_replicates = 3
+    for row, source_tube in enumerate(tubes_to_plate):
+        for iVolume, volume in enumerate(volumes):
+            col_first = iVolume * num_replicates
+            destination_wells = plate.rows(row)[col_first:col_first+num_replicates]
+            p = p10 if volume <= 10 else p50
+            p.transfer(volume, source_tube, destination_wells, new_tip='once')
 
 ########################################################################################################################
 # Off to the races
 ########################################################################################################################
 
 make_dilutions()
+plate_dilutions()
