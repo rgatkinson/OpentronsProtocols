@@ -28,7 +28,7 @@ from opentrons.commands import stringify_location, make_command, command_types
 from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
-from opentrons.legacy_api.containers.placeable import unpack_location, Placeable, Container, Well, WellSeries
+from opentrons.legacy_api.containers.placeable import unpack_location, Well, Placeable
 from opentrons.trackers import pose_tracker
 from opentrons.util.vector import Vector
 
@@ -49,8 +49,7 @@ config.allow_overspill_default = True
 
 config.aspirate = Config()
 config.aspirate.bottom_clearance = 1.0  # see Pipette._position_for_aspirate
-config.aspirate.top_clearance = 3.5
-config.aspirate.top_clearance_factor = 10.0
+config.aspirate.top_clearance = -3.5
 config.aspirate.extra_top_clearance_name = 'extra_aspirate_top_clearance'
 config.aspirate.pre_wet = Config()
 config.aspirate.pre_wet.default = True
@@ -58,19 +57,17 @@ config.aspirate.pre_wet.count = 3
 config.aspirate.pre_wet.max_volume_fraction = 1  # https://github.com/Opentrons/opentrons/issues/2901 would pre-wet only 2/3, but why not everything?
 config.aspirate.pre_wet.rate_func = lambda aspirate_rate: 1  # could instead just use the aspirate
 config.aspirate.pause = Config()
-config.aspirate.pause.ms_default = 500
+config.aspirate.pause.ms_default = 750
 
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
-config.dispense.top_clearance = 2.0
-config.dispense.top_clearance_factor = 10.0
+config.dispense.top_clearance = -2.0
 config.dispense.extra_top_clearance_name = 'extra_dispense_top_clearance'
 config.dispense.full_dispense = Config()
-config.dispense.full_dispense.default = False  # todo: should this be 'True'?
+config.dispense.full_dispense.default = True
 
 config.layered_mix = Config()
-config.layered_mix.top_clearance = 1.0
-config.layered_mix.top_clearance_factor = 10
+config.layered_mix.top_clearance = -1.5  # close, so we mix top layers too
 config.layered_mix.aspirate_bottom_clearance = 1.0
 config.layered_mix.aspirate_rate_factor = 4.0
 config.layered_mix.dispense_rate_factor = 4.0
@@ -582,7 +579,7 @@ class Concentration(object):
         else:
             value = str(value)
         self.flavor = Concentration.Flavor.Molar
-        units = [('mM', 0.001), ('uM', 0.000001), ('nM', 1e-9), ('pM', 1e-12), ('fM', 1e-15), ('M', 1)]
+        units = [('mM', 0.001), ('uM', 0.000001), ('nM', 1e-9), ('M', 1)]
         for unit, factor in units:
             if value.endswith(unit):
                 quantity = value[0:-len(unit)]
@@ -633,12 +630,8 @@ class Concentration(object):
                 return emit(1e3, 'mM')
             elif test(self.value, 1e6):
                 return emit(1e6, 'uM')
-            elif test(self.value, 1e9):
-                return emit(1e9, 'nM')
-            elif test(self.value, 1e12):
-                return emit(1e12, 'pM')
             else:
-                return emit(1e15, 'fM')
+                return emit(1e9, 'nM')
         elif self.flavor == Concentration.Flavor.X:
             return pretty.format('{0:.3n}x', self.value)
         else:
@@ -670,17 +663,11 @@ class Mixture(object):
                     dilution_factor = volume / total_volume
                     concentration = liquid.concentration * dilution_factor
                     result += pretty.format('{0}:{1:n}={2}', liquid.name, volume, concentration)
-                elif self.is_homogeneous and liquid.concentration.flavor != Concentration.Flavor.DontCare:
-                    result += pretty.format('{0}:{1:n}={2}', liquid.name, volume, liquid.concentration)
                 else:
                     result += pretty.format('{0}:{1:n}', liquid.name, volume)
                 is_first = False
             result += ' }'
         return result
-
-    @property
-    def is_homogeneous(self):
-        return len(self.liquids) == 1
 
     @property
     def volume(self):
@@ -755,17 +742,17 @@ class PipetteContents(object):
 # Must keep in sync with Opentrons-Analyze controller.note_liquid_name
 def note_liquid(location, name=None, initial_volume=None, min_volume=None, concentration=None):
     well, __ = unpack_location(location)
-    assert isWell(well)
+    assert is_well(well)
     if name is None:
         name = well.label
     else:
         well.label = name
     d = {'name': name, 'location': get_location_path(well)}
     if initial_volume is None and min_volume is not None:
-        initial_volume = interval([min_volume, get_well_geometry(well).well_capacity])
+        initial_volume = interval([min_volume, well_geometry(well).well_capacity])
     if initial_volume is not None:
         d['initial_volume'] = initial_volume
-        get_well_volume(well).set_initial_volume(initial_volume)
+        well_volume(well).set_initial_volume(initial_volume)
     if concentration is not None:
         d['concentration'] = str(Concentration(concentration))
     serialized = json.dumps(d).replace("{", "{{").replace("}", "}}")  # runtime calls comment.format(...) on our comment; avoid issues therewith
@@ -833,7 +820,7 @@ class WellVolume(object):
         if self.well is None:
             return 0
         else:
-            return get_well_geometry(self.well).min_aspiratable_volume
+            return well_geometry(self.well).min_aspiratable_volume
 
     #-------------------------------------------------------------------------------------------------------------------
     # Actions
@@ -843,7 +830,7 @@ class WellVolume(object):
         assert volume >= 0
         if not self.initial_volume_known:
             self.set_initial_volume(interval([volume,
-                                              fpu.infinity if self.well is None else get_well_geometry(self.well).well_capacity]))
+                                              fpu.infinity if self.well is None else well_geometry(self.well).well_capacity]))
         self._track_volume(-volume)
 
     def dispense(self, volume):
@@ -858,11 +845,11 @@ class WellVolume(object):
         self.max_delta = max(self.max_delta, self.cum_delta)
 
 
-def isWell(location):
+def is_well(location):
     return isinstance(location, Well)
 
-def get_well_volume(well):
-    assert isWell(well)
+def well_volume(well):
+    assert is_well(well)
     try:
         return well.contents
     except AttributeError:
@@ -1174,8 +1161,8 @@ class FalconTube15mlGeometry(WellGeometry):
         return 14.859
 
 
-def get_well_geometry(well):
-    assert isWell(well)
+def well_geometry(well):
+    assert is_well(well)
     try:
         return well.geometry
     except AttributeError:
@@ -1452,20 +1439,7 @@ class EnhancedPipette(Pipette):
     # Aspirate and dispense
     #-------------------------------------------------------------------------------------------------------------------
 
-    def aspirate(self, volume=None, location=None, rate=1.0, pre_wet=None, pause=None):
-        if not helpers.is_number(volume):  # recapitulate super
-            if volume and not location:
-                location = volume
-            volume = self._working_volume - self.current_volume
-        location = location if location else self.previous_placeable
-        well, _ = unpack_location(location)
-
-        current_well_volume = get_well_volume(well).current_volume_min
-        needed_well_volume = get_well_geometry(well).min_aspiratable_volume + volume;
-        if current_well_volume < needed_well_volume:
-            msg = pretty.format('aspirating too much from well={0} have={1:n} need={2:n}', well.get_name(), current_well_volume, needed_well_volume)
-            warn(msg)
-
+    def _pre_wet(self, well, volume, location, rate, pre_wet):
         if pre_wet is None:
             pre_wet = self.aspirate_params_hack.pre_wet_during_transfer
         if pre_wet is None:
@@ -1474,32 +1448,47 @@ class EnhancedPipette(Pipette):
             if self.tip_wetness is TipWetness.DRY:
                 pre_wet_volume = min(
                     self.max_volume * config.aspirate.pre_wet.max_volume_fraction,
-                    max(volume, get_well_volume(well).available_volume_min))
+                    max(volume, well_volume(well).available_volume_min))
                 pre_wet_rate = config.aspirate.pre_wet.rate_func(rate)
                 self.tip_wetness = TipWetness.WETTING
                 def do_pre_wet():
                     for i in range(config.aspirate.pre_wet.count):
-                        self.aspirate(volume=pre_wet_volume, location=location, rate=pre_wet_rate, pre_wet=False)
+                        self.aspirate(volume=pre_wet_volume, location=location, rate=pre_wet_rate, pre_wet=False, ms_pause=0)
                         self.dispense(volume=pre_wet_volume, location=location, rate=pre_wet_rate, full_dispense=(i+1 == config.aspirate.pre_wet.count))
                 info_while(pretty.format('prewetting tip in well {0} vol={1:n}', well.get_name(), pre_wet_volume), do_pre_wet)
                 self.tip_wetness = TipWetness.WET
 
+    def aspirate(self, volume=None, location=None, rate=1.0, pre_wet=None, ms_pause=None):
+        if not helpers.is_number(volume):  # recapitulate super
+            if volume and not location:
+                location = volume
+            volume = self._working_volume - self.current_volume
+        location = location if location else self.previous_placeable
+        well, _ = unpack_location(location)
+
+        current_well_volume = well_volume(well).current_volume_min
+        needed_well_volume = well_geometry(well).min_aspiratable_volume + volume;
+        if current_well_volume < needed_well_volume:
+            msg = pretty.format('aspirating too much from well={0} have={1:n} need={2:n}', well.get_name(), current_well_volume, needed_well_volume)
+            warn(msg)
+
+        self._pre_wet(well, volume, location, rate, pre_wet)
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume,
                                                        clearances=config.aspirate,
                                                        extra_clearance=getattr(well, config.aspirate.extra_top_clearance_name, 0))
         super().aspirate(volume=volume, location=location, rate=rate)
 
         # if we're asked to, pause after aspiration to let liquid rise
-        if pause is None:
-            pause = self.aspirate_params_hack.ms_pause_during_transfer
-        if pause is None:
-            pause = config.aspirate.pause.ms_default
-        if config.enable_enhancements and pause and not self.is_mix_in_progress():
-            self.delay(pause / 1000.0)
+        if ms_pause is None:
+            ms_pause = self.aspirate_params_hack.ms_pause_during_transfer
+        if ms_pause is None:
+            ms_pause = config.aspirate.pause.ms_default
+        if config.enable_enhancements and ms_pause > 0 and not self.is_mix_in_progress():
+            self.delay(ms_pause / 1000.0)
 
         # track volume todo: what if we're doing an air gap
         well, __ = unpack_location(location)
-        get_well_volume(well).aspirate(volume)
+        well_volume(well).aspirate(volume)
         if volume != 0:
             self.prev_aspirated_location = well
 
@@ -1536,7 +1525,7 @@ class EnhancedPipette(Pipette):
             self.dispense_params_hack.fully_dispensed = False
         # track volume
         well, __ = unpack_location(location)
-        get_well_volume(well).dispense(volume)
+        well_volume(well).dispense(volume)
 
     def _dispense_during_transfer(self, vol, loc, **kwargs):
         assert kwargs.get(self.dispense_params_hack.full_dispense_during_transfer_kw) is not None
@@ -1557,25 +1546,27 @@ class EnhancedPipette(Pipette):
 
     def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, clearances=None, extra_clearance=0, allow_above=False):
         if isinstance(location, Placeable):
-            well = location; assert isWell(well)
-            well_vol = get_well_volume(well).current_volume_min
-            well_depth = get_well_geometry(well).depth_from_volume_min(well_vol if aspirate_volume is None else well_vol - aspirate_volume)
-            z = well_depth - self._top_clearance(well, well_depth,
-                                                 clearance=(0 if clearances is None else clearances.top_clearance) + extra_clearance,
-                                                 factor=1 if clearances is None else clearances.top_clearance_factor)
+            well = location; assert is_well(well)
+            current_well_volume = well_volume(well).current_volume_min
+            liquid_depth = well_geometry(well).depth_from_volume_min(current_well_volume if aspirate_volume is None else current_well_volume - aspirate_volume)
+            z = self._top_clearance(liquid_depth=liquid_depth, clearance=(0 if clearances is None else clearances.top_clearance) + extra_clearance)
             if clearances is not None:
                 z = max(z, clearances.bottom_clearance)
             if not allow_above:
                 z = min(z, well.z_size())
             result = well.bottom(z)
         else:
-            result = location
+            result = location  # we already had a displacement baked in to the location, don't adjust (when does this happen?)
         assert isinstance(result, tuple)
         return result
 
     #-------------------------------------------------------------------------------------------------------------------
     # Tip Management
     #-------------------------------------------------------------------------------------------------------------------
+
+    @property
+    def tip_length(self):
+        return self._tip_length
 
     def pick_up_tip(self, location=None, presses=None, increment=None):
         result = super().pick_up_tip(location, presses, increment)
@@ -1655,7 +1646,7 @@ class EnhancedPipette(Pipette):
         return len(self.mixes_in_progress) > 0
 
     # If count is provided, we do (at most) that many asp/disp cycles, clamped to an increment of min_incr
-    def layered_mix(self, wells, msg=None,
+    def layered_mix(self, wells, msg='Mixing',
                     count=None,
                     min_incr=None,
                     incr=None,
@@ -1670,6 +1661,8 @@ class EnhancedPipette(Pipette):
 
         def do_layered_mix():
             self.begin_layered_mix()
+            local_keep_last_tip = keep_last_tip if keep_last_tip is not None else config.layered_mix.keep_last_tip
+
             for well in wells:
                 self._layered_mix_one(well, msg=msg,
                                       count=count,
@@ -1682,28 +1675,18 @@ class EnhancedPipette(Pipette):
                                       dispense_rate=dispense_rate,
                                       initial_turnover=initial_turnover,
                                       max_tip_cycles=max_tip_cycles)
-            if not keep_last_tip:
+            if not local_keep_last_tip:
                 self.done_tip()
             self.end_layered_mix()
 
-        if msg is None:
-            if len(wells) == 1:
-                msg = f'Mixing {wells[0]}'
-            else:
-                msg = f'Mixing {wells}'
-        else:
-            if len(wells) == 1:
-                pass
-            else:
-                msg = f'{msg} {[well.get_name() for well in wells]}'
-        keep_last_tip = keep_last_tip if keep_last_tip is not None else config.layered_mix.keep_last_tip
-        log_while(msg, do_layered_mix)
+        log_while(f'{msg} {[well.get_name() for well in wells]}', do_layered_mix)
 
-    def _top_clearance(self, well, depth, clearance, factor):
-        if clearance < 0:
-            return clearance
+    def _top_clearance(self, liquid_depth, clearance):
+        assert liquid_depth >= 0
+        if clearance > 0:
+            return liquid_depth + clearance  # going up
         else:
-            return max(clearance, depth / factor)
+            return liquid_depth + clearance  # going down. we used to clamp to at least a fraction of the current liquid depth, but not worthwhile as tube modelling accuracy has improved
 
     def _layered_mix_one(self, well, msg, **kwargs):
         def fetch(name, default=None):
@@ -1723,15 +1706,15 @@ class EnhancedPipette(Pipette):
         max_tip_cycles = fetch('max_tip_cycles', fpu.infinity)
         pre_wet = fetch('pre_wet', False)  # not much point in pre-wetting during mixing; save some time, simpler. but we do so if asked
 
-        well_vol = get_well_volume(well).current_volume_min
-        well_depth = get_well_geometry(well).depth_from_volume(well_vol)
-        well_depth_after_asp = get_well_geometry(well).depth_from_volume(well_vol - volume)
-        msg = pretty.format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_aspirate={4:n}", msg, well.get_name(), well_vol, well_depth, well_depth_after_asp)
+        current_well_volume = well_volume(well).current_volume_min
+        liquid_depth = well_geometry(well).depth_from_volume(current_well_volume)
+        liquid_depth_after_asp = well_geometry(well).depth_from_volume(current_well_volume - volume)
+        msg = pretty.format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_aspirate={4:n}", msg, well.get_name(), current_well_volume, liquid_depth, liquid_depth_after_asp)
 
         def do_one():
             count_ = count
             y_min = y = config.layered_mix.aspirate_bottom_clearance
-            y_max = well_depth_after_asp - self._top_clearance(well, well_depth_after_asp, clearance=config.layered_mix.top_clearance, factor=config.layered_mix.top_clearance_factor)
+            y_max = self._top_clearance(liquid_depth=liquid_depth_after_asp, clearance=config.layered_mix.top_clearance)
             if count_ is not None:
                 if count_ <= 1:
                     y_max = y_min
