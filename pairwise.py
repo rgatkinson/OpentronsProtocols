@@ -743,17 +743,17 @@ class PipetteContents(object):
 # Must keep in sync with Opentrons-Analyze controller.note_liquid_name
 def note_liquid(location, name=None, initial_volume=None, min_volume=None, concentration=None):
     well, __ = unpack_location(location)
-    assert isWell(well)
+    assert is_well(well)
     if name is None:
         name = well.label
     else:
         well.label = name
     d = {'name': name, 'location': get_location_path(well)}
     if initial_volume is None and min_volume is not None:
-        initial_volume = interval([min_volume, get_well_geometry(well).well_capacity])
+        initial_volume = interval([min_volume, well_geometry(well).well_capacity])
     if initial_volume is not None:
         d['initial_volume'] = initial_volume
-        get_well_volume(well).set_initial_volume(initial_volume)
+        well_volume(well).set_initial_volume(initial_volume)
     if concentration is not None:
         d['concentration'] = str(Concentration(concentration))
     serialized = json.dumps(d).replace("{", "{{").replace("}", "}}")  # runtime calls comment.format(...) on our comment; avoid issues therewith
@@ -821,7 +821,7 @@ class WellVolume(object):
         if self.well is None:
             return 0
         else:
-            return get_well_geometry(self.well).min_aspiratable_volume
+            return well_geometry(self.well).min_aspiratable_volume
 
     #-------------------------------------------------------------------------------------------------------------------
     # Actions
@@ -831,7 +831,7 @@ class WellVolume(object):
         assert volume >= 0
         if not self.initial_volume_known:
             self.set_initial_volume(interval([volume,
-                                              fpu.infinity if self.well is None else get_well_geometry(self.well).well_capacity]))
+                                              fpu.infinity if self.well is None else well_geometry(self.well).well_capacity]))
         self._track_volume(-volume)
 
     def dispense(self, volume):
@@ -846,11 +846,11 @@ class WellVolume(object):
         self.max_delta = max(self.max_delta, self.cum_delta)
 
 
-def isWell(location):
+def is_well(location):
     return isinstance(location, Well)
 
-def get_well_volume(well):
-    assert isWell(well)
+def well_volume(well):
+    assert is_well(well)
     try:
         return well.contents
     except AttributeError:
@@ -1162,8 +1162,8 @@ class FalconTube15mlGeometry(WellGeometry):
         return 14.859
 
 
-def get_well_geometry(well):
-    assert isWell(well)
+def well_geometry(well):
+    assert is_well(well)
     try:
         return well.geometry
     except AttributeError:
@@ -1449,7 +1449,7 @@ class EnhancedPipette(Pipette):
             if self.tip_wetness is TipWetness.DRY:
                 pre_wet_volume = min(
                     self.max_volume * config.aspirate.pre_wet.max_volume_fraction,
-                    max(volume, get_well_volume(well).available_volume_min))
+                    max(volume, well_volume(well).available_volume_min))
                 pre_wet_rate = config.aspirate.pre_wet.rate_func(rate)
                 self.tip_wetness = TipWetness.WETTING
                 def do_pre_wet():
@@ -1467,8 +1467,8 @@ class EnhancedPipette(Pipette):
         location = location if location else self.previous_placeable
         well, _ = unpack_location(location)
 
-        current_well_volume = get_well_volume(well).current_volume_min
-        needed_well_volume = get_well_geometry(well).min_aspiratable_volume + volume;
+        current_well_volume = well_volume(well).current_volume_min
+        needed_well_volume = well_geometry(well).min_aspiratable_volume + volume;
         if current_well_volume < needed_well_volume:
             msg = pretty.format('aspirating too much from well={0} have={1:n} need={2:n}', well.get_name(), current_well_volume, needed_well_volume)
             warn(msg)
@@ -1489,7 +1489,7 @@ class EnhancedPipette(Pipette):
 
         # track volume todo: what if we're doing an air gap
         well, __ = unpack_location(location)
-        get_well_volume(well).aspirate(volume)
+        well_volume(well).aspirate(volume)
         if volume != 0:
             self.prev_aspirated_location = well
 
@@ -1526,7 +1526,7 @@ class EnhancedPipette(Pipette):
             self.dispense_params_hack.fully_dispensed = False
         # track volume
         well, __ = unpack_location(location)
-        get_well_volume(well).dispense(volume)
+        well_volume(well).dispense(volume)
 
     def _dispense_during_transfer(self, vol, loc, **kwargs):
         assert kwargs.get(self.dispense_params_hack.full_dispense_during_transfer_kw) is not None
@@ -1547,9 +1547,9 @@ class EnhancedPipette(Pipette):
 
     def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, clearances=None, extra_clearance=0, allow_above=False):
         if isinstance(location, Placeable):
-            well = location; assert isWell(well)
-            well_vol = get_well_volume(well).current_volume_min
-            liquid_depth = get_well_geometry(well).depth_from_volume_min(well_vol if aspirate_volume is None else well_vol - aspirate_volume)
+            well = location; assert is_well(well)
+            current_well_volume = well_volume(well).current_volume_min
+            liquid_depth = well_geometry(well).depth_from_volume_min(current_well_volume if aspirate_volume is None else current_well_volume - aspirate_volume)
             z = self._top_clearance(liquid_depth=liquid_depth, clearance=(0 if clearances is None else clearances.top_clearance) + extra_clearance)
             if clearances is not None:
                 z = max(z, clearances.bottom_clearance)
@@ -1557,7 +1557,7 @@ class EnhancedPipette(Pipette):
                 z = min(z, well.z_size())
             result = well.bottom(z)
         else:
-            result = location
+            result = location  # we already had a displacement baked in to the location, don't adjust (when does this happen?)
         assert isinstance(result, tuple)
         return result
 
@@ -1707,10 +1707,10 @@ class EnhancedPipette(Pipette):
         max_tip_cycles = fetch('max_tip_cycles', fpu.infinity)
         pre_wet = fetch('pre_wet', False)  # not much point in pre-wetting during mixing; save some time, simpler. but we do so if asked
 
-        well_vol = get_well_volume(well).current_volume_min
-        liquid_depth = get_well_geometry(well).depth_from_volume(well_vol)
-        liquid_depth_after_asp = get_well_geometry(well).depth_from_volume(well_vol - volume)
-        msg = pretty.format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_aspirate={4:n}", msg, well.get_name(), well_vol, liquid_depth, liquid_depth_after_asp)
+        current_well_volume = well_volume(well).current_volume_min
+        liquid_depth = well_geometry(well).depth_from_volume(current_well_volume)
+        liquid_depth_after_asp = well_geometry(well).depth_from_volume(current_well_volume - volume)
+        msg = pretty.format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_aspirate={4:n}", msg, well.get_name(), current_well_volume, liquid_depth, liquid_depth_after_asp)
 
         def do_one():
             count_ = count
@@ -2285,8 +2285,8 @@ for well in plate.wells():
 # Remember initial liquid names and volumes
 log('Liquid Names')
 note_liquid(location=water, name='Water', min_volume=7000)  # volume is rough guess
-assert strand_a_min_vol >= strand_dilution_source_vol + get_well_geometry(strand_a).min_aspiratable_volume
-assert strand_b_min_vol >= strand_dilution_source_vol + get_well_geometry(strand_b).min_aspiratable_volume
+assert strand_a_min_vol >= strand_dilution_source_vol + well_geometry(strand_a).min_aspiratable_volume
+assert strand_b_min_vol >= strand_dilution_source_vol + well_geometry(strand_b).min_aspiratable_volume
 note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, min_volume=strand_a_min_vol)  # i.e.: we have enough, just not specified how much
 note_liquid(location=strand_b, name='StrandB', concentration=strand_b_conc, min_volume=strand_b_min_vol)  # ditto
 note_liquid(location=diluted_strand_a, name='Diluted StrandA')
@@ -2389,7 +2389,7 @@ def createMasterMix():
                 cur_vol = tubes[tube_index][1]
                 min_vol = max(p50_min_vol,
                               cur_vol / config.min_aspirate_factor_hack,  # tolerance is proportional to specification of volume. can probably make better guess
-                              get_well_geometry(cur_well).min_aspiratable_volume)
+                              well_geometry(cur_well).min_aspiratable_volume)
                 tube_index = tube_index + 1
             this_vol = min(xfer_vol_remaining, cur_vol - min_vol)
             assert this_vol >= p50_min_vol  # TODO: is this always the case?
