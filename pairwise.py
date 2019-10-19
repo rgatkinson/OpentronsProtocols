@@ -51,7 +51,6 @@ config.allow_overspill_default = True
 config.aspirate = Config()
 config.aspirate.bottom_clearance = 1.0  # see Pipette._position_for_aspirate
 config.aspirate.top_clearance = -3.5
-config.aspirate.top_clearance_factor = 10.0
 config.aspirate.extra_top_clearance_name = 'extra_aspirate_top_clearance'
 config.aspirate.pre_wet = Config()
 config.aspirate.pre_wet.default = True
@@ -64,14 +63,12 @@ config.aspirate.pause.ms_default = 500
 config.dispense = Config()
 config.dispense.bottom_clearance = 0.5  # see Pipette._position_for_dispense
 config.dispense.top_clearance = -2.0
-config.dispense.top_clearance_factor = 10.0
 config.dispense.extra_top_clearance_name = 'extra_dispense_top_clearance'
 config.dispense.full_dispense = Config()
 config.dispense.full_dispense.default = False  # todo: should this be 'True'?
 
 config.layered_mix = Config()
-config.layered_mix.top_clearance = -1.0
-config.layered_mix.top_clearance_factor = 10
+config.layered_mix.top_clearance = -1.5  # close, so we mix top layers too
 config.layered_mix.aspirate_bottom_clearance = 1.0
 config.layered_mix.aspirate_rate_factor = 4.0
 config.layered_mix.dispense_rate_factor = 4.0
@@ -1551,9 +1548,7 @@ class EnhancedPipette(Pipette):
             well = location; assert isWell(well)
             well_vol = get_well_volume(well).current_volume_min
             liquid_depth = get_well_geometry(well).depth_from_volume_min(well_vol if aspirate_volume is None else well_vol - aspirate_volume)
-            z = liquid_depth + self._top_clearance(liquid_depth=liquid_depth,
-                                                   clearance=(0 if clearances is None else clearances.top_clearance) + extra_clearance,
-                                                   factor=1 if clearances is None else clearances.top_clearance_factor)
+            z = self._top_clearance(liquid_depth=liquid_depth, clearance=(0 if clearances is None else clearances.top_clearance) + extra_clearance)
             if clearances is not None:
                 z = max(z, clearances.bottom_clearance)
             if not allow_above:
@@ -1685,14 +1680,12 @@ class EnhancedPipette(Pipette):
 
         log_while(f'{msg} {[well.get_name() for well in wells]}', do_layered_mix)
 
-    def _top_clearance(self, liquid_depth, clearance, factor):
-        assert liquid_depth >= 0 and factor > 0
+    def _top_clearance(self, liquid_depth, clearance):
+        assert liquid_depth >= 0
         if clearance > 0:
-            # going up
-            return clearance
+            return liquid_depth + clearance  # going up
         else:
-            # going down
-            return min(clearance, -liquid_depth / factor)  # todo: is the 'factor' thing still a good idea? was it ever?
+            return liquid_depth + clearance  # going down. we used to clamp to at least a fraction of the current liquid depth, but not worthwhile as tube modelling accuracy has improved
 
     def _layered_mix_one(self, well, msg, **kwargs):
         def fetch(name, default=None):
@@ -1720,9 +1713,7 @@ class EnhancedPipette(Pipette):
         def do_one():
             count_ = count
             y_min = y = config.layered_mix.aspirate_bottom_clearance
-            y_max = liquid_depth_after_asp + self._top_clearance(liquid_depth=liquid_depth_after_asp,
-                                                                 clearance=config.layered_mix.top_clearance,
-                                                                 factor=config.layered_mix.top_clearance_factor)
+            y_max = self._top_clearance(liquid_depth=liquid_depth_after_asp, clearance=config.layered_mix.top_clearance)
             if count_ is not None:
                 if count_ <= 1:
                     y_max = y_min
