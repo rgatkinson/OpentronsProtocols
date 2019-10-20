@@ -2,7 +2,6 @@
 @author Robert Atkinson
 """
 
-
 metadata = {
     'protocolName': 'Pairwise Interaction: Dilute & Master & Plate',
     'author': 'Robert Atkinson <bob@theatkinsons.org>',
@@ -1221,6 +1220,11 @@ class EnhancedPipette(Pipette):
         self.tip_wetness = TipWetness.NONE
         self.mixes_in_progress = list()
 
+        # load the config (again) in order to extract some more data later
+        from opentrons.config import pipette_config
+        pipette_model_version, pip_id = instruments._pipette_details(self.mount, self.name)
+        self.pipette_config = pipette_config.load(pipette_model_version, pip_id)
+
     #-------------------------------------------------------------------------------------------------------------------
     # Rates and speeds
     #-------------------------------------------------------------------------------------------------------------------
@@ -1310,8 +1314,6 @@ class EnhancedPipette(Pipette):
 
         step_info_map = dict()
         for i, step in enumerate(plan):
-            # print('cur=%s index=%s step=%s' % (format_number(self.current_volume), i, step))
-
             aspirate = step.get('aspirate')
             dispense = step.get('dispense')
 
@@ -1566,8 +1568,40 @@ class EnhancedPipette(Pipette):
     #-------------------------------------------------------------------------------------------------------------------
 
     @property
-    def tip_length(self):
-        return self._tip_length
+    def current_tip_overlap(self):  # tip_overlap with respect to the current tip
+        assert self.has_tip
+        d = self.pipette_config.tip_overlap
+        try:
+            return d[self.current_tip_tiprack.uri]
+        except (KeyError, AttributeError):
+            return d['default']
+
+    @property
+    def full_tip_length(self):
+        return self.current_tip_tiprack.tip_length
+
+    @property
+    def nominal_available_tip_length(self):
+        return self.full_tip_length - self.current_tip_overlap
+
+    @property
+    def calibrated_available_tip_length(self):
+        return self._tip_length  # tiprack is implicit (2019.10.19), as only one kind of tip is calibrated
+
+    @property
+    def available_tip_length(self):
+        return self.calibrated_available_tip_length
+
+    @property
+    def current_tip_tiprack(self):  # tiprack of the current tip
+        assert self.has_tip
+        return self.current_tip().parent
+
+    #-------------------------------------------------------------------------------------------------------------------
+
+    def tip_coords_absolute(self):
+        xyz = pose_tracker.absolute(self.robot.poses, self)
+        return Vector(xyz)
 
     def pick_up_tip(self, location=None, presses=None, increment=None):
         result = super().pick_up_tip(location, presses, increment)
@@ -1757,13 +1791,6 @@ class EnhancedPipette(Pipette):
 
         info_while(msg, do_one)
 
-    #-------------------------------------------------------------------------------------------------------------------
-    # Movement
-    #-------------------------------------------------------------------------------------------------------------------
-
-    def tip_coords_absolute(self):
-        xyz = pose_tracker.absolute(self.robot.poses, self)
-        return Vector(xyz)
 
 ########################################################################################################################
 # Custom Labware
@@ -1977,6 +2004,24 @@ class Opentrons15RackInsert(CustomTubeRack):
                 well_geometry=well_geometry)
             ])
 
+# an enhanced version of labware.load(tiprack_type, slot) that grabs more metadata
+def load_tiprack(tiprack_type, slot, label=None):
+    from opentrons.protocol_api import labware as new_labware
+    from opentrons.legacy_api.robot.robot import _setup_container
+    from opentrons.legacy_api.containers import load_new_labware_def
+    slot = str(slot)
+    share = False
+    definition = new_labware.get_labware_definition(load_name=tiprack_type)
+    container = load_new_labware_def(definition)
+    container = _setup_container(container)
+    #
+    container.uri = new_labware.uri_from_definition(definition)
+    container.tip_length = definition['parameters']['tipLength']
+    container.tip_overlap = definition['parameters']['tipOverlap']
+    #
+    robot._add_container_obj(container, tiprack_type, slot, label, share)
+    return container
+
 # test = Opentrons15RackInsert(name='Atkinson 15 Tube Rack 5000 µL', well_geometry=Eppendorf5point0mlTubeGeometry)
 # test_loaded = test.load(slot=9)
 # print(test_loaded)
@@ -1987,6 +2032,7 @@ class Opentrons15RackInsert(CustomTubeRack):
 # Logging
 ########################################################################################################################
 
+# region Logging
 # region Commands
 
 # Enhance well name to include any label that might be present
@@ -2054,10 +2100,6 @@ opentrons.commands.aspirate = command_aspirate
 opentrons.commands.dispense = command_dispense
 # endregion
 
-########################################################################################################################
-# Logging
-########################################################################################################################
-
 def _format_log_msg(msg: str, prefix="***********", suffix=' ***********'):
     return "%s%s%s%s" % (prefix, '' if len(prefix) == 0 else ' ', msg, suffix)
 
@@ -2088,6 +2130,7 @@ def fatal(msg: str, prefix="***********", suffix=' ***********'):
 
 def silent_log(msg):
     pass
+# endregion
 
 ########################################################################################################################
 # Utilities
@@ -2234,9 +2277,9 @@ strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
 ########################################################################################################################
 
 # Configure the tips
-tips300a = labware.load('opentrons_96_tiprack_300ul', 1)
-tips10 = labware.load('opentrons_96_tiprack_10ul', 4)
-tips300b = labware.load('opentrons_96_tiprack_300ul', 7)
+tips300a = load_tiprack('opentrons_96_tiprack_300ul', 1, label='tips300a')
+tips10 = load_tiprack('opentrons_96_tiprack_10ul', 4, label='tips10')
+tips300b = load_tiprack('opentrons_96_tiprack_300ul', 7, label='tips300b')
 
 # Configure the pipettes.
 p10 = EnhancedPipette(instruments.P10_Single(mount='left', tip_racks=[tips10]))
