@@ -28,7 +28,7 @@ from opentrons.commands import stringify_location, make_command, command_types
 from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
-from opentrons.legacy_api.containers.placeable import unpack_location, Well, Placeable
+from opentrons.legacy_api.containers.placeable import unpack_location, Well, Placeable, WellSeries
 from opentrons.trackers import pose_tracker
 from opentrons.util.vector import Vector
 
@@ -2292,15 +2292,13 @@ dilution_water_volume = dilution_volume - dilution_source_volume
 
 def make_dilutions():
     log('transferring water for dilutions')
-    p50.transfer(dilution_water_volume, water, dilutions,
-                 new_tip='once',
-                 trash=config.trash_control)
+    p50.transfer(dilution_water_volume, water, dilutions, new_tip='once', trash=config.trash_control)
 
     sources = WellSeries([initial_stock]) + dilutions[0:5]
     destinations = dilutions
     for source, destination in zip(sources, destinations):
         log(f'diluting from {source.get_name()} to {destination.get_name()}')
-        p50.transfer(dilution_source_volume, source, destination, new_tip='once', keep_last_tip=True)
+        p50.transfer(dilution_source_volume, source, destination, new_tip='once', trash=config.trash_control, keep_last_tip=True)  # keep tip cause we can use it for mixing
         p50.layered_mix([destination])
 
 def plate_dilutions():
@@ -2312,7 +2310,13 @@ def plate_dilutions():
             col_first = iVolume * num_replicates
             destination_wells = plate.rows(row)[col_first:col_first+num_replicates]
             p = p10 if volume <= 10 else p50
-            p.transfer(volume, source_tube, destination_wells, new_tip='once')
+            if not p.has_tip:  # make sure we have a tip. can reuse so long as we keep the same source tube
+                p.pick_up_tip()
+            p.transfer(volume, source_tube, destination_wells, new_tip='never', trash=config.trash_control)
+        # We're going on to another source tube. Any tip we have is now junk
+        p10.done_tip()
+        p50.done_tip()
+
 
 ########################################################################################################################
 # Off to the races

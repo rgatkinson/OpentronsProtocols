@@ -22,7 +22,7 @@ from opentrons.commands import stringify_location, make_command, command_types
 from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
-from opentrons.legacy_api.containers.placeable import unpack_location, Well, Placeable
+from opentrons.legacy_api.containers.placeable import unpack_location, Well, WellSeries, Placeable
 from opentrons.trackers import pose_tracker
 from opentrons.util.vector import Vector
 
