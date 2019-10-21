@@ -1222,8 +1222,22 @@ class EnhancedPipette(Pipette):
 
         # load the config (again) in order to extract some more data later
         from opentrons.config import pipette_config
+        from opentrons.config.pipette_config import configs
         pipette_model_version, pip_id = instruments._pipette_details(self.mount, self.name)
         self.pipette_config = pipette_config.load(pipette_model_version, pip_id)
+        if not hasattr(self.pipette_config, 'drop_tip_min'):  # future-proof
+            cfg = configs[pipette_model_version]  # ignores the id-based overrides done by pipette_config.load, but we can live with that
+            self.pipette_config_drop_tip_min = cfg['dropTip']['min']  # hack: can't add field to pipette_config, so we do it this way
+        else:
+            self.pipette_config_drop_tip_min = self.pipette_config.drop_tip_min
+
+        # try to mitigate effects of static electricity on small pipettes: they can cling to the tip on drop, causing disasters when next tips are picked up
+        if config.enable_enhancements and self.name == 'p10_single':
+            # dropping twice probably will help
+            if 'doubleDropTip' not in self.quirks:
+                self.quirks.append('doubleDropTip')
+            # plunging lower also helps, clearly
+            self.plunger_positions['drop_tip'] = self.pipette_config_drop_tip_min
 
     #-------------------------------------------------------------------------------------------------------------------
     # Rates and speeds
