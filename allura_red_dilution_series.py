@@ -2235,9 +2235,11 @@ def verify_well_locations(well_list: List[Well], pipette: EnhancedPipette):
 ########################################################################################################################
 
 # Tip usage
-p10_start_tip = 'A2'
-p50_start_tip = 'A1'
+p10_start_tip = 'A1'
+p50_start_tip = 'A3'
 config.trash_control = False
+
+stock_volume = 1000
 
 ########################################################################################################################
 # Labware
@@ -2275,7 +2277,7 @@ for well in plate.wells():
 # Remember initial liquid names and volumes
 log('Liquid Names')
 note_liquid(location=water, name='Water', min_volume=7000)  # volume is rough guess
-note_liquid(location=initial_stock, name='AlluraRed', concentration="20.1442 mM", min_volume=1000)
+note_liquid(location=initial_stock, name='AlluraRed', concentration="20.1442 mM", initial_volume=stock_volume)
 
 # Clean up namespace
 del well
