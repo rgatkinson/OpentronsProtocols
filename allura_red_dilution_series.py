@@ -2244,13 +2244,12 @@ config.trash_control = False
 ########################################################################################################################
 
 # Configure the tips
-tips300a = labware.load('opentrons_96_tiprack_300ul', 1)
-tips10 = labware.load('opentrons_96_tiprack_10ul', 4)
-tips300b = labware.load('opentrons_96_tiprack_300ul', 7)
+tips10 = labware.load('opentrons_96_tiprack_10ul', 1)
+tips300a = labware.load('opentrons_96_tiprack_300ul', 4)
 
 # Configure the pipettes.
 p10 = EnhancedPipette(instruments.P10_Single(mount='left', tip_racks=[tips10]))
-p50 = EnhancedPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b]))
+p50 = EnhancedPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a]))
 
 # Control tip usage
 p10.start_at_tip(tips10[p10_start_tip])
