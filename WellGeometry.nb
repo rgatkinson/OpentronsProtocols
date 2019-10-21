@@ -55,13 +55,27 @@ Cell[BoxData[{
   RowBox[{"assert", ",", " ", "HoldAll"}], 
   "]"}]}], "Input",ExpressionUUID->"5325dfb4-04b1-494c-bcbd-e2677b467f94"],
 
-Cell[BoxData[
+Cell[BoxData[{
  RowBox[{
   RowBox[{"printCell", "[", "cell_", "]"}], " ", ":=", " ", 
   RowBox[{"CellPrint", "[", 
    RowBox[{"ExpressionCell", "[", 
     RowBox[{"cell", ",", " ", "\"\<Output\>\""}], "]"}], 
-   "]"}]}]], "Input",ExpressionUUID->"37bb6aae-3724-4681-b762-434c36589e57"],
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"cellPrint", "[", "cell_", "]"}], " ", ":=", " ", 
+  RowBox[{"CellPrint", "[", 
+   RowBox[{"ExpressionCell", "[", 
+    RowBox[{"cell", ",", " ", "\"\<Output\>\""}], "]"}], 
+   "]"}]}]}], "Input",ExpressionUUID->"37bb6aae-3724-4681-b762-434c36589e57"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"log", "[", "msg_", "]"}], " ", ":=", " ", 
+  RowBox[{"CellPrint", "[", 
+   RowBox[{"TextCell", "[", 
+    RowBox[{"msg", ",", " ", "\"\<Text\>\""}], "]"}], 
+   "]"}]}]], "Input",ExpressionUUID->"e7981d16-a332-4bc6-abdf-3a48fc8b52ff"],
 
 Cell[BoxData[{
  RowBox[{
@@ -372,7 +386,7 @@ Cell[BoxData[{
    RowBox[{"{", 
     RowBox[{"a", ",", "b", ",", "c"}], "}"}], 
    "]"}]}]}], "Input",ExpressionUUID->"8ec68a9c-2f7a-4b02-a56f-dc20decd0fec"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -418,7 +432,7 @@ Cell[BoxData[{
        RowBox[{"genericShape", ",", " ", "depth"}], "]"}], " ", "=", " ", 
       "result"}], ";", "\[IndentingNewLine]", "result"}]}], 
    "]"}]}]}], "Input",ExpressionUUID->"01203d0f-6f73-43d7-a6ac-5d5039ab00cf"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -1241,7 +1255,7 @@ Cell[BoxData[{
    RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
   "]"}]}], "Input",ExpressionUUID->"0e3171ab-ef8e-4c05-bf51-94bbc9231f19"]
 }, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -2234,7 +2248,7 @@ Cell[BoxData[{
    RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
   "]"}]}], "Input",ExpressionUUID->"282eb182-df4b-4463-93e5-fc1a32a32034"]
 }, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -2501,7 +2515,7 @@ Cell[BoxData[{
    RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
   "]"}]}], "Input",ExpressionUUID->"645760b4-e03e-4f17-9d9a-58f468eb9693"]
 }, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -4058,7 +4072,7 @@ Cell[BoxData[{
    RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
   "]"}]}], "Input",ExpressionUUID->"9469b866-a170-479c-bffc-09c629d76d17"]
 }, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -5294,7 +5308,7 @@ Cell[BoxData[{
    RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
   "]"}]}], "Input",ExpressionUUID->"24e450ff-cbe2-4280-b8a6-5197e3d08812"]
 }, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -5339,7 +5353,7 @@ Cell[BoxData[{
     RowBox[{"sphere", "[", "r", "]"}], "]"}]}], 
   ";"}]}], "Input",ExpressionUUID->"825d670a-9fb3-4d5f-8adf-18cac6a5ea3e"]
 }, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -5938,7 +5952,7 @@ Cell[BoxData[{
    RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
   "]"}]}], "Input",ExpressionUUID->"53fd61fa-d164-4f12-a815-97b811c98e57"]
 }, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -6077,7 +6091,7 @@ Cell[BoxData[{
      RowBox[{"unknownShape", "[", 
       RowBox[{"h", ",", " ", "vol"}], "]"}], ",", " ", "depth"}], "]"}]}], 
   ";"}]}], "Input",ExpressionUUID->"52a90ae7-afe5-4ef4-ad7c-00a6a8b77c5f"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -6490,7 +6504,7 @@ Cell[BoxData[{
         "}"}], "\[IndentingNewLine]", "]"}]}]}], "\[IndentingNewLine]", 
    "]"}]}]}], "Input",ExpressionUUID->"11f14e66-db95-4420-a2fd-6abede41c944"]
 }, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -6552,8 +6566,9 @@ Cell[BoxData[{
   RowBox[{
    RowBox[{"radiusFromDepth", "[", 
     RowBox[{
-     RowBox[{"pipetteTip", "[", "parts__", "]"}], ",", " ", "depth_"}], "]"}],
-    " ", ":=", " ", 
+     RowBox[{"p", ":", " ", 
+      RowBox[{"pipetteTip", "[", "parts__", "]"}]}], ",", " ", "depth_"}], 
+    "]"}], " ", ":=", " ", 
    RowBox[{"Module", "[", 
     RowBox[{
      RowBox[{"{", 
@@ -6575,32 +6590,40 @@ Cell[BoxData[{
          RowBox[{"1", ";;", " ", "partCount"}], "]"}], "]"}]}], ";", 
       "\[IndentingNewLine]", 
       RowBox[{"Piecewise", " ", "@", " ", 
-       RowBox[{"MapThread", "[", "\[IndentingNewLine]", 
+       RowBox[{"(", 
         RowBox[{
-         RowBox[{"Function", "[", 
-          RowBox[{
-           RowBox[{"{", 
-            RowBox[{
-            "i", ",", " ", "part", ",", " ", "height", ",", " ", 
-             "cumHeight"}], "}"}], ",", 
-           RowBox[{"{", 
-            RowBox[{
-             RowBox[{"radiusFromDepth", "[", 
-              RowBox[{"part", ",", " ", 
-               RowBox[{"depth", " ", "-", " ", "cumHeight"}]}], "]"}], ",", 
-             " ", 
-             RowBox[{"Or", "[", 
-              RowBox[{
-               RowBox[{"i", "\[Equal]", "partCount"}], ",", " ", 
-               RowBox[{"depth", " ", "\[LessEqual]", " ", 
-                RowBox[{"cumHeight", "+", "height"}]}]}], "]"}]}], " ", 
-            "}"}]}], "]"}], ",", " ", 
          RowBox[{"{", 
+          RowBox[{"{", 
+           RowBox[{"Indeterminate", ",", " ", 
+            RowBox[{"depth", " ", "<", " ", "0"}]}], "}"}], "}"}], " ", "~", 
+         "Join", "~", " ", 
+         RowBox[{"MapThread", "[", "\[IndentingNewLine]", 
           RowBox[{
-           RowBox[{"Range", "[", "partCount", "]"}], ",", 
-           RowBox[{"{", "parts", "}"}], ",", " ", "heights", ",", " ", 
-           "cumHeights"}], "}"}]}], " ", "]"}]}]}]}], "\[IndentingNewLine]", 
-    "]"}]}], "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+           RowBox[{"Function", "[", 
+            RowBox[{
+             RowBox[{"{", 
+              RowBox[{
+              "i", ",", " ", "part", ",", " ", "height", ",", " ", 
+               "cumHeight"}], "}"}], ",", 
+             RowBox[{"{", 
+              RowBox[{
+               RowBox[{"radiusFromDepth", "[", 
+                RowBox[{"part", ",", " ", 
+                 RowBox[{"depth", " ", "-", " ", "cumHeight"}]}], "]"}], ",", 
+               " ", 
+               RowBox[{"Or", "[", 
+                RowBox[{
+                 RowBox[{"i", "\[Equal]", "partCount"}], ",", " ", 
+                 RowBox[{"depth", " ", "\[LessEqual]", " ", 
+                  RowBox[{"cumHeight", "+", "height"}]}]}], "]"}]}], " ", 
+              "}"}]}], "]"}], ",", " ", 
+           RowBox[{"{", 
+            RowBox[{
+             RowBox[{"Range", "[", "partCount", "]"}], ",", 
+             RowBox[{"{", "parts", "}"}], ",", " ", "heights", ",", " ", 
+             "cumHeights"}], "}"}]}], " ", "]"}]}], ")"}]}]}]}], 
+    "\[IndentingNewLine]", "]"}]}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"test", " ", "@", " ", 
    RowBox[{"radiusFromDepth", "[", 
@@ -6615,7 +6638,7 @@ Cell[BoxData[{
   ";"}]}], "Input",ExpressionUUID->"be576ddd-112c-4018-805a-d3ce9d203c81"]
 }, Open  ]]
 }, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -7221,7 +7244,7 @@ It should be noted that the specification indicates that the upper \
 the top. We ignore that\
 \>", "Text",ExpressionUUID->"256d249b-09af-426b-9593-83dcbf8dac53"]
 }, Open  ]]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -7817,7 +7840,7 @@ The height of the cylindrical part here (hCyl) seems unreasonably large, \
 given the observed dimensions of the tubes. For the moment, at least, we don\
 \[CloseCurlyQuote]t use this approach.\
 \>", "Text",ExpressionUUID->"4517fb1f-7fdb-49cc-aea8-4a6913d6339d"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -8036,7 +8059,7 @@ Cell[BoxData[{
   RowBox[{"test", " ", "@", " ", 
    RowBox[{"volume", " ", "@", " ", "fittedIdt"}]}], 
   ";"}]}], "Input",ExpressionUUID->"e0795983-552f-487d-b98c-b389c7119e83"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -8567,7 +8590,7 @@ Cell[BoxData[
       "\[IndentingNewLine]", 
       RowBox[{"ListPlot", "[", "falconData", "]"}]}], "]"}]}]}], 
   "]"}]], "Input",ExpressionUUID->"bc443cb3-9f50-4e20-8b4e-6613d6e756cb"]
-}, Open  ]],
+}, Closed]],
 
 Cell[CellGroupData[{
 
@@ -8611,18 +8634,24 @@ Cell[BoxData[
    RowBox[{"invertedFrustum", "[", 
     RowBox[{"59.3", ",", " ", "3", ",", " ", "1"}], "]"}], 
    "]"}]}]], "Input",ExpressionUUID->"3bc77bfb-73d5-4148-b629-630aa0885eaa"]
+}, Open  ]]
 }, Open  ]],
 
 Cell[CellGroupData[{
 
 Cell["Collision Detection", \
-"Subsubsection",ExpressionUUID->"ff17b704-a955-41c5-9dc9-2c3458d4c45d"],
+"Subsection",ExpressionUUID->"ff17b704-a955-41c5-9dc9-2c3458d4c45d"],
 
 Cell[TextData[{
  StyleBox["depth ",
   FontSlant->"Italic"],
  "is from the bottom of tube, as usual"
 }], "Text",ExpressionUUID->"9899be27-8c70-4d7b-9da0-26eb1e86eac3"],
+
+Cell[CellGroupData[{
+
+Cell["Utilities", \
+"Subsubsection",ExpressionUUID->"563448e5-845b-4d94-9052-fd9ec910d2db"],
 
 Cell[BoxData[{
  RowBox[{"Clear", "[", 
@@ -8988,21 +9017,29 @@ Cell[BoxData[{
       RowBox[{
       "depth", ",", " ", "0.19409486595347666`", ",", " ", 
        "16.674223638479965`"}], "}"}]}], "]"}]}], 
-  ";"}]}], "Input",ExpressionUUID->"fe240e7b-a4f3-45a2-87ef-a6f3529ef1fc"],
+  ";"}]}], "Input",ExpressionUUID->"fe240e7b-a4f3-45a2-87ef-a6f3529ef1fc"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Main Event", \
+"Subsubsection",ExpressionUUID->"e9939375-236c-4445-8e7f-e7b053d78a2f"],
 
 Cell[BoxData[{
  RowBox[{
   RowBox[{"collisionDetect", "[", 
    RowBox[{"tube_", ",", " ", "tip_", ",", " ", "depth_"}], "]"}], " ", ":=", 
   " ", 
-  RowBox[{"Block", "[", 
+  RowBox[{"Module", "[", 
    RowBox[{
     RowBox[{"{", 
      RowBox[{
-     "tubeHeight", ",", " ", "expr", ",", " ", "assumpts", ",", " ", "region",
-       ",", " ", "x", ",", " ", "z", ",", " ", "condPieces", ",", " ", 
-      "truePiece", ",", " ", "trueCond", ",", " ", "minToPiecewise", ",", " ",
-       "processPiece", ",", " ", "exprs"}], "}"}], ",", "\[IndentingNewLine]", 
+     "tubeHeight", ",", " ", "expr", ",", " ", "assumpts", ",", " ", "z", ",",
+       "piecesOf", ",", " ", "trueOf", ",", " ", "condPieces", ",", " ", 
+      "depthBound", ",", " ", "truePiece", ",", " ", "findTrueCond", ",", " ",
+       "trueCond", ",", " ", "minToPiecewise", ",", " ", "processPieceCond", 
+      ",", " ", "exprs", ",", " ", "result", ",", " ", "reduceResult"}], 
+     "}"}], ",", "\[IndentingNewLine]", 
     RowBox[{
      RowBox[{"tubeHeight", " ", "=", " ", 
       RowBox[{"height", "[", "tube", "]"}]}], ";", "\[IndentingNewLine]", 
@@ -9011,8 +9048,19 @@ Cell[BoxData[{
        RowBox[{"assumptions", "[", "tube", "]"}], " ", "&&", " ", 
        RowBox[{"assumptions", "[", "tip", "]"}], " ", "&&", " ", 
        RowBox[{"depth", " ", "\[GreaterEqual]", " ", "0"}], "  ", "&&", " ", 
-       RowBox[{"depth", " ", "\[LessEqual]", " ", "tubeHeight"}]}]}], ";", 
+       RowBox[{"depth", " ", "\[LessEqual]", " ", "tubeHeight"}], " ", "&&", 
+       " ", 
+       RowBox[{"z", " ", "\[GreaterEqual]", " ", "depth"}]}]}], ";", 
      "\[IndentingNewLine]", 
+     RowBox[{"(*", " ", 
+      RowBox[{
+      "our", " ", "fundamental", " ", "clearance", " ", "expression", " ", 
+       "is", " ", "the", " ", "difference", " ", "in", " ", "the", " ", 
+       RowBox[{"radii", ".", " ", "The"}], " ", "pipette", " ", "tip", " ", 
+       "is", " ", "above", " ", "the", " ", "bottom", " ", "of", " ", "the", 
+       " ", "tube", " ", 
+       RowBox[{"by", " ", "'"}], 
+       RowBox[{"depth", "'"}]}], " ", "*)"}], "\[IndentingNewLine]", 
      RowBox[{"expr", " ", "=", " ", 
       RowBox[{
        RowBox[{"radiusFromDepth", "[", 
@@ -9020,26 +9068,50 @@ Cell[BoxData[{
        RowBox[{"radiusFromDepth", "[", 
         RowBox[{"tip", ",", " ", 
          RowBox[{"z", "-", "depth"}]}], "]"}]}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"(*", " ", 
+      RowBox[{
+      "expand", " ", "to", " ", "deal", " ", "with", " ", "the", " ", 
+       "finite", " ", "bounds", " ", "we", " ", "have", " ", "hear", " ", 
+       "on", " ", "depth"}], " ", "*)"}], "\[IndentingNewLine]", 
      RowBox[{"expr", " ", "=", " ", 
       RowBox[{"PiecewiseExpand", "[", 
        RowBox[{"expr", ",", "assumpts", ",", " ", "Reals"}], "]"}]}], ";", 
      "\[IndentingNewLine]", 
-     RowBox[{"test", " ", "@", " ", "expr"}], ";", "\[IndentingNewLine]", 
      RowBox[{"If", "[", 
       RowBox[{
        RowBox[{"NumericQ", "[", "depth", "]"}], "\[IndentingNewLine]", ",", 
        "\[IndentingNewLine]", 
+       RowBox[{"(*", " ", 
+        RowBox[{
+         RowBox[{
+          RowBox[{
+           RowBox[{"We", "'"}], "re", " ", "being", " ", "asked", " ", "for", 
+           " ", "a", " ", "specific", " ", "depth"}], ";", " ", 
+          RowBox[{"this", " ", "is", " ", "for", " ", 
+           RowBox[{"testing", ".", " ", "Solve"}], " ", "numerically"}]}], 
+         ",", " ", 
+         RowBox[{"and", " ", "plot", " ", "for", " ", "good", " ", 
+          RowBox[{"meaasure", "."}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
        RowBox[{
         RowBox[{"printCell", "[", 
          RowBox[{"Plot", "[", 
           RowBox[{"expr", ",", " ", 
            RowBox[{"{", 
-            RowBox[{"z", ",", " ", "0", ",", " ", "tubeHeight"}], "}"}], ",", 
-           " ", 
+            RowBox[{"z", ",", " ", "depth", ",", " ", "tubeHeight"}], "}"}], 
+           ",", " ", 
            RowBox[{"AxesLabel", "\[Rule]", 
             RowBox[{"{", 
-             RowBox[{"\"\<z\>\"", ",", " ", "\"\<clearance\>\""}], "}"}]}]}], 
-          "]"}], "]"}], ";", "\[IndentingNewLine]", 
+             RowBox[{"\"\<z\>\"", ",", " ", "\"\<clearance\>\""}], "}"}]}], 
+           ",", " ", 
+           RowBox[{"AxesOrigin", "\[Rule]", 
+            RowBox[{"{", 
+             RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
+           RowBox[{"GridLines", "\[Rule]", "Automatic"}], ",", " ", 
+           RowBox[{"PlotLabel", "\[Rule]", 
+            RowBox[{"StringForm", "[", 
+             RowBox[{
+             "\"\<Clearance as function of z with depth=``\>\"", ",", 
+              "depth"}], "]"}]}]}], "]"}], "]"}], ";", "\[IndentingNewLine]", 
         RowBox[{"FullSimplify", "[", 
          RowBox[{
           RowBox[{"MinValue", "[", 
@@ -9052,41 +9124,119 @@ Cell[BoxData[{
                RowBox[{"z", " ", "\[LessEqual]", " ", "tubeHeight"}]}]}], 
              "}"}], ",", " ", "z"}], "]"}], ",", " ", "assumpts"}], "]"}]}], 
        "\[IndentingNewLine]", ",", "\[IndentingNewLine]", 
+       RowBox[{"(*", " ", 
+        RowBox[{
+        "access", " ", "piece", " ", "of", " ", "a", " ", "Piecewise"}], " ", 
+        "*)"}], "\[IndentingNewLine]", 
        RowBox[{
-        RowBox[{"condPieces", " ", "=", " ", 
-         RowBox[{"expr", "[", 
+        RowBox[{
+         RowBox[{"piecesOf", "[", "p_Piecewise", "]"}], " ", ":=", " ", 
+         RowBox[{"p", "[", 
           RowBox[{"[", "1", "]"}], "]"}]}], ";", "\[IndentingNewLine]", 
-        RowBox[{"truePiece", " ", "=", " ", 
-         RowBox[{"expr", "[", 
+        RowBox[{
+         RowBox[{"trueOf", "[", "p_Piecewise", "]"}], " ", ":=", " ", 
+         RowBox[{"p", "[", 
           RowBox[{"[", "2", "]"}], "]"}]}], ";", "\[IndentingNewLine]", 
-        RowBox[{"trueCond", " ", "=", " ", 
+        RowBox[{"condPieces", " ", "=", " ", 
+         RowBox[{"piecesOf", " ", "@", " ", "expr"}]}], ";", 
+        "\[IndentingNewLine]", 
+        RowBox[{"truePiece", " ", "=", " ", 
+         RowBox[{"trueOf", " ", "@", " ", "expr"}]}], ";", 
+        "\[IndentingNewLine]", "\[IndentingNewLine]", 
+        RowBox[{"(*", " ", 
+         RowBox[{"Convert", " ", 
+          RowBox[{"the", " ", "'"}], 
+          RowBox[{"True", "'"}], " ", "into", " ", "an", " ", "explicitly", 
+          " ", "stated", " ", "condition"}], " ", "*)"}], 
+        "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{"findTrueCond", "[", "pieces_", "]"}], " ", ":=", " ", 
          RowBox[{"Simplify", "[", 
           RowBox[{
-           RowBox[{"z", " ", "\[GreaterEqual]", " ", "0"}], " ", "&&", " ", 
-           RowBox[{"Not", "[", 
-            RowBox[{"Or", " ", "@@", " ", 
-             RowBox[{"(", 
-              RowBox[{"condPieces", "[", 
-               RowBox[{"[", 
-                RowBox[{"All", ",", "2"}], "]"}], "]"}], ")"}]}], "]"}]}], 
-          "]"}]}], ";", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+           RowBox[{
+            RowBox[{"z", " ", "\[GreaterEqual]", " ", "0"}], " ", "&&", " ", 
+            RowBox[{"Not", "[", 
+             RowBox[{"Or", " ", "@@", " ", 
+              RowBox[{"(", 
+               RowBox[{"pieces", "[", 
+                RowBox[{"[", 
+                 RowBox[{"All", ",", "2"}], "]"}], "]"}], ")"}]}], "]"}]}], 
+           ",", " ", "assumpts"}], "]"}]}], ";", "\[IndentingNewLine]", 
         RowBox[{
-         RowBox[{"processPiece", "[", 
+         RowBox[{"findTrueCond", "[", "p_Piecewise", "]"}], " ", ":=", " ", 
+         RowBox[{"findTrueCond", "[", 
+          RowBox[{"piecesOf", " ", "@", " ", "p"}], "]"}]}], ";", 
+        "\[IndentingNewLine]", 
+        RowBox[{"trueCond", " ", "=", " ", 
+         RowBox[{"findTrueCond", "[", "condPieces", "]"}]}], ";", 
+        "\[IndentingNewLine]", "\[IndentingNewLine]", 
+        RowBox[{"(*", " ", 
+         RowBox[{
+          RowBox[{
+           RowBox[{"We", "'"}], "re", " ", "going", " ", "to", " ", "process",
+            " ", "all", " ", "the", " ", "pieces"}], ",", " ", 
+          RowBox[{"finding", " ", "a", " ", "min", " ", "for", " ", "each"}], 
+          ",", " ", 
+          RowBox[{
+          "that", " ", "will", " ", "be", " ", "then", " ", "guarded", " ", 
+           "by", " ", "a", " ", "clause", " ", "dependent", " ", "on", " ", 
+           "depth"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{"processPieceCond", "[", 
           RowBox[{"piece_", ",", " ", "cond_"}], "]"}], " ", ":=", " ", 
          RowBox[{"Module", "[", 
           RowBox[{
            RowBox[{"{", 
             RowBox[{
-            "genPiece", ",", " ", "rules", ",", " ", "constants", ",", " ", 
-             "constraints", ",", " ", "minValue", ",", " ", "argMinValue", 
+            "genericPiece", ",", " ", "rules", ",", " ", "constants", ",", 
+             " ", "constraints", ",", " ", "minValues", ",", " ", "minValue", 
              ",", " ", "depthSym", ",", " ", "tubeHeightSym", ",", " ", "eqn",
-              ",", " ", "solns", ",", " ", "minValues", ",", " ", "emptyTest",
-              ",", " ", "lower", ",", " ", "upper", ",", " ", "expandedMin", 
-             ",", " ", "resultCond"}], "}"}], ",", "\[IndentingNewLine]", 
+              ",", " ", "solns", ",", " ", "emptyTest", ",", " ", "lower", 
+             ",", " ", "upper", ",", " ", "expandedMin", ",", " ", 
+             "resultCond", ",", " ", "newPiece", ",", " ", "makeResult"}], 
+            "}"}], ",", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+           RowBox[{"(*", 
+            RowBox[{
+             RowBox[{
+             "log", " ", "@", " ", 
+              "\"\<figure out the range that z takes in this piece\>\""}], 
+             ";"}], "*)"}], "\[IndentingNewLine]", 
            RowBox[{
             RowBox[{
+             RowBox[{"emptyTest", "[", 
+              RowBox[{"set_", ",", " ", "ifEmpty_"}], "]"}], " ", ":=", " ", 
+             RowBox[{"If", "[", 
+              RowBox[{
+               RowBox[{
+                RowBox[{"Length", "[", "set", "]"}], "\[Equal]", "0"}], ",", 
+               " ", 
+               RowBox[{"{", "ifEmpty", "}"}], ",", " ", "set"}], "]"}]}], ";",
+             "\[IndentingNewLine]", 
+            RowBox[{"lower", " ", "=", " ", 
+             RowBox[{"Max", " ", "@@", " ", 
+              RowBox[{"emptyTest", "[", 
+               RowBox[{
+                RowBox[{"findLower", "[", 
+                 RowBox[{"z", ",", " ", "cond"}], "]"}], ",", " ", "0"}], 
+               "]"}]}]}], ";", "\[IndentingNewLine]", 
+            RowBox[{"upper", " ", "=", " ", 
+             RowBox[{"Min", " ", "@@", " ", 
+              RowBox[{"emptyTest", "[", 
+               RowBox[{
+                RowBox[{"findUpper", "[", 
+                 RowBox[{"z", ",", " ", "cond"}], "]"}], ",", " ", 
+                "tubeHeight"}], "]"}]}]}], ";", "\[IndentingNewLine]", 
+            "\[IndentingNewLine]", 
+            RowBox[{"(*", 
+             RowBox[{
+              RowBox[{
+              "log", " ", "@", " ", 
+               "\"\<genericize any inexact numbers. MinValue doesn't like in \
+exact numbers. \>\""}], ";"}], "*)"}], "\[IndentingNewLine]", 
+            RowBox[{
              RowBox[{"{", 
-              RowBox[{"genPiece", ",", " ", "rules"}], "}"}], " ", "=", " ", 
+              RowBox[{"genericPiece", ",", " ", "rules"}], "}"}], " ", "=", 
+             " ", 
              RowBox[{"genericize", "[", 
               RowBox[{"piece", ",", " ", "InexactNumberQ"}], "]"}]}], ";", 
             "\[IndentingNewLine]", 
@@ -9121,56 +9271,44 @@ Cell[BoxData[{
                 RowBox[{"depthSym", " ", "\[Rule]", " ", "depth"}], ",", " ", 
                 RowBox[{
                 "tubeHeightSym", " ", "\[Rule]", " ", "tubeHeight"}]}], 
-               "}"}]}]}], ";", "\[IndentingNewLine]", 
+               "}"}]}]}], ";", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+            RowBox[{"(*", 
+             RowBox[{
+              RowBox[{
+              "log", " ", "@", " ", 
+               "\"\<try to minima as the place where the derivative is zero \
+\>\""}], ";"}], "*)"}], "\[IndentingNewLine]", 
             RowBox[{"eqn", " ", "=", " ", 
              RowBox[{
               RowBox[{"D", "[", 
-               RowBox[{"genPiece", ",", "z"}], "]"}], " ", "\[Equal]", " ", 
-              "0"}]}], ";", "\[IndentingNewLine]", 
+               RowBox[{"genericPiece", ",", "z"}], "]"}], " ", "\[Equal]", 
+              " ", "0"}]}], ";", "\[IndentingNewLine]", 
             RowBox[{"solns", " ", "=", " ", 
              RowBox[{"Solve", "[", 
               RowBox[{"eqn", ",", " ", "z"}], "]"}]}], ";", 
-            "\[IndentingNewLine]", 
-            RowBox[{
-             RowBox[{"emptyTest", "[", 
-              RowBox[{"set_", ",", " ", "ifEmpty_"}], "]"}], " ", ":=", " ", 
-             RowBox[{"If", "[", 
-              RowBox[{
-               RowBox[{
-                RowBox[{"Length", "[", "set", "]"}], "\[Equal]", "0"}], ",", 
-               " ", 
-               RowBox[{"{", "ifEmpty", "}"}], ",", " ", "set"}], "]"}]}], ";",
-             "\[IndentingNewLine]", 
-            RowBox[{"lower", " ", "=", " ", 
-             RowBox[{"Max", " ", "@@", " ", 
-              RowBox[{"emptyTest", "[", 
-               RowBox[{
-                RowBox[{"findLower", "[", 
-                 RowBox[{"z", ",", " ", "cond"}], "]"}], ",", " ", "0"}], 
-               "]"}]}]}], ";", "\[IndentingNewLine]", 
-            RowBox[{"upper", " ", "=", " ", 
-             RowBox[{"Min", " ", "@@", " ", 
-              RowBox[{"emptyTest", "[", 
-               RowBox[{
-                RowBox[{"findUpper", "[", 
-                 RowBox[{"z", ",", " ", "cond"}], "]"}], ",", " ", 
-                "tubeHeight"}], "]"}]}]}], ";", "\[IndentingNewLine]", 
+            "\[IndentingNewLine]", "\[IndentingNewLine]", 
             RowBox[{"If", " ", "[", 
              RowBox[{
               RowBox[{
                RowBox[{"Length", "[", "solns", "]"}], " ", "\[Equal]", " ", 
                "0"}], ",", "\[IndentingNewLine]", 
+              RowBox[{"(*", " ", 
+               RowBox[{"Calculus", " ", 
+                RowBox[{"doesn", "'"}], "t", " ", 
+                RowBox[{"work", ":", " ", 
+                 RowBox[{"no", " ", "contained", " ", 
+                  RowBox[{"minima", ".", " ", "So"}], " ", "simple", " ", 
+                  "enough", " ", "that", " ", "MinValue", " ", "will", " ", 
+                  RowBox[{"work", "."}]}]}]}], " ", "*)"}], 
+              "\[IndentingNewLine]", 
               RowBox[{
-               RowBox[{
-                RowBox[{"{", 
-                 RowBox[{"minValue", ",", " ", "argMinValue"}], "}"}], " ", 
-                "=", " ", 
+               RowBox[{"minValue", " ", "=", " ", 
                 RowBox[{"Assuming", "[", 
                  RowBox[{"constraints", ",", " ", 
-                  RowBox[{"Minimize", "[", 
+                  RowBox[{"MinValue", "[", 
                    RowBox[{
                     RowBox[{"{", 
-                    RowBox[{"genPiece", ",", " ", 
+                    RowBox[{"genericPiece", ",", " ", 
                     RowBox[{
                     RowBox[{"depthSym", " ", "\[LessEqual]", " ", "z"}], " ", 
                     "&&", " ", 
@@ -9187,6 +9325,19 @@ Cell[BoxData[{
                 RowBox[{
                 "derived", " ", "maxima", " ", "and", " ", "minima"}]}], " ", 
                "*)"}], "\[IndentingNewLine]", 
+              RowBox[{"(*", " ", 
+               RowBox[{
+               "the", " ", "trouble", " ", "is", " ", "is", " ", "that", " ", 
+                "if", " ", "depth", " ", "is", " ", "in", " ", "fact", " ", 
+                "in", " ", "this", " ", "interval", " ", "then", " ", "the", 
+                " ", "lower", " ", "bound", " ", "is", " ", "in", " ", 
+                "correct"}], " ", "*)"}], "\[IndentingNewLine]", 
+              RowBox[{"(*", " ", 
+               RowBox[{
+               "we", " ", "can", " ", "deal", " ", "with", " ", "that", " ", 
+                "by", " ", "including", " ", "a", " ", "Max", " ", 
+                "condition", " ", "in", " ", "the", " ", "lower", " ", 
+                "bound"}], " ", "*)"}], "\[IndentingNewLine]", 
               RowBox[{
                RowBox[{"solns", " ", "=", " ", 
                 RowBox[{"Union", "[", 
@@ -9194,66 +9345,155 @@ Cell[BoxData[{
                   RowBox[{"{", 
                    RowBox[{
                     RowBox[{"{", 
-                    RowBox[{"z", " ", "\[Rule]", " ", "lower"}], "}"}], ",", 
-                    " ", 
+                    RowBox[{"z", " ", "\[Rule]", " ", 
+                    RowBox[{"Max", "[", 
+                    RowBox[{"depth", ",", "lower"}], "]"}]}], "}"}], ",", " ", 
                     RowBox[{"{", 
                     RowBox[{"z", " ", "\[Rule]", " ", "upper"}], "}"}]}], 
                    "}"}]}], "]"}]}], ";", "\[IndentingNewLine]", 
+               RowBox[{"minValues", " ", "=", " ", 
+                RowBox[{
+                 RowBox[{
+                  RowBox[{"(", 
+                   RowBox[{"genericPiece", " ", "/.", " ", "#"}], ")"}], 
+                  "&"}], "/@", " ", "solns"}]}], ";", "\[IndentingNewLine]", 
                RowBox[{"minValue", " ", "=", " ", 
-                RowBox[{"Min", " ", "@@", " ", 
-                 RowBox[{"(", 
-                  RowBox[{
-                   RowBox[{
-                    RowBox[{"(", 
-                    RowBox[{"genPiece", " ", "/.", " ", "#"}], ")"}], "&"}], "/@",
-                    " ", "solns"}], ")"}]}]}], ";"}]}], "\[IndentingNewLine]",
-              "]"}], ";", "\[IndentingNewLine]", 
-            RowBox[{"minValue", " ", "=", " ", 
-             RowBox[{"FullSimplify", "[", 
-              RowBox[{"minValue", ",", " ", "constraints"}], "]"}]}], ";", 
-            "\[IndentingNewLine]", 
+                RowBox[{"Min", " ", "@@", " ", "minValues"}]}], ";"}]}], 
+             "\[IndentingNewLine]", "]"}], ";", "\[IndentingNewLine]", 
+            RowBox[{"(*", " ", 
+             RowBox[{
+             "ungenericize", " ", "our", " ", "minimized", " ", "piece"}], 
+             " ", "*)"}], "\[IndentingNewLine]", 
             RowBox[{"minValue", " ", "=", " ", 
              RowBox[{"minValue", " ", "/.", " ", "rules"}]}], ";", 
             "\[IndentingNewLine]", 
+            RowBox[{"(*", " ", 
+             RowBox[{"simplify", " ", "it"}], " ", "*)"}], 
+            "\[IndentingNewLine]", 
             RowBox[{"minValue", " ", "=", " ", 
              RowBox[{"FullSimplify", "[", 
-              RowBox[{"minValue", ",", " ", "constraints"}], "]"}]}], ";", 
-            "\[IndentingNewLine]", 
+              RowBox[{
+               RowBox[{"PiecewiseExpand", "[", 
+                RowBox[{"minValue", ",", " ", 
+                 RowBox[{"constraints", " ", "&&", " ", "assumpts"}]}], "]"}],
+                ",", " ", 
+               RowBox[{"constraints", " ", "&&", " ", "assumpts"}]}], "]"}]}],
+             ";", "\[IndentingNewLine]", 
+            RowBox[{"(*", " ", 
+             RowBox[{
+             "simplify", " ", "the", " ", "condition", " ", "under", " ", 
+              "which", " ", "this", " ", "piece", " ", "applies"}], " ", 
+             "*)"}], "\[IndentingNewLine]", 
             RowBox[{"resultCond", " ", "=", " ", 
-             RowBox[{"FullSimplify", "[", 
-              RowBox[{"(*", 
-               RowBox[{"cond", "  ", "&&", " ", 
-                RowBox[{"depthSym", " ", "\[LessEqual]", " ", "z"}], " ", "&&",
-                 " ", 
-                RowBox[{"z", " ", "\[LessEqual]", " ", "tubeHeightSym"}], " ",
-                 "&&"}], "*)"}], " ", 
+             RowBox[{"FullSimplify", "[", " ", 
               RowBox[{
                RowBox[{"depth", " ", "\[LessEqual]", " ", "upper"}], ",", " ",
                 "constraints"}], "]"}]}], ";", "\[IndentingNewLine]", 
-            RowBox[{"{", 
-             RowBox[{"minValue", ",", " ", "resultCond"}], "}"}]}]}], 
+            RowBox[{"(*", " ", 
+             RowBox[{
+             "put", " ", "that", " ", "together", " ", "and", " ", "simplify",
+               " ", "some", " ", "more", " ", "with", " ", 
+              "PiecewiseExpand"}], " ", "*)"}], "\[IndentingNewLine]", 
+            RowBox[{"newPiece", " ", "=", " ", 
+             RowBox[{"Piecewise", "[", 
+              RowBox[{
+               RowBox[{"{", 
+                RowBox[{"{", 
+                 RowBox[{"minValue", ",", " ", "resultCond"}], "}"}], "}"}], 
+               ",", " ", "Indeterminate"}], "]"}]}], ";", 
+            "\[IndentingNewLine]", 
+            RowBox[{"newPiece", " ", "=", " ", 
+             RowBox[{"PiecewiseExpand", "[", 
+              RowBox[{"newPiece", ",", " ", "assumpts"}], "]"}]}], ";", 
+            "\[IndentingNewLine]", "\[IndentingNewLine]", 
+            RowBox[{"(*", " ", 
+             RowBox[{
+             "make", " ", "sure", " ", "we", " ", "have", " ", "our", " ", 
+              "piece", " ", "together", " ", "with", " ", "the", " ", 
+              "condition", " ", "we", " ", "want"}], " ", "*)"}], 
+            "\[IndentingNewLine]", 
+            RowBox[{
+             RowBox[{"makeResult", "[", 
+              RowBox[{"Piecewise", "[", 
+               RowBox[{
+                RowBox[{"{", 
+                 RowBox[{"{", 
+                  RowBox[{"a_", ",", " ", "b_"}], "}"}], "}"}], ",", " ", 
+                "Indeterminate"}], "]"}], "]"}], " ", ":=", " ", 
+             RowBox[{"{", 
+              RowBox[{"a", ",", " ", "b"}], "}"}]}], ";", 
+            "\[IndentingNewLine]", 
+            RowBox[{
+             RowBox[{"makeResult", "[", "other_", "]"}], " ", ":=", " ", 
+             RowBox[{"{", 
+              RowBox[{"other", ",", " ", "resultCond"}], "}"}]}], ";", 
+            "\[IndentingNewLine]", 
+            RowBox[{"makeResult", "[", "newPiece", "]"}]}]}], 
           "\[IndentingNewLine]", "]"}]}], ";", "\[IndentingNewLine]", 
+        "\[IndentingNewLine]", 
+        RowBox[{"(*", " ", 
+         RowBox[{
+          RowBox[{"process", " ", "all", " ", "the", " ", "pieces"}], ",", 
+          " ", 
+          RowBox[{
+          "finding", " ", "the", " ", "min", " ", "of", " ", "each", " ", 
+           "and", " ", "an", " ", "appropriate", " ", "range", " ", "bound", 
+           " ", "for", " ", "depth"}]}], " ", "*)"}], "\[IndentingNewLine]", 
         RowBox[{"condPieces", " ", "=", " ", 
          RowBox[{
           RowBox[{"(", 
            RowBox[{
             RowBox[{
-             RowBox[{"processPiece", " ", "@@", " ", "#"}], " ", "&"}], " ", "/@",
+             RowBox[{"processPieceCond", "[", 
+              RowBox[{
+               RowBox[{"#", "[", 
+                RowBox[{"[", "1", "]"}], "]"}], ",", " ", 
+               RowBox[{"#", "[", 
+                RowBox[{"[", "2", "]"}], "]"}]}], "]"}], " ", "&"}], " ", "/@",
              " ", "condPieces"}], ")"}], " ", "~", "Join", "~", " ", 
           RowBox[{"{", 
-           RowBox[{"processPiece", "[", 
+           RowBox[{"processPieceCond", "[", 
             RowBox[{"truePiece", ",", " ", "trueCond"}], "]"}], "}"}]}]}], 
-        ";", "\[IndentingNewLine]", 
-        RowBox[{"truePiece", " ", "=", " ", "Indeterminate"}], ";", 
-        "\[IndentingNewLine]", 
-        RowBox[{"condPieces", " ", "=", " ", 
-         RowBox[{"Reverse", "[", "condPieces", "]"}]}], ";", 
-        "\[IndentingNewLine]", 
+        ";", "\[IndentingNewLine]", "\[IndentingNewLine]", 
         RowBox[{"(*", " ", 
          RowBox[{
-         "condPieces", " ", "is", " ", "sorted", " ", "in", " ", "increasing",
-           " ", "z", " ", "order", " ", "of", " ", "\"\<depth <= bound\>\"", 
-          " ", "tests"}], " ", "*)"}], "\[IndentingNewLine]", 
+         "sort", " ", "in", " ", "increasing", " ", "order", " ", "by", " ", 
+          "depth", " ", "bound"}], " ", "*)"}], "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{"depthBound", "[", 
+          RowBox[{"{", 
+           RowBox[{"other_", ",", " ", 
+            RowBox[{"depth", " ", "\[LessEqual]", " ", "bound_"}]}], "}"}], 
+          "]"}], " ", ":=", " ", "bound"}], ";", "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{"depthBound", "[", 
+          RowBox[{"{", 
+           RowBox[{"other_", ",", " ", 
+            RowBox[{"depth", " ", "<", " ", "bound_"}]}], "}"}], "]"}], " ", ":=",
+          " ", "bound"}], ";", "\[IndentingNewLine]", 
+        RowBox[{"condPieces", " ", "=", " ", 
+         RowBox[{"Sort", "[", 
+          RowBox[{"condPieces", ",", " ", 
+           RowBox[{"Function", "[", 
+            RowBox[{
+             RowBox[{"{", 
+              RowBox[{"x", ",", "y"}], "}"}], ",", " ", 
+             RowBox[{
+              RowBox[{"depthBound", "[", "x", "]"}], " ", "\[LessEqual]", " ", 
+              RowBox[{"depthBound", "[", "y", "]"}]}]}], "]"}]}], "]"}]}], 
+        ";", "\[IndentingNewLine]", 
+        RowBox[{"(*", 
+         RowBox[{
+          RowBox[{"test", " ", "@", "  ", 
+           RowBox[{"Column", " ", "@", " ", "condPieces"}]}], ";"}], "*)"}], 
+        "\[IndentingNewLine]", "\[IndentingNewLine]", 
+        RowBox[{"(*", " ", 
+         RowBox[{
+          RowBox[{"Form", " ", "'"}], 
+          RowBox[{"Min", "'"}], " ", 
+          RowBox[{"partial", " ", "'"}], 
+          RowBox[{"sums", "'"}], " ", "over", " ", "all", " ", "the", " ", 
+          "pieces"}], " ", "*)"}], "\[IndentingNewLine]", 
         RowBox[{"exprs", " ", "=", " ", 
          RowBox[{"condPieces", "[", 
           RowBox[{"[", 
@@ -9270,6 +9510,12 @@ Cell[BoxData[{
              RowBox[{"[", " ", 
               RowBox[{"2", ";;"}], "]"}], "]"}], "]"}], ",", " ", 
            "assumpts"}], "]"}]}], ";", "\[IndentingNewLine]", 
+        "\[IndentingNewLine]", 
+        RowBox[{"(*", " ", 
+         RowBox[{"Pair", " ", "the", " ", "pieces", " ", 
+          RowBox[{"partial", " ", "'"}], 
+          RowBox[{"sums", "'"}], " ", "together", " ", "with", " ", "their", 
+          " ", "conditions"}], " ", "*)"}], "\[IndentingNewLine]", 
         RowBox[{"condPieces", " ", "=", " ", 
          RowBox[{"Transpose", "[", 
           RowBox[{"{", 
@@ -9278,12 +9524,72 @@ Cell[BoxData[{
              RowBox[{"[", 
               RowBox[{"All", ",", "2"}], "]"}], "]"}]}], "}"}], "]"}]}], ";", 
         "\[IndentingNewLine]", 
-        RowBox[{"PiecewiseExpand", "[", 
+        RowBox[{"result", " ", "=", " ", 
+         RowBox[{"PiecewiseExpand", "[", 
+          RowBox[{
+           RowBox[{"Piecewise", "[", 
+            RowBox[{"condPieces", ",", " ", "Indeterminate"}], "]"}], ",", 
+           " ", "assumpts"}], "]"}]}], ";", "\[IndentingNewLine]", 
+        RowBox[{"result", " ", "=", " ", 
+         RowBox[{"PiecewiseExpand", "[", 
+          RowBox[{"result", ",", " ", "assumpts"}], "]"}]}], ";", 
+        "\[IndentingNewLine]", "\[IndentingNewLine]", 
+        RowBox[{"(*", " ", 
          RowBox[{
-          RowBox[{"Piecewise", "[", 
-           RowBox[{"condPieces", ",", " ", "truePiece"}], "]"}], ",", " ", 
-          "assumpts"}], "]"}]}]}], "\[IndentingNewLine]", "]"}]}]}], 
-   "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", 
+         "Use", " ", "reduce", " ", "to", " ", "simplify", " ", "the", " ", 
+          "conditions", " ", "in", " ", "each", " ", "of", " ", "the", " ", 
+          "pieces", " ", "of", " ", "the", " ", "result"}], " ", "*)"}], 
+        "\[IndentingNewLine]", 
+        RowBox[{"result", " ", "=", " ", 
+         RowBox[{"Piecewise", "[", "\[IndentingNewLine]", 
+          RowBox[{
+           RowBox[{"Transpose", "[", 
+            RowBox[{"{", "\[IndentingNewLine]", 
+             RowBox[{
+              RowBox[{
+               RowBox[{"piecesOf", "[", "result", "]"}], "[", 
+               RowBox[{"[", 
+                RowBox[{"All", ",", "1"}], "]"}], "]"}], ",", 
+              "\[IndentingNewLine]", 
+              RowBox[{"Quiet", "[", 
+               RowBox[{
+                RowBox[{
+                 RowBox[{
+                  RowBox[{"Reduce", "[", 
+                   RowBox[{"#", ",", " ", "depth"}], "]"}], "&"}], "/@", " ", 
+                 RowBox[{
+                  RowBox[{"piecesOf", "[", "result", "]"}], "[", 
+                  RowBox[{"[", 
+                   RowBox[{"All", ",", "2"}], "]"}], "]"}]}], ",", " ", 
+                RowBox[{"{", 
+                 StyleBox[
+                  RowBox[{"Reduce", "::", "ratnz"}], "MessageName"], "}"}]}], 
+               "]"}]}], "}"}], "]"}], ",", "\[IndentingNewLine]", 
+           RowBox[{"trueOf", " ", "@", " ", "result"}]}], "]"}]}], ";", 
+        "\[IndentingNewLine]", "\[IndentingNewLine]", 
+        RowBox[{"(*", " ", 
+         RowBox[{"Convert", " ", 
+          RowBox[{"the", " ", "'"}], 
+          RowBox[{"other", "'"}], " ", "case", " ", "into", " ", "an", " ", 
+          "explicit", " ", 
+          RowBox[{"condition", ".", " ", "This"}], " ", "will", " ", "cause", 
+          " ", "simplifications", " ", "if", " ", 
+          RowBox[{"it", "'"}], "s", " ", "extraneous"}], " ", "*)"}], 
+        "\[IndentingNewLine]", 
+        RowBox[{"result", " ", "=", " ", 
+         RowBox[{"Piecewise", "[", 
+          RowBox[{
+           RowBox[{
+            RowBox[{"piecesOf", "[", "result", "]"}], " ", "~", "Join", "~", 
+            " ", 
+            RowBox[{"{", 
+             RowBox[{"{", 
+              RowBox[{
+               RowBox[{"trueOf", " ", "@", " ", "result"}], ",", " ", 
+               RowBox[{"findTrueCond", "[", "result", "]"}]}], "}"}], "}"}]}],
+            ",", " ", "Indeterminate"}], "]"}]}], ";", "\[IndentingNewLine]", 
+        "\[IndentingNewLine]", "result"}]}], "\[IndentingNewLine]", "]"}]}]}],
+    "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"test", " ", "@", " ", "fittedEppendorf1$5M1"}], 
   ";"}], "\[IndentingNewLine]", 
@@ -9303,21 +9609,24 @@ Cell[BoxData[{
      RowBox[{
      "fittedEppendorf1$5M1", ",", " ", "opentrons$300\[Mu]l$tipM0", ",", " ", 
       "depth"}], "]"}]}]}], ";"}], "\[IndentingNewLine]", 
- RowBox[{"testResult", " ", "/.", " ", 
-  RowBox[{"{", 
-   RowBox[{"depth", " ", "\[Rule]", "  ", "10"}], 
-   "}"}]}], "\[IndentingNewLine]", 
- RowBox[{"FullSimplify", "[", "%", 
-  "]"}]}], "Input",ExpressionUUID->"baee5795-b055-4463-bff3-77b885ab1b51"],
-
-Cell[BoxData[{
+ RowBox[{
+  RowBox[{"test", " ", "@", " ", 
+   RowBox[{"(", 
+    RowBox[{"testResult", " ", "/.", " ", 
+     RowBox[{"{", 
+      RowBox[{"depth", " ", "\[Rule]", "  ", "10"}], "}"}]}], ")"}]}], 
+  ";"}], "\[IndentingNewLine]", 
  RowBox[{"Plot", "[", 
   RowBox[{"testResult", ",", " ", 
    RowBox[{"{", 
     RowBox[{"depth", ",", " ", "0", ",", " ", "37.8"}], "}"}], ",", " ", 
    RowBox[{"AxesLabel", "\[Rule]", " ", 
     RowBox[{"{", 
-     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<min clearance\>\""}], "}"}]}]}], 
+     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<min clearance\>\""}], "}"}]}], 
+   ",", " ", 
+   RowBox[{"PlotLabel", "\[Rule]", "\"\<Min clearance vs tip depth\>\""}], 
+   ",", " ", 
+   RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
   "]"}], "\[IndentingNewLine]", 
  RowBox[{"Plot", "[", 
   RowBox[{"testResult", ",", " ", 
@@ -9325,13 +9634,45 @@ Cell[BoxData[{
     RowBox[{"depth", ",", " ", "0", ",", " ", "0.5"}], "}"}], ",", " ", 
    RowBox[{"AxesLabel", "\[Rule]", " ", 
     RowBox[{"{", 
-     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<min clearance\>\""}], "}"}]}]}], 
-  "]"}]}], "Input",ExpressionUUID->"70a5296e-0c2d-4c90-b5c1-ec600bc4e8f7"],
-
-Cell["\<\
-Hmmm... Is there a bug in the inverted spherical cap radiusFromDepth \
-calculation?\
-\>", "Text",ExpressionUUID->"3c99e8e9-0175-4231-8efe-f33edce515c2"]
+     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<min clearance\>\""}], "}"}]}], 
+   ",", " ", 
+   RowBox[{
+   "PlotLabel", "\[Rule]", "\"\<Min clearance vs tip depth (zoomed)\>\""}], 
+   ",", " ", 
+   RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{"Plot", "[", 
+  RowBox[{"testResult", ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"depth", ",", " ", "14.2", ",", " ", "14.4"}], "}"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", " ", 
+    RowBox[{"{", 
+     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<min clearance\>\""}], "}"}]}], 
+   ",", " ", 
+   RowBox[{
+   "PlotLabel", "\[Rule]", "\"\<Min clearance vs tip depth (zoomed)\>\""}], 
+   ",", " ", 
+   RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{"Plot", "[", 
+  RowBox[{
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"radiusFromDepth", "[", 
+      RowBox[{"fittedEppendorf1$5M1", ",", " ", "z"}], "]"}], ",", " ", 
+     RowBox[{"radiusFromDepth", "[", 
+      RowBox[{"opentrons$300\[Mu]l$tipM0", ",", 
+       RowBox[{"z", " ", "-", " ", "0.1"}]}], "]"}]}], "}"}], ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"z", ",", " ", "0", ",", " ", "0.5"}], "}"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{"\"\<depth\>\"", ",", " ", "\"\<radius\>\""}], "}"}]}], ",", " ", 
+   RowBox[{
+   "PlotLabel", "\[Rule]", " ", "\"\<Radii when tip at 0.1mm depth\>\""}], 
+   ",", " ", 
+   RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
+  "]"}]}], "Input",ExpressionUUID->"baee5795-b055-4463-bff3-77b885ab1b51"]
 }, Open  ]]
 }, Open  ]]
 }, Open  ]],
@@ -10238,7 +10579,7 @@ Cell[BoxData[{
 }, Open  ]]
 },
 WindowSize->{1376, 1548},
-WindowMargins->{{Automatic, 616}, {Automatic, 0}},
+WindowMargins->{{Automatic, 1151}, {Automatic, 0}},
 PrintingCopies->1,
 PrintingPageRange->{32000, 32000},
 PrintingOptions->{"Magnification"->1.,
