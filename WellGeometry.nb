@@ -10579,31 +10579,92 @@ Cell[CellGroupData[{
 Cell["Defining Labware Instances", \
 "Section",ExpressionUUID->"17bde502-9c9f-436e-b428-0033d7704a2b"],
 
-Cell[CellGroupData[{
-
-Cell["Definitions", \
-"Subsection",ExpressionUUID->"82b0e9ae-cc21-457f-aca4-6b5ddd413dde"],
-
 Cell["With that, we define the tips and tubes", \
 "Text",ExpressionUUID->"7293cbc3-abce-4c87-bb65-f01fce08d9c1"],
 
-Cell[BoxData[
+Cell[CellGroupData[{
+
+Cell["Utilities", \
+"Subsection",ExpressionUUID->"88488fb1-7f52-49e5-897c-ef6b0b04efe8"],
+
+Cell[BoxData[{
+ RowBox[{"Clear", "[", 
+  RowBox[{
+  "cFormat", ",", " ", "cubeRoot", ",", " ", "square", ",", " ", "cube", ",", 
+   " ", "sqrt"}], "]"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{
-   RowBox[{"(", 
-    RowBox[{"tips", " ", "=", " ", 
+   RowBox[{"cFormat", "[", "p_Piecewise", "]"}], " ", ":=", " ", 
+   RowBox[{"Module", "[", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{
+      "pieces", ",", " ", "default", ",", " ", "formatted", ",", " ", "op", 
+       ",", " ", "rules"}], "}"}], ",", "\[IndentingNewLine]", 
      RowBox[{
-      RowBox[{"{", "\[IndentingNewLine]", 
+      RowBox[{"pieces", " ", "=", " ", 
+       RowBox[{"p", "[", 
+        RowBox[{"[", "1", "]"}], "]"}]}], ";", "\[IndentingNewLine]", 
+      RowBox[{"default", " ", "=", " ", 
+       RowBox[{"p", "[", 
+        RowBox[{"[", "2", "]"}], "]"}]}], ";", "\[IndentingNewLine]", 
+      RowBox[{"rules", " ", "=", " ", 
+       RowBox[{"{", " ", "\[IndentingNewLine]", 
+        RowBox[{
+         RowBox[{
+          RowBox[{"x_", "^", 
+           RowBox[{"(", 
+            RowBox[{"1", "/", "3"}], ")"}]}], " ", "\[RuleDelayed]", " ", 
+          RowBox[{"cubeRoot", "[", "x", "]"}]}], ",", " ", 
+         "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{"x_", "^", 
+           RowBox[{"(", 
+            RowBox[{
+             RowBox[{"-", "1"}], "/", "3"}], ")"}]}], " ", "\[RuleDelayed]", 
+          " ", 
+          RowBox[{"1", " ", "/", " ", 
+           RowBox[{"cubeRoot", "[", "x", "]"}]}]}], ",", " ", 
+         "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{"x_", "^", "2"}], " ", "\[RuleDelayed]", " ", 
+          RowBox[{"square", "[", "x", "]"}]}], ",", " ", 
+         "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{"x_", "^", "3"}], " ", "\[RuleDelayed]", " ", 
+          RowBox[{"cube", "[", "x", "]"}]}], ",", " ", "\[IndentingNewLine]", 
+         RowBox[{
+          RowBox[{"Sqrt", "[", "x_", "]"}], " ", "\[RuleDelayed]", " ", 
+          RowBox[{"sqrt", "[", "x", "]"}]}]}], "\[IndentingNewLine]", "}"}]}],
+       ";", "\[IndentingNewLine]", 
+      RowBox[{"op", " ", "=", " ", 
+       RowBox[{"Function", "[", 
+        RowBox[{
+         RowBox[{"{", "expr", "}"}], ",", "\[IndentingNewLine]", 
+         RowBox[{"CForm", "[", 
+          RowBox[{"expr", " ", "//.", " ", "rules"}], "]"}]}], 
+        "\[IndentingNewLine]", "]"}]}], ";", "\[IndentingNewLine]", 
+      RowBox[{"formatted", " ", "=", " ", 
        RowBox[{
         RowBox[{
-        "opentrons$10\[Mu]l$tip", " ", "\[Rule]", " ", 
-         "opentrons$10\[Mu]l$tipM0"}], ",", "\[IndentingNewLine]", 
-        RowBox[{
-        "opentrons$300\[Mu]l$tip", " ", "\[Rule]", " ", 
-         "opentrons$300\[Mu]l$tipM0"}]}], "\[IndentingNewLine]", "}"}], "//", 
-      " ", "Association"}]}], ")"}], " ", "//", " ", "Normal"}], " ", "//", 
-  " ", "ColumnForm"}]], \
-"Input",ExpressionUUID->"f7c64fca-343b-410c-8a94-d6f0c572c2b0"],
+         RowBox[{"{", 
+          RowBox[{
+           RowBox[{"op", "[", 
+            RowBox[{"#", "[", 
+             RowBox[{"[", "1", "]"}], "]"}], "]"}], ",", 
+           RowBox[{"#", "[", 
+            RowBox[{"[", "2", "]"}], "]"}]}], "}"}], "&"}], "/@", " ", 
+        "pieces"}]}], ";", "\[IndentingNewLine]", 
+      RowBox[{"Piecewise", "[", 
+       RowBox[{"formatted", ",", " ", 
+        RowBox[{"op", "[", "default", "]"}]}], "]"}]}]}], "]"}]}], 
+  ";"}]}], "Input",ExpressionUUID->"30c56b7b-3e33-46e9-a36e-267a7e11f17f"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Tubes", \
+"Subsection",ExpressionUUID->"e32d00db-b6a0-4772-a84a-ffcd1e9ea7b8"],
 
 Cell[BoxData[
  RowBox[{
@@ -10613,311 +10674,49 @@ Cell[BoxData[
      RowBox[{
       RowBox[{"{", "\[IndentingNewLine]", 
        RowBox[{
-        RowBox[{"fittedFalcon15ml", " ", "\[Rule]", " ", "fittedFalcon"}], 
-        ",", "\[IndentingNewLine]", 
+        RowBox[{"falcon15ml", " ", "\[Rule]", " ", "fittedFalcon"}], ",", 
+        "\[IndentingNewLine]", 
         RowBox[{
-        "fittedEppendorf1$5ml", " ", "\[Rule]", " ", "fittedEppendorf1$5M1"}],
-         ",", "\[IndentingNewLine]", 
+        "eppendorf1$5ml", " ", "\[Rule]", " ", "fittedEppendorf1$5M1"}], ",", 
+        "\[IndentingNewLine]", 
         RowBox[{
-        "fittedEppendorf5$0ml", " ", "\[Rule]", " ", "fittedEppendorf5$0M0"}],
-         ",", "\[IndentingNewLine]", 
-        RowBox[{"fittedIdtTube", " ", "\[Rule]", " ", "fittedIdt"}], ",", 
+        "eppendorf5$0ml", " ", "\[Rule]", " ", "fittedEppendorf5$0M0"}], ",", 
         "\[IndentingNewLine]", 
-        RowBox[{"bioradPlateWellM3", " ", "\[Rule]", " ", 
-         RowBox[{"modelBioRad3", "[", "]"}]}], ",", "\[IndentingNewLine]", 
-        "\[IndentingNewLine]", 
-        RowBox[{"generic", " ", "\[Rule]", " ", 
-         RowBox[{"toCanonical", " ", "@", " ", 
-          RowBox[{"conicalTestTube", "[", 
-           RowBox[{
-            RowBox[{"{", 
-             RowBox[{"idTop", ",", " ", "idHip", ",", " ", "idBottom"}], 
-             "}"}], ",", " ", 
-            RowBox[{"{", 
-             RowBox[{"hTop", ",", " ", "hBottom"}], "}"}]}], "]"}]}]}], ",", 
-        "\[IndentingNewLine]", "\[IndentingNewLine]", 
-        RowBox[{"(*", " ", 
-         RowBox[{
-         "stuff", " ", "from", " ", "here", " ", "down", " ", "is", " ", 
-          "for", " ", 
-          RowBox[{"historical", " ", "/", " ", "comparative"}], " ", 
-          "purposes", " ", "only"}], " ", "*)"}], "\[IndentingNewLine]", 
-        "\[IndentingNewLine]", 
-        RowBox[{"eppendorf1$5ml", " ", "\[Rule]", " ", 
-         RowBox[{"Block", "[", 
-          RowBox[{
-           RowBox[{"{", 
-            RowBox[{
-             RowBox[{"wall", " ", "=", " ", 
-              RowBox[{"(*", 
-               RowBox[{"measured", "@", "1000"}], "*)"}], " ", 
-              RowBox[{"10.34", " ", "-", " ", "8.81"}]}], ",", " ", 
-             RowBox[{"hTop", "=", "20"}]}], "}"}], ",", " ", 
-           "\[IndentingNewLine]", 
-           RowBox[{"toCanonical", " ", "@", " ", 
-            RowBox[{"conicalTestTube", "[", 
-             RowBox[{
-              RowBox[{"{", 
-               RowBox[{"9.0", " ", 
-                RowBox[{"(*", "measured", "*)"}], ",", " ", "8.7", ",", " ", 
-                "3.6"}], "}"}], ",", " ", 
-              RowBox[{"{", 
-               RowBox[{"hTop", ",", " ", 
-                RowBox[{"37.8", " ", "-", " ", "hTop"}]}], "}"}]}], "]"}]}]}],
-           "]"}]}], ",", "\[IndentingNewLine]", "\[IndentingNewLine]", 
-        RowBox[{"(*", " ", 
-         RowBox[{
-         "mixure", " ", "of", " ", "measurements", " ", "and", " ", "values", 
-          " ", "from", " ", "spec", " ", "drawing"}], " ", "*)"}], 
-        "\[IndentingNewLine]", 
-        RowBox[{"(*", " ", 
-         RowBox[{"FWIW", ",", " ", 
-          RowBox[{
-           RowBox[{"Opentrons", " ", "uses", " ", "idTop"}], "=", "14.9"}], 
-          ",", " ", 
-          RowBox[{"depth", "=", 
-           RowBox[{
-            RowBox[{"117.5", ".", " ", "The"}], " ", "latter", " ", "is", " ",
-             "pretty", " ", "good"}]}], ",", " ", 
-          RowBox[{
-           RowBox[{"given", " ", "'"}], 
-           RowBox[{"a", "'"}], " ", 
-           RowBox[{"and", " ", "'"}], 
-           RowBox[{"wall", "'"}], " ", "defined", " ", "here"}], ",", " ", 
-          RowBox[{"so", " ", "our", " ", "depth", " ", 
-           RowBox[{"calc", "'"}], "s", " ", "should", " ", "be", " ", 
-           "good"}]}], " ", "*)"}], "\[IndentingNewLine]", 
-        RowBox[{"(*", " ", 
-         RowBox[{
-          RowBox[{"note", ":", " ", 
-           RowBox[{"as", " ", "defined", " ", "here"}]}], ",", " ", 
-          RowBox[{
-          "we", " ", "only", " ", "have", " ", "14", "mL", " ", "capacity"}], 
-          ",", " ", 
-          RowBox[{"not", " ", "15", 
-           RowBox[{"mL", ".", " ", "Will"}], " ", "affect", " ", "volume", 
-           " ", "calc", " ", "but", " ", "not", " ", "depth", " ", 
-           RowBox[{"calc", "."}]}]}], " ", "*)"}], "\[IndentingNewLine]", 
-        RowBox[{"(*", 
-         RowBox[{
-          RowBox[{"2", " ", "-", " ", 
-           RowBox[{"logically", " ", "needed"}]}], ",", " ", 
-          RowBox[{"but", " ", "better", " ", "fit", " ", 
-           RowBox[{"w", "/", "o"}], " ", 
-           RowBox[{"(", 
-            RowBox[{"?", "!"}], ")"}]}]}], "*)"}], "\[IndentingNewLine]", 
-        RowBox[{"falcon15ml", " ", "\[Rule]", " ", 
-         RowBox[{"Module", "[", "\[IndentingNewLine]", 
-          RowBox[{
-           RowBox[{"{", 
-            RowBox[{
-            "id14", ",", " ", "od14", ",", " ", "wall14", ",", " ", 
-             "wallMeasured", ",", " ", "wall", ",", " ", "a", ",", " ", "b", 
-             ",", " ", "a14", ",", " ", "b14", ",", " ", "c", ",", " ", 
-             "cMeasured", ",", " ", "d", ",", " ", "bottomOd", ",", " ", 
-             "wallCap", ",", " ", "htopMeasured", ",", " ", "hBottomAndCap"}],
-             "}"}], ",", "\[IndentingNewLine]", 
-           RowBox[{
-            RowBox[{"id14", " ", "=", "15.0"}], ";", "\[IndentingNewLine]", 
-            RowBox[{"od14", " ", "=", " ", "16.3"}], ";", 
-            "\[IndentingNewLine]", 
-            RowBox[{"wall14", " ", "=", " ", 
-             RowBox[{"od14", " ", "-", " ", "id14"}]}], ";", " ", 
-            "\[IndentingNewLine]", 
-            RowBox[{"wallMeasured", " ", "=", " ", "1.27"}], ";", 
-            "\[IndentingNewLine]", 
-            RowBox[{"wall", " ", "=", "wallMeasured"}], ";", 
-            "\[IndentingNewLine]", 
-            RowBox[{"wallCap", " ", "=", " ", "1.75"}], ";", 
-            "\[IndentingNewLine]", 
-            RowBox[{"a", " ", "=", " ", "118.8"}], ";", "\[IndentingNewLine]", 
-            RowBox[{"b", " ", "=", " ", "17.37"}], ";", "\[IndentingNewLine]", 
-            RowBox[{"a14", " ", "=", " ", "106.3"}], ";", 
-            "\[IndentingNewLine]", 
-            RowBox[{"b14", " ", "=", " ", "16.6"}], ";", 
-            "\[IndentingNewLine]", 
-            RowBox[{"c", " ", "=", " ", "15.75"}], ";", "\[IndentingNewLine]", 
-            RowBox[{"cMeasured", " ", "=", " ", "15.1"}], ";", 
-            "\[IndentingNewLine]", 
-            RowBox[{"d", " ", "=", " ", "22.48"}], ";", " ", 
-            "\[IndentingNewLine]", 
-            RowBox[{"bottomOd", " ", "=", " ", "3.18"}], ";", 
-            "\[IndentingNewLine]", 
-            RowBox[{"htopMeasured", " ", "=", " ", "84.07"}], ";", 
-            "\[IndentingNewLine]", 
-            RowBox[{"hBottomAndCap", " ", "=", " ", 
-             RowBox[{"d", " ", "-", " ", "wallCap"}]}], ";", 
-            "\[IndentingNewLine]", "\[IndentingNewLine]", 
-            RowBox[{"toCanonical", " ", "@", " ", 
-             RowBox[{"conicalTestTube", "[", 
-              RowBox[{
-               RowBox[{"{", 
-                RowBox[{
-                 RowBox[{"b14", " ", "-", "  ", "wall"}], ",", " ", 
-                 RowBox[{"cMeasured", "-", " ", 
-                  RowBox[{"2", " ", "wall"}]}], ",", " ", 
-                 RowBox[{"bottomOd", " ", "-", 
-                  RowBox[{"2", " ", "wall"}]}]}], "}"}], ",", " ", 
-               RowBox[{"{", 
-                RowBox[{"htopMeasured", ",", " ", "hBottomAndCap"}], "}"}]}], 
-              "]"}]}]}]}], "\[IndentingNewLine]", "]"}]}], ",", 
-        "\[IndentingNewLine]", "\[IndentingNewLine]", 
-        RowBox[{"(*", " ", 
-         RowBox[{
-          RowBox[{
-          "this", " ", "hacks", " ", "in", " ", "the", " ", "slightly", " ", 
-           "shallower", " ", "taper", " ", "at", " ", "the", " ", "top"}], 
-          ",", " ", 
-          RowBox[{"which", " ", 
-           RowBox[{"isn", "'"}], "t", " ", "sized", " ", "on", " ", "the", 
-           " ", "spec", " ", "drawing"}]}], " ", "*)"}], 
+        RowBox[{"idtTube", " ", "\[Rule]", " ", "fittedIdt"}], ",", 
         "\[IndentingNewLine]", 
         RowBox[{"bioradPlateWell", " ", "\[Rule]", " ", 
-         RowBox[{"Module", "[", 
-          RowBox[{
-           RowBox[{"{", 
+         RowBox[{"modelBioRad3", "[", "]"}]}]}], "\[IndentingNewLine]", 
+       RowBox[{"(*", 
+        RowBox[{",", " ", 
+         RowBox[{"generic", " ", "\[Rule]", " ", 
+          RowBox[{"toCanonical", " ", "@", " ", 
+           RowBox[{"conicalTestTube", "[", 
             RowBox[{
-             RowBox[{"hCyl", "=", "0.15"}], ",", 
-             RowBox[{"rbig", "=", 
-              RowBox[{"5.46", "/", "2"}]}], ",", " ", 
-             RowBox[{"rsmall", "=", 
-              RowBox[{"2.64", "/", "2"}]}], ",", " ", "cyl", ",", " ", "con", 
-             ",", " ", "cap"}], "}"}], ",", "\[IndentingNewLine]", 
-           RowBox[{
-            RowBox[{"cyl", " ", "=", " ", 
-             RowBox[{"cylinder", "[", 
-              RowBox[{"hCyl", ",", " ", "rbig"}], "]"}]}], ";", 
-            "\[IndentingNewLine]", 
-            RowBox[{"con", " ", "=", " ", 
-             RowBox[{"invertedFrustum", "[", 
-              RowBox[{
-               RowBox[{"14.81", " ", "-", " ", "hCyl"}], ",", " ", "rbig", 
-               ",", " ", "rsmall"}], "]"}]}], ";", "\[IndentingNewLine]", 
-            RowBox[{"cap", " ", "=", " ", 
-             RowBox[{"emptyCylinder", "[", "]"}]}], ";", 
-            "\[IndentingNewLine]", 
-            RowBox[{"conicalTestTube", "[", 
-             RowBox[{"cyl", ",", " ", "con", ",", " ", "cap"}], "]"}]}]}], 
-          "]"}]}], ",", "\[IndentingNewLine]", "\[IndentingNewLine]", 
-        RowBox[{"(*", " ", 
-         RowBox[{"see", " ", "above"}], " ", "*)"}], "\[IndentingNewLine]", 
-        RowBox[{"bioradPlateWell2", " ", "\[Rule]", " ", 
-         RowBox[{"conicalTestTube", "[", 
-          RowBox[{
-           RowBox[{"cylinder", "[", 
-            RowBox[{"8.835453539401207`", ",", "2.239570651942052`"}], "]"}], 
-           ",", 
-           RowBox[{"invertedFrustum", "[", 
-            RowBox[{
-            "5.974546460598792`", ",", "2.239570651942052`", ",", 
-             "0.15271630954950383`", ",", "\"\<apexangle\>\""}], "]"}], ",", 
-           RowBox[{"cylinder", "[", 
-            RowBox[{"0", ",", "0"}], "]"}]}], "]"}]}], ",", 
-        "\[IndentingNewLine]", "\[IndentingNewLine]", 
-        RowBox[{"idtTube", " ", "\[Rule]", " ", 
-         RowBox[{"conicalTestTube", "[", "\[IndentingNewLine]", 
-          RowBox[{
-           RowBox[{"cylinder", "[", 
-            RowBox[{"40.73", ",", " ", 
-             RowBox[{"8.31", "/", "2"}]}], "]"}], ",", "\[IndentingNewLine]", 
-           RowBox[{"invertedCone", "[", 
-            RowBox[{"3.2", ",", " ", 
-             RowBox[{"8.31", " ", "/", "2"}]}], "]"}], ",", 
-           "\[IndentingNewLine]", 
-           RowBox[{"emptyCylinder", "[", "]"}]}], "\[IndentingNewLine]", 
-          "]"}]}]}], "\[IndentingNewLine]", "\[IndentingNewLine]", "}"}], " ",
-       "//", " ", "Association"}]}], ")"}], " ", "//", " ", "Normal"}], " ", "//",
-   " ", "ColumnForm"}]], \
-"Input",ExpressionUUID->"f33ae077-a49f-4b64-8cee-64fee06939c4"]
-}, Open  ]],
-
-Cell[CellGroupData[{
-
-Cell["Expressions for Copying to Python", \
-"Subsection",ExpressionUUID->"817692a6-7edd-4123-b792-c99e0121f905"],
+             RowBox[{"{", 
+              RowBox[{"idTop", ",", " ", "idHip", ",", " ", "idBottom"}], 
+              "}"}], ",", " ", 
+             RowBox[{"{", 
+              RowBox[{"hTop", ",", " ", "hBottom"}], "}"}]}], "]"}]}]}]}], 
+        "*)"}], "\[IndentingNewLine]", "}"}], " ", "//", " ", 
+      "Association"}]}], ")"}], " ", "//", " ", "Normal"}], " ", "//", " ", 
+  "ColumnForm"}]], \
+"Input",ExpressionUUID->"f33ae077-a49f-4b64-8cee-64fee06939c4"],
 
 Cell[BoxData[{
+ RowBox[{"Clear", "[", "printAndPlot", "]"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"printAndPlot", "[", "name_", "]"}], " ", ":=", " ", 
   RowBox[{"Block", "[", 
    RowBox[{
     RowBox[{"{", 
-     RowBox[{
-     "simplify", ",", " ", "cFormat", ",", " ", "expr", ",", " ", "tube", ",",
-       " ", "h"}], "}"}], ",", " ", "\[IndentingNewLine]", 
+     RowBox[{"simplify", ",", " ", "expr", ",", " ", "tube", ",", " ", "h"}], 
+     "}"}], ",", " ", "\[IndentingNewLine]", 
     RowBox[{
      RowBox[{
       RowBox[{"simplify", "[", "fn_", "]"}], " ", ":=", " ", 
       RowBox[{"FullSimplify", "[", 
        RowBox[{"fn", ",", " ", 
         RowBox[{"assumptions", "[", "tube", "]"}]}], "]"}]}], ";", 
-     "\[IndentingNewLine]", "\[IndentingNewLine]", 
-     RowBox[{
-      RowBox[{"cFormat", "[", "p_Piecewise", "]"}], " ", ":=", " ", 
-      RowBox[{"Module", "[", 
-       RowBox[{
-        RowBox[{"{", 
-         RowBox[{
-         "pieces", ",", " ", "default", ",", " ", "formatted", ",", " ", "op",
-           ",", " ", "rules"}], "}"}], ",", "\[IndentingNewLine]", 
-        RowBox[{
-         RowBox[{"pieces", " ", "=", " ", 
-          RowBox[{"p", "[", 
-           RowBox[{"[", "1", "]"}], "]"}]}], ";", "\[IndentingNewLine]", 
-         RowBox[{"default", " ", "=", " ", 
-          RowBox[{"p", "[", 
-           RowBox[{"[", "2", "]"}], "]"}]}], ";", "\[IndentingNewLine]", 
-         RowBox[{"rules", " ", "=", " ", 
-          RowBox[{"{", " ", "\[IndentingNewLine]", 
-           RowBox[{
-            RowBox[{
-             RowBox[{"x_", "^", 
-              RowBox[{"(", 
-               RowBox[{"1", "/", "3"}], ")"}]}], " ", "\[RuleDelayed]", " ", 
-             RowBox[{"cubeRoot", "[", "x", "]"}]}], ",", " ", 
-            "\[IndentingNewLine]", 
-            RowBox[{
-             RowBox[{"x_", "^", 
-              RowBox[{"(", 
-               RowBox[{
-                RowBox[{"-", "1"}], "/", "3"}], ")"}]}], " ", 
-             "\[RuleDelayed]", " ", 
-             RowBox[{"1", " ", "/", " ", 
-              RowBox[{"cubeRoot", "[", "x", "]"}]}]}], ",", " ", 
-            "\[IndentingNewLine]", 
-            RowBox[{
-             RowBox[{"x_", "^", "2"}], " ", "\[RuleDelayed]", " ", 
-             RowBox[{"square", "[", "x", "]"}]}], ",", " ", 
-            "\[IndentingNewLine]", 
-            RowBox[{
-             RowBox[{"x_", "^", "3"}], " ", "\[RuleDelayed]", " ", 
-             RowBox[{"cube", "[", "x", "]"}]}], ",", " ", 
-            "\[IndentingNewLine]", 
-            RowBox[{
-             RowBox[{"Sqrt", "[", "x_", "]"}], " ", "\[RuleDelayed]", " ", 
-             RowBox[{"sqrt", "[", "x", "]"}]}]}], "\[IndentingNewLine]", 
-           "}"}]}], ";", "\[IndentingNewLine]", 
-         RowBox[{"op", " ", "=", " ", 
-          RowBox[{"Function", "[", 
-           RowBox[{
-            RowBox[{"{", "expr", "}"}], ",", "\[IndentingNewLine]", 
-            RowBox[{"CForm", "[", 
-             RowBox[{"expr", " ", "//.", " ", "rules"}], "]"}]}], 
-           "\[IndentingNewLine]", "]"}]}], ";", "\[IndentingNewLine]", 
-         RowBox[{"formatted", " ", "=", " ", 
-          RowBox[{
-           RowBox[{
-            RowBox[{"{", 
-             RowBox[{
-              RowBox[{"op", "[", 
-               RowBox[{"#", "[", 
-                RowBox[{"[", "1", "]"}], "]"}], "]"}], ",", 
-              RowBox[{"#", "[", 
-               RowBox[{"[", "2", "]"}], "]"}]}], "}"}], "&"}], "/@", " ", 
-           "pieces"}]}], ";", "\[IndentingNewLine]", 
-         RowBox[{"Piecewise", "[", 
-          RowBox[{"formatted", ",", " ", 
-           RowBox[{"op", "[", "default", "]"}]}], "]"}]}]}], "]"}]}], ";", 
      "\[IndentingNewLine]", "\[IndentingNewLine]", 
      RowBox[{"CellPrint", "[", 
       RowBox[{"TextCell", "[", 
@@ -11016,7 +10815,7 @@ Cell[BoxData[{
            RowBox[{"AxesOrigin", "\[Rule]", 
             RowBox[{"{", 
              RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
-           RowBox[{"ImageSize", "\[Rule]", "Large"}]}], "]"}]}], ";", 
+           RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}]}], ";", 
         "\[IndentingNewLine]", "\[IndentingNewLine]", 
         RowBox[{"test", " ", "@", " ", 
          RowBox[{"N", " ", "@", " ", 
@@ -11052,7 +10851,7 @@ Cell[BoxData[{
            RowBox[{"AxesOrigin", "\[Rule]", 
             RowBox[{"{", 
              RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
-           RowBox[{"ImageSize", "\[Rule]", "Large"}]}], "]"}]}], ";", 
+           RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}]}], ";", 
         "\[IndentingNewLine]", "\[IndentingNewLine]", 
         RowBox[{"test", " ", "@", " ", 
          RowBox[{"N", " ", "@", " ", 
@@ -11088,7 +10887,7 @@ Cell[BoxData[{
            RowBox[{"AxesOrigin", "\[Rule]", 
             RowBox[{"{", 
              RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
-           RowBox[{"ImageSize", "\[Rule]", "Large"}]}], "]"}]}], ";"}]}], 
+           RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}]}], ";"}]}], 
       "\[IndentingNewLine]", "]"}]}]}], "]"}]}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"printAndPlot", " ", "/@", " ", 
@@ -11098,7 +10897,148 @@ Cell[BoxData[{
 
 Cell[CellGroupData[{
 
-Cell["Comparing Models", \
+Cell["Pipettes", \
+"Subsection",ExpressionUUID->"82b0e9ae-cc21-457f-aca4-6b5ddd413dde"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"(", 
+    RowBox[{"tips", " ", "=", " ", 
+     RowBox[{
+      RowBox[{"{", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{
+        "\"\<opentrons_96_tiprack_10ul\>\"", "\[Rule]", " ", 
+         "opentrons$10\[Mu]l$tipM0"}], ",", "\[IndentingNewLine]", 
+        RowBox[{
+        "\"\<opentrons_96_tiprack_300ul\>\"", " ", "\[Rule]", " ", 
+         "opentrons$300\[Mu]l$tipM1"}]}], "\[IndentingNewLine]", "}"}], "//", 
+      " ", "Association"}]}], ")"}], " ", "//", " ", "Normal"}], " ", "//", 
+  " ", "ColumnForm"}]], \
+"Input",ExpressionUUID->"f7c64fca-343b-410c-8a94-d6f0c572c2b0"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{
+   RowBox[{"(", 
+    RowBox[{"pipettes", " ", "=", " ", 
+     RowBox[{
+      RowBox[{"{", "\[IndentingNewLine]", 
+       RowBox[{"\"\<p50_single_v1.4\>\"", " ", "\[Rule]", " ", "p50M0"}], 
+       "\[IndentingNewLine]", "}"}], "//", " ", "Association"}]}], ")"}], " ",
+    "//", " ", "Normal"}], " ", "//", " ", 
+  "ColumnForm"}]], \
+"Input",ExpressionUUID->"b8866487-1b8b-43e7-9dcc-4d2dd6c58e3d"],
+
+Cell[BoxData[
+ RowBox[{"tipUsage", " ", "=", " ", 
+  RowBox[{"{", "\[IndentingNewLine]", 
+   RowBox[{"{", 
+    RowBox[{
+    "\"\<p50_single_v1.4\>\"", ",", " ", "\"\<opentrons_96_tiprack_300ul\>\"",
+      ",", " ", 
+     RowBox[{"{", 
+      RowBox[{
+      "falcon15ml", ",", " ", "eppendorf1$5ml", ",", " ", "eppendorf5$0ml", 
+       ",", " ", "idtTube", ",", " ", "bioradPlateWell"}], " ", "}"}]}], 
+    "}"}], "\[IndentingNewLine]", 
+   "}"}]}]], "Input",ExpressionUUID->"bd4ada82-b130-40bf-8cfc-d86b3852429a"],
+
+Cell[BoxData[{
+ RowBox[{"Clear", "[", "printAndPlot", "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"printAndPlot", "[", 
+   RowBox[{"pipetteModelName_", ",", " ", "tipName_", ",", " ", "tubeName_"}],
+    "]"}], " ", ":=", " ", 
+  RowBox[{"Block", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+     "tube", ",", " ", "simplify", ",", "tip", ",", " ", "pip", ",", " ", 
+      "mounted", ",", " ", "minClearance", ",", " ", "depth"}], "}"}], ",", 
+    " ", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"tube", " ", "=", " ", 
+      RowBox[{"tubes", "[", "tubeName", "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"simplify", "[", "fn_", "]"}], " ", ":=", " ", 
+      RowBox[{"FullSimplify", "[", 
+       RowBox[{"fn", ",", " ", 
+        RowBox[{"assumptions", "[", "tube", "]"}]}], "]"}]}], ";", 
+     "\[IndentingNewLine]", "\[IndentingNewLine]", 
+     RowBox[{"CellPrint", "[", 
+      RowBox[{"TextCell", "[", 
+       RowBox[{
+        RowBox[{"ToString", "[", 
+         RowBox[{"StringForm", "[", 
+          RowBox[{
+          "\"\<``: ``: ``\>\"", ",", " ", "pipetteModelName", ",", " ", 
+           "tipName", ",", " ", "tubeName"}], "]"}], "]"}], ",", " ", 
+        "\"\<Subsubsection\>\""}], "]"}], "]"}], ";", "\[IndentingNewLine]", 
+     "\[IndentingNewLine]", 
+     RowBox[{"pip", " ", "=", " ", 
+      RowBox[{"pipettes", "[", "pipetteModelName", "]"}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"tip", " ", "=", " ", 
+      RowBox[{"tips", "[", "tipName", "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"mounted", " ", "=", " ", 
+      RowBox[{"mountTip", "[", 
+       RowBox[{"pip", ",", " ", "tip"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     "\[IndentingNewLine]", 
+     RowBox[{"minClearance", " ", "=", " ", 
+      RowBox[{"minClearanceFromDepth", "[", 
+       RowBox[{"tube", ",", " ", "mounted", ",", " ", "depth"}], "]"}]}], ";",
+      "\[IndentingNewLine]", "\[IndentingNewLine]", 
+     RowBox[{"test", " ", "@", "  ", 
+      RowBox[{"N", " ", "@", " ", 
+       RowBox[{"simplify", " ", "@", " ", "minClearance"}]}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"test", " ", "@", " ", 
+      RowBox[{"cFormat", " ", "@", " ", 
+       RowBox[{"simplify", " ", "@", " ", "minClearance"}]}]}], ";", 
+     "\[IndentingNewLine]", "\[IndentingNewLine]", 
+     RowBox[{"cellPrint", " ", "@", " ", 
+      RowBox[{"plotProfile", "[", "mounted", "]"}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"cellPrint", " ", "@", " ", 
+      RowBox[{"plotProfile", "[", "tube", "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"cellPrint", " ", "@", " ", 
+      RowBox[{"Plot", "[", 
+       RowBox[{"minClearance", ",", " ", 
+        RowBox[{"{", 
+         RowBox[{"depth", ",", " ", "0", ",", " ", 
+          RowBox[{"height", "[", "tube", "]"}]}], "}"}], ",", " ", 
+        RowBox[{
+        "PlotLabel", "\[Rule]", "\"\<min radial clearance vs depth\>\""}], 
+        ",", " ", 
+        RowBox[{"AxesOrigin", "\[Rule]", 
+         RowBox[{"{", 
+          RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
+        RowBox[{"AxesLabel", "\[Rule]", 
+         RowBox[{"{", 
+          RowBox[{"\"\<depth\>\"", ",", " ", "\"\<clearance\>\""}], "}"}]}]}],
+        "]"}]}], ";"}]}], "\[IndentingNewLine]", 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"printAndPlot", "[", 
+   RowBox[{"{", 
+    RowBox[{
+    "pipetteModelName_", ",", " ", "tipName_", ",", " ", "tubeNames__List"}], 
+    "}"}], "]"}], " ", ":=", " ", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"printAndPlot", "[", 
+     RowBox[{"pipetteModelName", ",", " ", "tipName", ",", " ", "#"}], "]"}], 
+    "&"}], " ", "/@", " ", "tubeNames"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"printAndPlot", " ", "/@", " ", "tipUsage"}], 
+  ";"}]}], "Input",ExpressionUUID->"1afd22c8-6d0d-44c0-904c-90efa397470f"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Comparing Models of Tubes", \
 "Subsection",ExpressionUUID->"195ff429-0478-417d-b861-6534fedbe351"],
 
 Cell[CellGroupData[{
@@ -11111,84 +11051,82 @@ Cell["The fitted Eppendorf model clearly is better.", \
 
 Cell[BoxData[{
  RowBox[{
-  RowBox[{"example1", " ", "=", " ", 
-   RowBox[{"tubes", "[", "eppendorf1$5ml", "]"}]}], 
-  ";"}], "\[IndentingNewLine]", 
- RowBox[{
   RowBox[{"example2", " ", "=", " ", "fittedEppendorf1$5M0"}], 
   ";"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"example3", " ", "=", " ", "fittedEppendorf1$5M1"}], 
   ";"}], "\[IndentingNewLine]", 
  RowBox[{
-  RowBox[{"test", " ", "@", " ", "example1"}], ";"}], "\[IndentingNewLine]", 
- RowBox[{
   RowBox[{"test", " ", "@", " ", "example2"}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"test", " ", "@", " ", "example3"}], ";"}], "\[IndentingNewLine]", 
- RowBox[{"expr1", " ", "=", " ", 
-  RowBox[{"depthFromVolume", "[", 
-   RowBox[{"example1", ",", " ", "v"}], "]"}]}], "\[IndentingNewLine]", 
  RowBox[{"expr2", " ", "=", " ", 
   RowBox[{"depthFromVolume", "[", 
    RowBox[{"example2", ",", " ", "v"}], "]"}]}], "\[IndentingNewLine]", 
  RowBox[{"expr3", " ", "=", " ", 
   RowBox[{"depthFromVolume", "[", 
    RowBox[{"example3", ",", " ", "v"}], "]"}]}], "\[IndentingNewLine]", 
- RowBox[{"Plot", "[", 
-  RowBox[{
-   RowBox[{"{", 
-    RowBox[{"expr1", ",", " ", "expr2", ",", " ", "expr3"}], "}"}], ",", " ", 
-   RowBox[{"{", 
-    RowBox[{"v", ",", " ", "0", ",", " ", 
-     RowBox[{"volume", "[", "example1", "]"}]}], "}"}], ",", " ", 
-   RowBox[{"AxesLabel", "\[Rule]", 
-    RowBox[{"{", 
-     RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}]}], 
-  "]"}], "\[IndentingNewLine]", 
- RowBox[{"Plot", "[", 
-  RowBox[{
-   RowBox[{"{", 
-    RowBox[{
-     RowBox[{"expr1", " ", "-", " ", "expr2"}], ",", " ", 
-     RowBox[{"expr2", " ", "-", " ", "expr2"}], ",", " ", 
-     RowBox[{"expr3", " ", "-", " ", "expr2"}]}], "}"}], ",", " ", 
-   RowBox[{"{", 
-    RowBox[{"v", ",", " ", "0", ",", " ", 
-     RowBox[{"volume", "[", "example1", "]"}]}], "}"}], ",", " ", 
-   RowBox[{"AxesLabel", "\[Rule]", 
-    RowBox[{"{", 
-     RowBox[{"\"\<volume\>\"", ",", " ", "\"\<\[CapitalDelta]depth\>\""}], 
-     "}"}]}]}], "]"}], "\[IndentingNewLine]", 
- RowBox[{" ", 
-  RowBox[{"Show", "[", 
+ RowBox[{"Row", " ", "@", 
+  RowBox[{"{", " ", 
    RowBox[{
-    RowBox[{"ListPlot", "[", 
+    RowBox[{"Plot", "[", 
      RowBox[{
-      RowBox[{"{", "eppendorf15Data", "}"}], ",", " ", 
+      RowBox[{"{", 
+       RowBox[{"expr2", ",", " ", "expr3"}], "}"}], ",", " ", 
+      RowBox[{"{", 
+       RowBox[{"v", ",", " ", "0", ",", " ", 
+        RowBox[{"volume", "[", "example3", "]"}]}], "}"}], ",", " ", 
       RowBox[{"AxesLabel", "\[Rule]", 
        RowBox[{"{", 
-        RowBox[{"\"\<vol\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}], ",", " ", 
-      RowBox[{"PlotRange", "\[Rule]", "All"}], ",", " ", 
-      RowBox[{"AxesOrigin", "\[Rule]", 
-       RowBox[{"{", 
-        RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
-      RowBox[{"ImageSize", "\[Rule]", "Large"}]}], "]"}], ",", 
+        RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}], ",", 
+      " ", 
+      RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}], ",", 
     "\[IndentingNewLine]", 
+    RowBox[{"Spacer", "[", "20", "]"}], ",", "\[IndentingNewLine]", 
     RowBox[{"Plot", "[", 
      RowBox[{
       RowBox[{"{", 
        RowBox[{
-        RowBox[{"depthFromVolume", "[", 
-         RowBox[{"example1", ",", " ", "v"}], "]"}], ",", " ", 
-        RowBox[{"depthFromVolume", "[", 
-         RowBox[{"example2", ",", " ", "v"}], "]"}], ",", " ", 
-        RowBox[{"depthFromVolume", "[", 
-         RowBox[{"example3", ",", " ", "v"}], "]"}]}], "}"}], ",", " ", 
+        RowBox[{"expr2", " ", "-", " ", "expr2"}], ",", " ", 
+        RowBox[{"expr3", " ", "-", " ", "expr2"}]}], "}"}], ",", " ", 
       RowBox[{"{", 
        RowBox[{"v", ",", " ", "0", ",", " ", 
-        RowBox[{"volume", "[", "example1", "]"}]}], "}"}]}], "]"}]}], 
-   "]"}]}]}], "Input",ExpressionUUID->"40c32bcd-1ef5-4258-830f-887814d9c061"]
+        RowBox[{"volume", "[", "example3", "]"}]}], "}"}], ",", " ", 
+      RowBox[{"AxesLabel", "\[Rule]", 
+       RowBox[{"{", 
+        RowBox[{"\"\<volume\>\"", ",", " ", "\"\<\[CapitalDelta]depth\>\""}], 
+        "}"}]}], ",", " ", 
+      RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"Spacer", "[", "20", "]"}], ",", "\[IndentingNewLine]", " ", 
+    RowBox[{"Show", "[", 
+     RowBox[{
+      RowBox[{"ListPlot", "[", 
+       RowBox[{
+        RowBox[{"{", "eppendorf15Data", "}"}], ",", " ", 
+        RowBox[{"AxesLabel", "\[Rule]", 
+         RowBox[{"{", 
+          RowBox[{"\"\<vol\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}], ",", 
+        " ", 
+        RowBox[{"PlotRange", "\[Rule]", "All"}], ",", " ", 
+        RowBox[{"AxesOrigin", "\[Rule]", 
+         RowBox[{"{", 
+          RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
+        RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{"Plot", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{
+          RowBox[{"depthFromVolume", "[", 
+           RowBox[{"example2", ",", " ", "v"}], "]"}], ",", " ", 
+          RowBox[{"depthFromVolume", "[", 
+           RowBox[{"example3", ",", " ", "v"}], "]"}]}], "}"}], ",", " ", 
+        RowBox[{"{", 
+         RowBox[{"v", ",", " ", "0", ",", " ", 
+          RowBox[{"volume", "[", "example3", "]"}]}], "}"}]}], "]"}]}], 
+     "]"}]}], "}"}]}]}], \
+"Input",ExpressionUUID->"40c32bcd-1ef5-4258-830f-887814d9c061"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -11196,76 +11134,70 @@ Cell[CellGroupData[{
 Cell["Comparing IDT Tube Models", \
 "Subsubsection",ExpressionUUID->"2a4191bb-328c-47da-b016-436b37e7bf10"],
 
-Cell["\<\
-The fitted IDT tube model is marginally better, but still better.\
-\>", "Text",ExpressionUUID->"b393e385-50b5-4df3-a099-f5f471f0e5b6"],
-
 Cell[BoxData[{
  RowBox[{
-  RowBox[{"example1", " ", "=", " ", 
+  RowBox[{"example2", " ", "=", " ", 
    RowBox[{"tubes", "[", "idtTube", "]"}]}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
-  RowBox[{"example2", " ", "=", " ", 
-   RowBox[{"tubes", "[", "fittedIdtTube", "]"}]}], 
-  ";"}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{"test", " ", "@", " ", "example1"}], ";"}], "\[IndentingNewLine]", 
- RowBox[{
   RowBox[{"test", " ", "@", " ", "example2"}], ";"}], "\[IndentingNewLine]", 
- RowBox[{"expr1", " ", "=", " ", 
-  RowBox[{"depthFromVolume", "[", 
-   RowBox[{"example1", ",", " ", "v"}], "]"}]}], "\[IndentingNewLine]", 
  RowBox[{"expr2", " ", "=", " ", 
   RowBox[{"depthFromVolume", "[", 
    RowBox[{"example2", ",", " ", "v"}], "]"}]}], "\[IndentingNewLine]", 
- RowBox[{"Plot", "[", 
-  RowBox[{
-   RowBox[{"{", 
-    RowBox[{"expr1", ",", " ", "expr2"}], "}"}], ",", " ", 
-   RowBox[{"{", 
-    RowBox[{"v", ",", " ", "0", ",", " ", 
-     RowBox[{"volume", "[", "example1", "]"}]}], "}"}], ",", " ", 
-   RowBox[{"AxesLabel", "\[Rule]", 
-    RowBox[{"{", 
-     RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}]}], 
-  "]"}], "\[IndentingNewLine]", 
- RowBox[{"Plot", "[", 
-  RowBox[{
-   RowBox[{"expr1", " ", "-", " ", "expr2"}], ",", " ", 
-   RowBox[{"{", 
-    RowBox[{"v", ",", " ", "0", ",", " ", 
-     RowBox[{"volume", "[", "example1", "]"}]}], "}"}], ",", " ", 
-   RowBox[{"AxesLabel", "\[Rule]", 
-    RowBox[{"{", 
-     RowBox[{"\"\<volume\>\"", ",", " ", "\"\<\[CapitalDelta]depth\>\""}], 
-     "}"}]}]}], "]"}], "\[IndentingNewLine]", 
- RowBox[{" ", 
-  RowBox[{"Show", "[", 
+ RowBox[{"Row", " ", "@", " ", 
+  RowBox[{"{", 
    RowBox[{
-    RowBox[{"ListPlot", "[", 
+    RowBox[{"Plot", "[", 
      RowBox[{
-      RowBox[{"{", "idtData", "}"}], ",", " ", 
+      RowBox[{"{", "expr2", "}"}], ",", " ", 
+      RowBox[{"{", 
+       RowBox[{"v", ",", " ", "0", ",", " ", 
+        RowBox[{"volume", "[", "example2", "]"}]}], "}"}], ",", " ", 
       RowBox[{"AxesLabel", "\[Rule]", 
        RowBox[{"{", 
-        RowBox[{"\"\<vol\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}], ",", " ", 
-      RowBox[{"PlotRange", "\[Rule]", "All"}], ",", " ", 
-      RowBox[{"AxesOrigin", "\[Rule]", 
-       RowBox[{"{", 
-        RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
-      RowBox[{"ImageSize", "\[Rule]", "Large"}]}], "]"}], ",", 
+        RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}], ",", 
+      " ", 
+      RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}], ",", 
     "\[IndentingNewLine]", 
+    RowBox[{"Spacer", "[", "20", "]"}], ",", "\[IndentingNewLine]", 
     RowBox[{"Plot", "[", 
      RowBox[{
       RowBox[{"{", 
-       RowBox[{
-        RowBox[{"depthFromVolume", "[", 
-         RowBox[{"example1", ",", " ", "v"}], "]"}], ",", " ", 
-        RowBox[{"depthFromVolume", "[", 
-         RowBox[{"example2", ",", " ", "v"}], "]"}]}], "}"}], ",", " ", 
+       RowBox[{"expr2", " ", "-", " ", "expr2"}], "}"}], ",", " ", 
       RowBox[{"{", 
        RowBox[{"v", ",", " ", "0", ",", " ", 
-        RowBox[{"volume", "[", "example1", "]"}]}], "}"}]}], "]"}]}], 
-   "]"}]}]}], "Input",ExpressionUUID->"7a302e25-3286-4ef8-93a9-8e27b3fc0297"]
+        RowBox[{"volume", "[", "example2", "]"}]}], "}"}], ",", " ", 
+      RowBox[{"AxesLabel", "\[Rule]", 
+       RowBox[{"{", 
+        RowBox[{"\"\<volume\>\"", ",", " ", "\"\<\[CapitalDelta]depth\>\""}], 
+        "}"}]}], ",", " ", 
+      RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"Spacer", "[", "20", "]"}], ",", "\[IndentingNewLine]", " ", 
+    RowBox[{"Show", "[", 
+     RowBox[{
+      RowBox[{"ListPlot", "[", 
+       RowBox[{
+        RowBox[{"{", "idtData", "}"}], ",", " ", 
+        RowBox[{"AxesLabel", "\[Rule]", 
+         RowBox[{"{", 
+          RowBox[{"\"\<vol\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}], ",", 
+        " ", 
+        RowBox[{"PlotRange", "\[Rule]", "All"}], ",", " ", 
+        RowBox[{"AxesOrigin", "\[Rule]", 
+         RowBox[{"{", 
+          RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
+        RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{"Plot", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"depthFromVolume", "[", 
+          RowBox[{"example2", ",", " ", "v"}], "]"}], "}"}], ",", " ", 
+        RowBox[{"{", 
+         RowBox[{"v", ",", " ", "0", ",", " ", 
+          RowBox[{"volume", "[", "example2", "]"}]}], "}"}]}], "]"}]}], 
+     "]"}]}], "}"}]}]}], \
+"Input",ExpressionUUID->"7a302e25-3286-4ef8-93a9-8e27b3fc0297"]
 }, Open  ]],
 
 Cell[CellGroupData[{
@@ -11273,28 +11205,10 @@ Cell[CellGroupData[{
 Cell["Comparing Bio-rad Plate models", \
 "Subsubsection",ExpressionUUID->"77a5f172-eb26-48cd-9ecf-7b19a514709b"],
 
-Cell["Which should we use?", \
-"Text",ExpressionUUID->"3187ecba-44aa-4519-ba65-94084921f09e"],
-
 Cell[BoxData[{
  RowBox[{
-  RowBox[{"example1", " ", "=", " ", 
-   RowBox[{"tubes", "[", "bioradPlateWell", "]"}]}], 
-  ";"}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{
-   RowBox[{"example2", " ", "=", " ", 
-    RowBox[{"tubes", "[", "bioradPlateWell2", "]"}]}], ";"}], " ", 
-  RowBox[{"(*", " ", 
-   RowBox[{"currently", " ", "in", " ", "use"}], " ", 
-   "*)"}]}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{
-   RowBox[{"examplem1", " ", "=", " ", 
-    RowBox[{"modelBioRad1", "[", "]"}]}], ";"}], " ", 
-  RowBox[{"(*", 
-   RowBox[{"same", " ", "as", " ", "example", " ", "1"}], 
-   "*)"}]}], "\[IndentingNewLine]", 
+  RowBox[{"examplem1", " ", "=", " ", 
+   RowBox[{"modelBioRad1", "[", "]"}]}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"examplem2", " ", "=", " ", 
    RowBox[{"modelBioRad2", "[", "]"}]}], ";"}], "\[IndentingNewLine]", 
@@ -11302,25 +11216,11 @@ Cell[BoxData[{
   RowBox[{"examplem3", " ", "=", " ", 
    RowBox[{"modelBioRad3", "[", "]"}]}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
-  RowBox[{"test", " ", "@", " ", "example1"}], ";"}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{"test", " ", "@", " ", "example2"}], ";"}], "\[IndentingNewLine]", 
- RowBox[{
   RowBox[{"test", " ", "@", " ", "examplem1"}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"test", " ", "@", " ", "examplem2"}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"test", " ", "@", " ", "examplem3"}], ";"}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{"expr1", " ", "=", " ", 
-   RowBox[{"depthFromVolume", "[", 
-    RowBox[{"example1", ",", " ", "v"}], "]"}]}], 
-  ";"}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{"expr2", " ", "=", " ", 
-   RowBox[{"depthFromVolume", "[", 
-    RowBox[{"example2", ",", " ", "v"}], "]"}]}], 
-  ";"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"exprm1", " ", "=", " ", 
    RowBox[{"depthFromVolume", "[", 
@@ -11336,50 +11236,53 @@ Cell[BoxData[{
    RowBox[{"depthFromVolume", "[", 
     RowBox[{"examplem3", ",", " ", "v"}], "]"}]}], 
   ";"}], "\[IndentingNewLine]", 
- RowBox[{"Plot", "[", 
-  RowBox[{
-   RowBox[{"{", 
-    RowBox[{
-    "expr1", ",", " ", "expr2", ",", "exprm1", ",", " ", "exprm2", ",", " ", 
-     "exprm3"}], "}"}], ",", " ", 
-   RowBox[{"{", 
-    RowBox[{"v", ",", " ", "0", ",", " ", 
-     RowBox[{"volume", "[", "examplem3", "]"}]}], "}"}], ",", " ", 
-   RowBox[{"AxesLabel", "\[Rule]", 
-    RowBox[{"{", 
-     RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}], ",", " ", 
-   RowBox[{"PlotLegends", "\[Rule]", 
-    RowBox[{"{", 
+ RowBox[{"Row", " ", "@", 
+  RowBox[{"{", " ", 
+   RowBox[{
+    RowBox[{"Plot", "[", 
      RowBox[{
-     "\"\<v1\>\"", ",", " ", "\"\<v2\>\"", ",", " ", "\"\<m1\>\"", ",", " ", 
-      "\"\<m2\>\"", ",", " ", "\"\<m3\>\""}], "}"}]}], ",", " ", 
-   RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
-  "]"}], "\[IndentingNewLine]", 
- RowBox[{"Plot", "[", 
-  RowBox[{
-   RowBox[{"{", 
-    RowBox[{
-     RowBox[{"expr2", " ", "-", " ", "expr1"}], ",", " ", 
-     RowBox[{"expr2", " ", "-", " ", "expr2"}], ",", " ", 
-     RowBox[{"expr2", " ", "-", " ", "exprm1"}], ",", " ", 
-     RowBox[{"expr2", " ", "-", " ", "exprm2"}], ",", " ", 
-     RowBox[{"expr2", " ", "-", " ", "exprm3"}]}], "}"}], ",", " ", 
-   RowBox[{"{", 
-    RowBox[{"v", ",", " ", "0", ",", " ", 
-     RowBox[{"volume", "[", "examplem3", "]"}]}], "}"}], ",", " ", 
-   RowBox[{"AxesLabel", "\[Rule]", 
-    RowBox[{"{", 
-     RowBox[{"\"\<volume\>\"", ",", " ", "\"\<\[CapitalDelta]depth\>\""}], 
-     "}"}]}], ",", 
-   RowBox[{"PlotLegends", "\[Rule]", 
-    RowBox[{"{", 
+      RowBox[{"{", 
+       RowBox[{"exprm1", ",", " ", "exprm2", ",", " ", "exprm3"}], "}"}], ",",
+       " ", 
+      RowBox[{"{", 
+       RowBox[{"v", ",", " ", "0", ",", " ", 
+        RowBox[{"volume", "[", "examplem3", "]"}]}], "}"}], ",", " ", 
+      RowBox[{"AxesLabel", "\[Rule]", 
+       RowBox[{"{", 
+        RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}], ",", 
+      " ", 
+      RowBox[{"PlotLegends", "\[Rule]", 
+       RowBox[{"{", 
+        RowBox[{
+        "\"\<m1\>\"", ",", " ", "\"\<m2\>\"", ",", " ", "\"\<m3\>\""}], 
+        "}"}]}], ",", " ", 
+      RowBox[{"GridLines", "\[Rule]", "Automatic"}], ",", " ", 
+      RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"Spacer", "[", "20", "]"}], ",", "\[IndentingNewLine]", 
+    RowBox[{"Plot", "[", 
      RowBox[{
-     "\"\<v2 - v1\>\"", ",", " ", "\"\<v2 - v2\>\"", ",", " ", 
-      "\"\<v2 - m1\>\"", ",", " ", "\"\<v2 - m2\>\"", ",", " ", 
-      "\"\<v2 - m3\>\""}], "}"}]}], ",", " ", 
-   RowBox[{"PlotRange", " ", "\[Rule]", " ", "All"}], ",", " ", 
-   RowBox[{"GridLines", "\[Rule]", "Automatic"}]}], 
-  "]"}]}], "Input",ExpressionUUID->"9219ffb6-41dc-4617-b29e-4ccafdd6cad4"],
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"exprm3", " ", "-", " ", "exprm1"}], ",", " ", 
+        RowBox[{"exprm3", " ", "-", " ", "exprm2"}], ",", " ", 
+        RowBox[{"exprm3", " ", "-", " ", "exprm3"}]}], "}"}], ",", " ", 
+      RowBox[{"{", 
+       RowBox[{"v", ",", " ", "0", ",", " ", 
+        RowBox[{"volume", "[", "examplem3", "]"}]}], "}"}], ",", " ", 
+      RowBox[{"AxesLabel", "\[Rule]", 
+       RowBox[{"{", 
+        RowBox[{"\"\<volume\>\"", ",", " ", "\"\<\[CapitalDelta]depth\>\""}], 
+        "}"}]}], ",", 
+      RowBox[{"PlotLegends", "\[Rule]", 
+       RowBox[{"{", 
+        RowBox[{
+        "\"\<m3 - m1\>\"", ",", " ", "\"\<m3 - m2\>\"", ",", " ", 
+         "\"\<m3 - m3\>\""}], "}"}]}], ",", " ", 
+      RowBox[{"PlotRange", " ", "\[Rule]", " ", "All"}], ",", " ", 
+      RowBox[{"GridLines", "\[Rule]", "Automatic"}], ",", " ", 
+      RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}]}], 
+   "}"}]}]}], "Input",ExpressionUUID->"9219ffb6-41dc-4617-b29e-4ccafdd6cad4"],
 
 Cell["\<\
 M3 is a more conservative choice than all the others, among other goodness.\
@@ -11405,78 +11308,75 @@ predicting depths that were too large.\
 
 Cell[BoxData[{
  RowBox[{
-  RowBox[{"example1", " ", "=", " ", 
+  RowBox[{"example2", " ", "=", " ", 
    RowBox[{"tubes", "[", "falcon15ml", "]"}]}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
-  RowBox[{"example2", " ", "=", " ", 
-   RowBox[{"tubes", "[", "fittedFalcon15ml", "]"}]}], 
-  ";"}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{"test", " ", "@", " ", "example1"}], ";"}], "\[IndentingNewLine]", 
- RowBox[{
   RowBox[{"test", " ", "@", " ", "example2"}], ";"}], "\[IndentingNewLine]", 
- RowBox[{"expr1", " ", "=", " ", 
-  RowBox[{"depthFromVolume", "[", 
-   RowBox[{"example1", ",", " ", "v"}], "]"}]}], "\[IndentingNewLine]", 
  RowBox[{"expr2", " ", "=", " ", 
   RowBox[{"depthFromVolume", "[", 
    RowBox[{"example2", ",", " ", "v"}], "]"}]}], "\[IndentingNewLine]", 
- RowBox[{"Plot", "[", 
-  RowBox[{
-   RowBox[{"{", 
-    RowBox[{"expr1", ",", " ", "expr2"}], "}"}], ",", " ", 
-   RowBox[{"{", 
-    RowBox[{"v", ",", " ", "0", ",", " ", 
-     RowBox[{"volume", "[", "example1", "]"}]}], "}"}], ",", " ", 
-   RowBox[{"AxesLabel", "\[Rule]", 
-    RowBox[{"{", 
-     RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}], ",", " ", 
-   RowBox[{"ImageSize", "\[Rule]", "Large"}]}], "]"}], "\[IndentingNewLine]", 
- RowBox[{"Plot", "[", 
-  RowBox[{
-   RowBox[{"expr1", "-", "expr2"}], ",", " ", 
-   RowBox[{"{", 
-    RowBox[{"v", ",", " ", "0", ",", " ", 
-     RowBox[{"volume", "[", "example1", "]"}]}], "}"}], ",", " ", 
-   RowBox[{"AxesLabel", "\[Rule]", 
-    RowBox[{"{", 
-     RowBox[{"\"\<volume\>\"", ",", " ", "\"\<\[CapitalDelta]depth\>\""}], 
-     "}"}]}], ",", " ", 
-   RowBox[{"ImageSize", "\[Rule]", "Large"}]}], "]"}], "\[IndentingNewLine]", 
- RowBox[{" ", 
-  RowBox[{"Show", "[", 
+ RowBox[{"Row", " ", "@", " ", 
+  RowBox[{"{", 
    RowBox[{
-    RowBox[{"ListPlot", "[", 
+    RowBox[{"Plot", "[", 
      RowBox[{
-      RowBox[{"{", "falconData", "}"}], ",", " ", 
+      RowBox[{"{", "expr2", "}"}], ",", " ", 
+      RowBox[{"{", 
+       RowBox[{"v", ",", " ", "0", ",", " ", 
+        RowBox[{"volume", "[", "example2", "]"}]}], "}"}], ",", " ", 
       RowBox[{"AxesLabel", "\[Rule]", 
        RowBox[{"{", 
-        RowBox[{"\"\<vol\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}], ",", " ", 
-      RowBox[{"PlotRange", "\[Rule]", "All"}], ",", " ", 
-      RowBox[{"AxesOrigin", "\[Rule]", 
-       RowBox[{"{", 
-        RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
-      RowBox[{"ImageSize", "\[Rule]", "Large"}]}], "]"}], ",", 
+        RowBox[{"\"\<volume\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}], ",", 
+      " ", 
+      RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}], ",", 
     "\[IndentingNewLine]", 
+    RowBox[{"Spacer", "[", "20", "]"}], ",", "\[IndentingNewLine]", 
     RowBox[{"Plot", "[", 
      RowBox[{
       RowBox[{"{", 
-       RowBox[{
-        RowBox[{"depthFromVolume", "[", 
-         RowBox[{"example1", ",", " ", "v"}], "]"}], ",", " ", 
-        RowBox[{"depthFromVolume", "[", 
-         RowBox[{"example2", ",", " ", "v"}], "]"}]}], "}"}], ",", " ", 
+       RowBox[{"expr2", "-", "expr2"}], "}"}], ",", " ", 
       RowBox[{"{", 
        RowBox[{"v", ",", " ", "0", ",", " ", 
-        RowBox[{"volume", "[", "example1", "]"}]}], "}"}]}], "]"}]}], 
-   "]"}]}]}], "Input",ExpressionUUID->"1546305e-1880-4a2c-ab31-aa655fdcb3a8"]
+        RowBox[{"volume", "[", "example2", "]"}]}], "}"}], ",", " ", 
+      RowBox[{"AxesLabel", "\[Rule]", 
+       RowBox[{"{", 
+        RowBox[{"\"\<volume\>\"", ",", " ", "\"\<\[CapitalDelta]depth\>\""}], 
+        "}"}]}], ",", " ", 
+      RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{"Spacer", "[", "20", "]"}], ",", "\[IndentingNewLine]", " ", 
+    RowBox[{"Show", "[", 
+     RowBox[{
+      RowBox[{"ListPlot", "[", 
+       RowBox[{
+        RowBox[{"{", "falconData", "}"}], ",", " ", 
+        RowBox[{"AxesLabel", "\[Rule]", 
+         RowBox[{"{", 
+          RowBox[{"\"\<vol\>\"", ",", " ", "\"\<depth\>\""}], "}"}]}], ",", 
+        " ", 
+        RowBox[{"PlotRange", "\[Rule]", "All"}], ",", " ", 
+        RowBox[{"AxesOrigin", "\[Rule]", 
+         RowBox[{"{", 
+          RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
+        RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{"Plot", "[", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"depthFromVolume", "[", 
+          RowBox[{"example2", ",", " ", "v"}], "]"}], "}"}], ",", " ", 
+        RowBox[{"{", 
+         RowBox[{"v", ",", " ", "0", ",", " ", 
+          RowBox[{"volume", "[", "example2", "]"}]}], "}"}]}], "]"}]}], 
+     "]"}]}], "}"}]}]}], \
+"Input",ExpressionUUID->"1546305e-1880-4a2c-ab31-aa655fdcb3a8"]
 }, Open  ]]
 }, Open  ]]
 }, Open  ]]
 }, Open  ]]
 },
-WindowSize->{1444, 1548},
-WindowMargins->{{Automatic, 800}, {Automatic, 0}},
+WindowSize->{1253, 1548},
+WindowMargins->{{579, Automatic}, {Automatic, 0}},
 PrintingCopies->1,
 PrintingPageRange->{32000, 32000},
 PrintingOptions->{"Magnification"->1.,
