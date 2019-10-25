@@ -14,6 +14,7 @@ import collections
 import enum
 import json
 import math
+import random
 import string
 import warnings
 from abc import abstractmethod
@@ -80,6 +81,11 @@ config.layered_mix.keep_last_tip = False
 config.layered_mix.initial_turnover = None
 config.layered_mix.max_tip_cycles = None
 config.layered_mix.max_tip_cycles_large = None
+config.layered_mix.enable_radial_randomness = True
+config.layered_mix.radial_clearance_tolerance = 0.5
+
+config.wells = Config()
+config.wells.radial_clearance_tolerance = 0.5
 
 # region Other Enhancements Stuff
 
@@ -241,6 +247,9 @@ def is_close(x, y, atol=1e-08, rtol=1e-05):  # after numpy.isclose, but faster, 
     if x == y:
         return True
     return abs(x-y) <= atol + rtol * abs(y)
+
+def is_well(location):
+    return isinstance(location, Well)
 
 def supremum(x):
     if is_interval(x):
@@ -759,10 +768,10 @@ def note_liquid(location, name=None, initial_volume=None, min_volume=None, conce
     robot.comment('Liquid: %s' % serialized)
 
 ########################################################################################################################
-# Well Enhancements
+# Well Volume
 ########################################################################################################################
 
-# region Well Enhancements
+# region Well Volume
 
 class WellVolume(object):
 
@@ -845,9 +854,6 @@ class WellVolume(object):
         self.max_delta = max(self.max_delta, self.cum_delta)
 
 
-def is_well(location):
-    return isinstance(location, Well)
-
 def well_volume(well):
     assert is_well(well)
     try:
@@ -855,6 +861,14 @@ def well_volume(well):
     except AttributeError:
         well.contents = WellVolume(well)
         return well.contents
+
+# endregion
+
+########################################################################################################################
+# Well Geometry
+########################################################################################################################
+
+# region Well Geometry
 
 class WellGeometry(object):
 
@@ -905,6 +919,10 @@ class WellGeometry(object):
     def height_above_rack(self):  # when hanging
         return 0
 
+    @property
+    def radial_clearance_tolerance(self):
+        return config.wells.radial_clearance_tolerance
+
     @abstractmethod
     def depth_from_volume(self, volume):  # best calc'n of depth from the given volume. may be an interval
         pass
@@ -946,6 +964,10 @@ class UnknownWellGeometry(WellGeometry):
 class IdtTubeWellGeometry(WellGeometry):
     def __init__(self, well):
         super().__init__(well)
+
+    @property
+    def radial_clearance_tolerance(self):
+        return 1.5  # extra because these tubes have some slop in their labware, don't want to rattle tube todo: make retval dependent on labware
 
     def depth_from_volume(self, vol):
         if vol <= 0.0:
@@ -1171,6 +1193,90 @@ def well_geometry(well):
 # endregion
 
 ########################################################################################################################
+# Pipette Geometry
+########################################################################################################################
+
+# region Pipette Geometry
+
+class RadialClearanceManager(object):
+
+    def __init__(self):
+        self._functions = {
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', FalconTube15mlGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_falcon15ml,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Eppendorf1point5mlTubeGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_eppendorf1_5ml,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Eppendorf5point0mlTubeGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_eppendorf5_0ml,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', IdtTubeWellGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_idt_tube,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Biorad96WellPlateWellGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_biorad_plate_well,
+        }
+
+    def get_clearance_function(self, pipette, well):
+        key = (pipette.model, pipette.current_tip_tiprack.uri, well_geometry(well).__class__)
+        return self._functions.get(key, None)
+
+    def _free_sailing(self):
+        return fpu.infinity
+
+    def p50_single_v1_4_opentrons_96_tiprack_300ul_falcon15ml(self, depth):
+        if depth < 0:
+            return 0
+        if depth < 4.21826:
+            return 0.3181014675267553 + 0.2492912278496944*depth
+        if depth < 52.59:
+            return 1.3356795812777742 + 0.008059412406212692*depth
+        if depth < 59.9064:
+            return -14.87960706782048 + 0.3163934426229509*depth
+        if depth <= 118.07:
+            return 3.5915771349525776 + 0.008059412406212692*depth
+        return self._free_sailing()
+
+    def p50_single_v1_4_opentrons_96_tiprack_300ul_eppendorf1_5ml(self, depth):
+        if depth <= 0.0220787:
+            return 0
+        if depth < 0.114979:
+            return -0.505 + 2.2698281410529737*sqrt((2.2462247020231834 - 0.19409486595347666*depth)*depth)
+        if depth < 12.2688:
+            return 0.6233463136480737 + 0.16904507285715673*depth
+        if depth < 12.6:
+            return 2.3141559767629554 + 0.031231049120679123*depth
+        if depth < 19.9:
+            return 2.05177678472461 + 0.05205479452054796*depth
+        if depth <= 37.8:
+            return 2.2593854454167044 + 0.04162219850586984*depth
+        return self._free_sailing()
+
+    def p50_single_v1_4_opentrons_96_tiprack_300ul_eppendorf5_0ml(self, depth):
+        if depth <= 0.0839332:
+            return 0
+        if depth < 0.333631:
+            return -0.505 + 0.9281232870726978*sqrt((3.624697354653752 - 1.1608835603563077*depth)*depth)
+        if depth <= 16.3089:
+            return 0.3710711112433953 + 0.26527628779029744*depth
+        if depth <= 55.4:
+            return 4.188102882787763 + 0.031231049120679123*depth
+        return self._free_sailing()
+
+    def p50_single_v1_4_opentrons_96_tiprack_300ul_idt_tube(self, depth):
+        if depth <= 0.448289:
+            return 0
+        if depth <= 1.99878:
+            return -0.505 + 1.126504715663486*depth
+        if depth <= 42:
+            return 1.6842072696656454 + 0.031231049120679123*depth
+        return self._free_sailing()
+
+    def p50_single_v1_4_opentrons_96_tiprack_300ul_biorad_plate_well(self, depth):
+        if depth < 0:
+            return 0
+        if depth < 7.47114:
+            return 0.4900373532550715 + 0.15391472105982892*depth
+        if depth <= 14.81:
+            return 1.0443669402110198 + 0.07971864009378668*depth
+        return self._free_sailing()
+
+# endregion
+
+
+########################################################################################################################
 # Custom Pipette objects
 #   see http://code.activestate.com/recipes/577555-object-wrapper-class/
 #   see https://stackoverflow.com/questions/1081253/inheriting-from-instance-in-python
@@ -1219,6 +1325,7 @@ class EnhancedPipette(Pipette):
         self.dispense_params_hack = EnhancedPipette.DispenseParamsHack()
         self.tip_wetness = TipWetness.NONE
         self.mixes_in_progress = list()
+        self.radial_clearance_manager = RadialClearanceManager()
 
         # load the config (again) in order to extract some more data later
         from opentrons.config import pipette_config
@@ -1790,12 +1897,23 @@ class EnhancedPipette(Pipette):
                     count_ = count_per_incr
                 if not self.has_tip:
                     self.pick_up_tip()
+
+                radial_clearance_func = self.radial_clearance_manager.get_clearance_function(self, well)
+                radial_clearance = 0 if radial_clearance_func is None or not config.layered_mix.enable_radial_randomness else radial_clearance_func(y_max)
+                radial_clearance = max(0, radial_clearance - max(well_geometry(well).radial_clearance_tolerance, config.layered_mix.radial_clearance_tolerance))
+
                 for i in range(count_):
                     tip_cycles += 1
                     need_new_tip = tip_cycles >= max_tip_cycles
                     full_dispense = need_new_tip or (not do_layer(y + y_incr) and i == count_ - 1)
+
+                    theta = random.random() * (2 * math.pi)
+                    _, dispense_coordinates = well.bottom(y_max)
+                    random_offset = (radial_clearance * math.cos(theta), radial_clearance * math.sin(theta), 0)
+                    dispense_location = (well, dispense_coordinates + random_offset)
+
                     self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', config.layered_mix.aspirate_rate_factor), pre_wet=pre_wet)
-                    self.dispense(volume, well.bottom(y_max), rate=fetch('dispense_rate', config.layered_mix.dispense_rate_factor), full_dispense=full_dispense)
+                    self.dispense(volume, dispense_location, rate=fetch('dispense_rate', config.layered_mix.dispense_rate_factor), full_dispense=full_dispense)
                     if need_new_tip:
                         self.done_tip()
                         tip_cycles = 0
