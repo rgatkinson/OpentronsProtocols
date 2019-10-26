@@ -1402,8 +1402,8 @@ class EnhancedPipette(Pipette):
         # try to mitigate effects of static electricity on small pipettes: they can cling to the tip on drop, causing disasters when next tips are picked up
         if config.enable_enhancements and self.name == 'p10_single':
             # dropping twice probably will help
-            if 'doubleDropTip' not in self.quirks:
-                self.quirks.append('doubleDropTip')
+            # if 'doubleDropTip' not in self.quirks:  # not necessary, in the end, it seems
+            #     self.quirks.append('doubleDropTip')
             # plunging lower also helps, clearly
             self.plunger_positions['drop_tip'] = self.pipette_config_drop_tip_min
 
