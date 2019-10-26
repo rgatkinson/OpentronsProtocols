@@ -1210,6 +1210,40 @@ class FalconTube15mlGeometry(WellGeometry):
         return 7.28
 
 
+class FalconTube50mlGeometry(WellGeometry):  # not yet finished
+    def __init__(self, well):
+        super().__init__(well)
+
+    def depth_from_volume(self, volume):
+        pass
+
+    def volume_from_depth(self, depth):
+        pass
+
+    def radius_from_depth(self, depth):
+        pass
+
+    @property
+    def well_capacity(self):
+        return 50000  # nominal
+
+    @property
+    def outside_height(self):
+        return 114.11
+
+    @property
+    def well_depth(self):
+        return 113.5
+
+    @property
+    def well_diameter_at_top(self):
+        return 27.74
+
+    @property
+    def rim_lip_height(self):
+        return 10.26
+
+
 def well_geometry(well):
     assert is_well(well)
     try:
