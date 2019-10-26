@@ -908,15 +908,22 @@ class WellGeometry(object):
         return self.well.z_size() if self.well is not None else fpu.infinity
 
     @property
+    def outside_height(self):  # outside height of the tube
+        return 0
+
+    @property
+    def rim_lip_height(self):  # when hanging in a rack, this is how much the tube sits about the reference plane of the rack
+        return 0
+
+    def height_above_reference_plane(self, hangable_tube_height, rack):
+        return max(0, self.outside_height - hangable_tube_height, self.rim_lip_height);
+
+    @property
     def well_diameter_at_top(self):
         return self.radius_from_depth(self.well_depth) * 2  # a generic impl; subclasses can optimize
 
     @property
     def min_aspiratable_volume(self):  # minimum volume we can aspirate from (i.e.: we leave at least this much behind when aspirating)
-        return 0
-
-    @property
-    def height_above_rack(self):  # when hanging
         return 0
 
     @property
@@ -1007,8 +1014,12 @@ class IdtTubeWellGeometry(WellGeometry):
         return 75  # a rough estimate, but seems functionally useful
 
     @property
-    def height_above_rack(self):
-        raise NotImplementedError  # we need to measure!
+    def rim_lip_height(self):
+        raise 6.38
+
+    @property
+    def outside_height(self):
+        return 45.01
 
 
 class Biorad96WellPlateWellGeometry(WellGeometry):
@@ -1089,11 +1100,15 @@ class Eppendorf1point5mlTubeGeometry(WellGeometry):
         return 37.8
 
     @property
+    def outside_height(self):
+        return 38.9
+
+    @property
     def well_diameter_at_top(self):
         return 9.32533
 
     @property
-    def height_above_rack(self):
+    def rim_lip_height(self):
         return 2
 
 
@@ -1137,11 +1152,15 @@ class Eppendorf5point0mlTubeGeometry(WellGeometry):
         return 55.4
 
     @property
+    def outside_height(self):
+        return 56.7
+
+    @property
     def well_diameter_at_top(self):
         return 14.1726
 
     @property
-    def height_above_rack(self):
+    def rim_lip_height(self):
         return 2.2
 
 
@@ -1175,12 +1194,20 @@ class FalconTube15mlGeometry(WellGeometry):
         return 16202.8  # compare to 15000 in opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical
 
     @property
+    def outside_height(self):
+        return 119.40
+
+    @property
     def well_depth(self):
         return 118.07  # compare to 117.5 in opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical
 
     @property
     def well_diameter_at_top(self):
         return 14.859
+
+    @property
+    def rim_lip_height(self):
+        return 7.28
 
 
 def well_geometry(well):
@@ -1995,7 +2022,7 @@ class WellGrid(object):
     def contains_indices(self, indices):
         return self.origin.x <= indices[0] < self.max.x and self.origin.y <= indices[1] < self.max.y
 
-    def definition_map(self, z_overall):
+    def definition_map(self, rack, z_reference, hangable_tube_height):
         result = collections.OrderedDict()
         for col in range(self.grid_size.x):
             for row in range(self.grid_size.y):
@@ -2009,12 +2036,12 @@ class WellGrid(object):
                     d['diameter'] = geometry.well_diameter_at_top
                     d['x'] = rc['x']
                     d['y'] = rc['y']
-                    d['z'] = z_overall - d['depth']
+                    d['z'] = geometry.height_above_reference_plane(hangable_tube_height, rack) + z_reference - d['depth']
                     result[rc['name']] = d
         return result
 
     @property
-    def well_ordering(self):  # values are well name, but in a 2D matrix
+    def well_ordering_names(self):  # values are well name, but in a 2D matrix
         result = []
         for col in range(self.grid_size.x):
             col_result = []
@@ -2025,7 +2052,11 @@ class WellGrid(object):
 
     @property
     def well_names(self):
-        return [well_name for column in self.well_ordering for well_name in column]
+        return [well_name for column in self.well_ordering_names for well_name in column]
+
+    @property
+    def well_geometries(self):
+        return [well_dict['geometry'] for row in self.wells_matrix for well_dict in row if well_dict['geometry'] is not None]
 
     def _create_wells_matrix(self, well_geometry=None):
         result = [None] * self.grid_size.y
@@ -2045,10 +2076,21 @@ class WellGrid(object):
 
 
 class CustomTubeRack(object):  # todo: allow for 'height above rim when hanging' and tubes that are taller than the rack
-    def __init__(self, name, dimensions=None, brand=None, brandIds=None, well_grids=None):
+    def __init__(self, name,
+                 dimensions=None,  # is either to reference plane (dimensions_measurement_geometry is None) or to the top of rack measure with some tube in place (otherwise)
+                 dimensions_measurement_geometry=None,  # geometry used, if any, when 'dimensions' were measured
+                 hangable_tube_height=None,  # tubes taller than this don't hang. this value is conservative, in that tubes slightly larger than this might still hang, depending on geometries of the tube and rack indentations
+                 brand=None,
+                 brandIds=None,
+                 well_grids=None
+                 ):
         assert name is not None
         self.name = name
-        self.dimensions = dimensions if dimensions is not None else Vector(x=0, y=0, z=0)
+        self.reference_dimensions = dimensions if dimensions is not None else Vector(x=0, y=0, z=0)
+        if dimensions_measurement_geometry is not None:
+            # find the z height of the reference plane of the labware
+            self.reference_dimensions = self.reference_dimensions - (0, 0, dimensions_measurement_geometry(None).rim_lip_height)
+        self.hangable_tube_height = hangable_tube_height if hangable_tube_height is not None else fpu.infinity
         self.brand = {
             'brand': brand if brand is not None else 'Atkinson Labs'
         }
@@ -2073,27 +2115,54 @@ class CustomTubeRack(object):  # todo: allow for 'height above rim when hanging'
         raise IndexError
 
     @property
+    def max_rim_lip_height(self):
+        result = 0
+        for geometry in self.well_geometries:
+            result = max(result, geometry.rim_lip_height)
+        return result
+
+    @property
+    def max_tube_height_above_reference_plane(self):
+        result = 0
+        for geometry in self.well_geometries:
+            result = max(result, geometry.height_above_reference_plane(self.hangable_tube_height, self))
+        return result
+
+    @property
+    def dimensions(self):
+        return self.reference_dimensions + (0, 0, self.max_tube_height_above_reference_plane)
+
+    @property
     def well_names(self):
         result = []
         for well_grid in self.well_grids:
             result.extend(well_grid.well_names)
         return result
 
+    @property
+    def well_geometries(self):
+        result = []
+        for well_grid in self.well_grids:
+            result.extend(well_grid.well_geometries)
+        return result
+
+    @property
     def _definition_map(self):
+        dimensions = self.dimensions
         result = collections.OrderedDict()
         result['ordering'] = []
         for well_grid in self.well_grids:
-            result['ordering'].extend(well_grid.well_ordering)
+            result['ordering'].extend(well_grid.well_ordering_names)
         result['brand'] = self.brand
         result['metadata'] = self.metadata
         result['dimensions'] = {
-            'xDimension': self.dimensions.coordinates.x,
-            'yDimension': self.dimensions.coordinates.y,
-            'zDimension': self.dimensions.coordinates.z
+            'xDimension': dimensions.coordinates.x,
+            'yDimension': dimensions.coordinates.y,
+            'zDimension': dimensions.coordinates.z
         }
         result['wells'] = collections.OrderedDict()
         for well_grid in self.well_grids:
-            for name, definition in well_grid.definition_map(self.dimensions.coordinates.z).items():
+            for name, definition in well_grid.definition_map(self, self.reference_dimensions.coordinates.z, self.hangable_tube_height).items():
                 result['wells'][name] = definition
         # todo: add 'groups', if that's still significant / worthwhile
         result['parameters'] = {
@@ -2112,7 +2181,7 @@ class CustomTubeRack(object):  # todo: allow for 'height above rim when hanging'
     def load(self, slot):
         slot = str(slot)
         if self.load_result is None:
-            def_map = self._definition_map()
+            def_map = self._definition_map
             self.load_result = robot.add_container_by_definition(def_map, slot, label=self.name)
             for well_name in self.well_names:
                 well = self.load_result.wells(well_name)
@@ -2123,17 +2192,19 @@ class CustomTubeRack(object):  # todo: allow for 'height above rim when hanging'
                     geometry.well = well
         return self.load_result
 
-class Opentrons15RackInsert(CustomTubeRack):
-    def __init__(self, name, brand=None, well_geometry=None):
+class Opentrons15Rack(CustomTubeRack):
+    def __init__(self, name, brand=None, default_well_geometry=None):
         super().__init__(
             dimensions=Vector(127.76, 85.48, 80.83),  # todo: adjust for height-above-rim
+            dimensions_measurement_geometry=Eppendorf5point0mlTubeGeometry,
+            hangable_tube_height=71.40,
             name=name,
             brand=brand,
             well_grids=[WellGrid(
                 grid_size=Point(5, 3),
                 incr=PointF(25.0, 25.0),
                 offset=PointF(13.88, 17.74),
-                well_geometry=well_geometry)
+                well_geometry=default_well_geometry)
             ])
 
 # an enhanced version of labware.load(tiprack_type, slot) that grabs more metadata
@@ -2154,7 +2225,7 @@ def load_tiprack(tiprack_type, slot, label=None):
     robot._add_container_obj(container, tiprack_type, slot, label, share)
     return container
 
-# test = Opentrons15RackInsert(name='Atkinson 15 Tube Rack 5000 µL', well_geometry=Eppendorf5point0mlTubeGeometry)
+# test = Opentrons15Rack(name='Atkinson 15 Tube Rack 5000 µL', default_well_geometry=Eppendorf5point0mlTubeGeometry)
 # test_loaded = test.load(slot=9)
 # print(test_loaded)
 
