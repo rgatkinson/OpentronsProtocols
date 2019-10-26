@@ -19,7 +19,8 @@ def uniq(l):
 
 
 def set_speed(rate):
-    robot.head_speed(x=(600 * rate), y=(400 * rate), z=(125 * rate), a=(125 * rate))
+    robot.head_speed(x=(600 * rate), y=(400 * rate),
+                      z=(125 * rate), a=(125 * rate))
 
 
 def run_custom_protocol(pipette_name, mount, tiprack_load_name, labware_def):
@@ -28,7 +29,8 @@ def run_custom_protocol(pipette_name, mount, tiprack_load_name, labware_def):
     test_labware = robot.add_container_by_definition(
         labware_def,
         TEST_LABWARE_SLOT,
-        label=labware_def.get('metadata', {}).get('displayName', 'test labware')
+        label=labware_def.get('metadata', {}).get(
+            'displayName', 'test labware')
     )
 
     num_cols = len(labware_def.get('ordering', [[]]))
@@ -72,14 +74,16 @@ def run_custom_protocol(pipette_name, mount, tiprack_load_name, labware_def):
         # need to interact with labware for it to show on deck map
         pipette.blow_out(well)
 
+
     set_speed(1.0)
     pipette.return_tip()
 
 
-LABWARE_DEF = """{"ordering":[["A1","B1","C1"],["A2","B2","C2"],["A3","B3","C3"],["A4","B4","C4"],["A5","B5","C5"]],"brand":{"brand":"Eppendorf","brandId":["0030108310"]},"metadata":{"displayName":"Eppendorf 15 Tube Rack 5000 µL","displayCategory":"tubeRack","displayVolumeUnits":"µL","tags":[]},"dimensions":{"xDimension":127.76,"yDimension":85.48,"zDimension":80.83},"wells":{"A1":{"depth":55.03,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":13.88,"y":67.74,"z":25.8},"B1":{"depth":55.03,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":13.88,"y":42.74,"z":25.8},"C1":{"depth":55.03,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":13.88,"y":17.74,"z":25.8},"A2":{"depth":55.03,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":38.88,"y":67.74,"z":25.8},"B2":{"depth":55.03,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":38.88,"y":42.74,"z":25.8},"C2":{"depth":55.03,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":38.88,"y":17.74,"z":25.8},"A3":{"depth":55.03,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":63.88,"y":67.74,"z":25.8},"B3":{"depth":55.03,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":63.88,"y":42.74,"z":25.8},"C3":{"depth":55.03,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":63.88,"y":17.74,"z":25.8},"A4":{"depth":55.03,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":88.88,"y":67.74,"z":25.8},"B4":{"depth":55.03,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":88.88,"y":42.74,"z":25.8},"C4":{"depth":55.03,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":88.88,"y":17.74,"z":25.8},"A5":{"depth":55.03,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":113.88,"y":67.74,"z":25.8},"B5":{"depth":55.03,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":113.88,"y":42.74,"z":25.8},"C5":{"depth":55.03,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":113.88,"y":17.74,"z":25.8}},"groups":[{"metadata":{"displayName":"Eppendorf 15 Tube Rack 5000 µL","displayCategory":"tubeRack","wellBottomShape":"v"},"brand":{"brand":"Eppendorf","brandId":["0030108310"]},"wells":["A1","B1","C1","A2","B2","C2","A3","B3","C3","A4","B4","C4","A5","B5","C5"]}],"parameters":{"format":"irregular","quirks":[],"isTiprack":false,"isMagneticModuleCompatible":false,"loadName":"eppendorf_15_tuberack_5000ul"},"namespace":"custom_beta","version":1,"schemaVersion":2,"cornerOffsetFromSlot":{"x":0,"y":0,"z":0}}"""
+LABWARE_DEF = """{"ordering":[["A1","B1","C1"],["A2","B2","C2"],["A3","B3","C3"],["A4","B4","C4"],["A5","B5","C5"]],"brand":{"brand":"Eppendorf","brandId":["0030108310"]},"metadata":{"displayName":"Eppendorf 15 Tube Rack 5000 µL","displayCategory":"tubeRack","displayVolumeUnits":"µL","tags":[]},"dimensions":{"xDimension":127.76,"yDimension":85.48,"zDimension":80.83},"wells":{"A1":{"depth":55.4,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":13.88,"y":67.74,"z":25.43},"B1":{"depth":55.4,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":13.88,"y":42.74,"z":25.43},"C1":{"depth":55.4,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":13.88,"y":17.74,"z":25.43},"A2":{"depth":55.4,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":38.88,"y":67.74,"z":25.43},"B2":{"depth":55.4,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":38.88,"y":42.74,"z":25.43},"C2":{"depth":55.4,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":38.88,"y":17.74,"z":25.43},"A3":{"depth":55.4,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":63.88,"y":67.74,"z":25.43},"B3":{"depth":55.4,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":63.88,"y":42.74,"z":25.43},"C3":{"depth":55.4,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":63.88,"y":17.74,"z":25.43},"A4":{"depth":55.4,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":88.88,"y":67.74,"z":25.43},"B4":{"depth":55.4,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":88.88,"y":42.74,"z":25.43},"C4":{"depth":55.4,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":88.88,"y":17.74,"z":25.43},"A5":{"depth":55.4,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":113.88,"y":67.74,"z":25.43},"B5":{"depth":55.4,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":113.88,"y":42.74,"z":25.43},"C5":{"depth":55.4,"totalLiquidVolume":5000,"shape":"circular","diameter":13.93,"x":113.88,"y":17.74,"z":25.43}},"groups":[{"metadata":{"displayName":"Eppendorf 15 Tube Rack 5000 µL","displayCategory":"tubeRack","wellBottomShape":"v"},"brand":{"brand":"Eppendorf","brandId":["0030108310"]},"wells":["A1","B1","C1","A2","B2","C2","A3","B3","C3","A4","B4","C4","A5","B5","C5"]}],"parameters":{"format":"irregular","quirks":[],"isTiprack":false,"isMagneticModuleCompatible":false,"loadName":"eppendorf_15_tuberack_5000ul"},"namespace":"custom_beta","version":1,"schemaVersion":2,"cornerOffsetFromSlot":{"x":0,"y":0,"z":0}}"""
 
 PIPETTE_MOUNT = 'right'
 PIPETTE_NAME = 'P300_Single'
 TIPRACK_LOADNAME = 'opentrons_96_tiprack_300ul'
 
-run_custom_protocol(PIPETTE_NAME, PIPETTE_MOUNT, TIPRACK_LOADNAME, json.loads(LABWARE_DEF))
+run_custom_protocol(PIPETTE_NAME, PIPETTE_MOUNT,
+                    TIPRACK_LOADNAME, json.loads(LABWARE_DEF))
