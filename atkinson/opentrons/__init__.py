@@ -2238,7 +2238,7 @@ class CustomTubeRack(object):
         result['cornerOffsetFromSlot'] = {'x': 0, 'y': 0, 'z': 0}
         return result
 
-    def load(self, slot=slot, label=None):
+    def load(self, slot=None, label=None):
         slot = str(slot)
         if self.load_result is None:
             def_map = self._definition_map
