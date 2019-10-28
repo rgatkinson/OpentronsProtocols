@@ -1,5 +1,5 @@
 #
-# atkinson.opentrons
+# atkinson.opentrons/__init__.py
 #
 
 # region Enhancements
