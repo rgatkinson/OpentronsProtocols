@@ -18,7 +18,8 @@ from opentrons_enhancements import *
 
 class PlaceableMonitor(object):
 
-    def __init__(self, controller, location_path):
+    def __init__(self, config, controller, location_path):
+        self.config = config;
         self.controller = controller
         self.location_path = location_path
         self.target = None
@@ -36,9 +37,9 @@ class PlaceableMonitor(object):
 
 
 class WellMonitor(PlaceableMonitor):
-    def __init__(self, controller, location_path):
-        super(WellMonitor, self).__init__(controller, location_path)
-        self.volume = WellVolume()
+    def __init__(self, config, controller, location_path):
+        super(WellMonitor, self).__init__(config, controller, location_path)
+        self.volume = WellVolume(None, self.config)
         self.liquid = Liquid(location_path)  # unique to this well unless we're told a better name later
         self.liquid_known = False
         self.mixture = Mixture()
@@ -75,13 +76,13 @@ class WellMonitor(PlaceableMonitor):
 
 # region Containers
 class AbstractContainerMonitor(PlaceableMonitor):
-    def __init__(self, controller, location_path):
-        super(AbstractContainerMonitor, self).__init__(controller, location_path)
+    def __init__(self, config, controller, location_path):
+        super(AbstractContainerMonitor, self).__init__(config, controller, location_path)
 
 
 class WellContainerMonitor(AbstractContainerMonitor):
-    def __init__(self, controller, location_path):
-        super(WellContainerMonitor, self).__init__(controller, location_path)
+    def __init__(self, config, controller, location_path):
+        super(WellContainerMonitor, self).__init__(config, controller, location_path)
         self.wells = dict()
 
     def add_well(self, well_monitor):  # idempotent
@@ -102,8 +103,8 @@ class WellContainerMonitor(AbstractContainerMonitor):
 
 
 class TipRackMonitor(AbstractContainerMonitor):
-    def __init__(self, controller, location_path):
-        super(TipRackMonitor, self).__init__(controller, location_path)
+    def __init__(self, config, controller, location_path):
+        super(TipRackMonitor, self).__init__(config, controller, location_path)
         self.tips_picked = dict()
         self.tips_dropped = dict()
 
@@ -121,7 +122,8 @@ class TipRackMonitor(AbstractContainerMonitor):
 
 
 class MonitorController(object):
-    def __init__(self):
+    def __init__(self, config):
+        self.config = config
         self._monitors = dict()  # maps location path to monitor
         self._liquids = dict()
 
@@ -193,7 +195,7 @@ class MonitorController(object):
 
     def _monitor_from_location_path(self, monitor_type, location_path):
         if location_path not in self._monitors:
-            monitor = monitor_type(self, location_path)
+            monitor = monitor_type(self.config, self, location_path)
             self._monitors[location_path] = monitor
         return self._monitors[location_path]
 
@@ -256,7 +258,7 @@ robot._driver = EnhancedSimulatingSmoothieDriver(robot._driver)
 
 def analyzeRunLog(run_log):
 
-    controller = MonitorController()
+    controller = MonitorController(config)
     pipette_contents = PipetteContents()
 
     # locations are either placeables or (placable, vector) pairs
