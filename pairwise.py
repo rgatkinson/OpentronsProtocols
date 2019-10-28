@@ -11,24 +11,29 @@ metadata = {
 from atkinson.opentrons import *
 
 ########################################################################################################################
-# Configurable protocol parameters
+# Tweakable protocol parameters
 ########################################################################################################################
 
 use_eppendorf_for_master_mix = True
 
 # Volumes of master mix ingredients. These are minimums in each tube.
-buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
-evagreen_volumes = [600]            # B1, B2, etc in screwcap rack
+buffer_volumes = [1000, 1000]        # A1, A2, etc in screwcap rack
+evagreen_volumes = [1000]            # B1, B2, etc in screwcap rack
 
 strand_a_conc = '10uM'  # '8.820 uM'  # Note: we'll use more Strand A than Strand B because of disposal_volumes
 strand_b_conc = '10uM'  # '9.117 uM'
-strand_a_min_vol = 600  # set as best one can
-strand_b_min_vol = 600  # set as best one can
+strand_a_min_vol = 1100  # set as best one can
+strand_b_min_vol = 1100  # set as best one can
 
 # Tip usage
-p10_start_tip = 'A9'
-p50_start_tip = 'A9'
+p10_start_tip = 'A2'
+p50_start_tip = 'A5'
 config.trash_control = True
+
+
+########################################################################################################################
+## Protocol
+########################################################################################################################
 
 # Diluting each strand
 strand_dilution_factor = 25.0 / 9.0  # per Excel worksheet
@@ -57,11 +62,6 @@ per_well_water_volumes = [
     [16, 12, 8, 0]]
 assert len(per_well_water_volumes) == rows_per_plate
 assert len(per_well_water_volumes[0]) * num_replicates == columns_per_plate
-
-
-########################################################################################################################
-## Protocol
-########################################################################################################################
 
 # compute derived constants
 strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
