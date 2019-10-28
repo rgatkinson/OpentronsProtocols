@@ -39,14 +39,18 @@ class TopConfigurationContext(ConfigurationContext):
     def well_geometry(self, well):
         assert is_well(well)
         try:
-            return well.geometry
+            result = well.geometry
+            assert result.config is self
+            return result
         except AttributeError:
             return self.set_well_geometry(well, UnknownWellGeometry)
 
     def well_volume(self, well):
         assert is_well(well)
         try:
-            return well.contents
+            result = well.contents
+            assert result.config is self
+            return result
         except AttributeError:
             well.contents = WellVolume(well, self)
             return well.contents
@@ -2050,7 +2054,8 @@ class PointF(Point):
 
 
 class WellGrid(object):
-    def __init__(self, grid_size: Point, incr: PointF, offset=PointF(), origin_name='A1', origin=None, well_geometry=None):
+    def __init__(self, config, grid_size: Point, incr: PointF, offset=PointF(), origin_name='A1', origin=None, well_geometry=None):
+        self.config = config
         self.grid_size = grid_size
         self.origin = self.well_name_to_indices(origin_name) if origin is None else origin
         self.max = self.origin + self.grid_size
@@ -2124,13 +2129,13 @@ class WellGrid(object):
                     'geometry': None
                 }
                 if well_geometry is not None:
-                    d['geometry'] = well_geometry(well=None)
+                    d['geometry'] = well_geometry(config=self.config, well=None)
                 result[row][col] = d
         return result
 
 
 class CustomTubeRack(object):
-    def __init__(self, name,
+    def __init__(self, config, name,
                  dimensions=None,  # is either to reference plane (dimensions_measurement_geometry is None) or to the top of rack measure with some tube in place (otherwise)
                  dimensions_measurement_geometry=None,  # geometry used, if any, when 'dimensions' were measured
                  hangable_tube_height=None,  # tubes taller than this don't hang. this value is conservative, in that tubes slightly larger than this might still hang, depending on geometries of the tube and rack indentations
@@ -2139,11 +2144,12 @@ class CustomTubeRack(object):
                  well_grids=None
                  ):
         assert name is not None
+        self.config = config
         self.name = name
         self.reference_dimensions = dimensions if dimensions is not None else Vector(x=0, y=0, z=0)
         if dimensions_measurement_geometry is not None:
             # find the z height of the reference plane of the labware
-            self.reference_dimensions = self.reference_dimensions - (0, 0, dimensions_measurement_geometry(None).rim_lip_height)
+            self.reference_dimensions = self.reference_dimensions - (0, 0, dimensions_measurement_geometry(well=None, config=self.config).rim_lip_height)
         self.hangable_tube_height = hangable_tube_height if hangable_tube_height is not None else fpu.infinity
         self.brand = {
             'brand': brand if brand is not None else 'Atkinson Labs'
@@ -2232,11 +2238,13 @@ class CustomTubeRack(object):
         result['cornerOffsetFromSlot'] = {'x': 0, 'y': 0, 'z': 0}
         return result
 
-    def load(self, slot):
+    def load(self, slot=slot, label=None):
         slot = str(slot)
         if self.load_result is None:
             def_map = self._definition_map
-            self.load_result = robot.add_container_by_definition(def_map, slot, label=self.name)
+            if label is None:
+                label = self.name
+            self.load_result = robot.add_container_by_definition(def_map, slot, label=label)
             for well_name in self.well_names:
                 well = self.load_result.wells(well_name)
                 geometry = self[well_name].get('geometry', None)
@@ -2247,14 +2255,15 @@ class CustomTubeRack(object):
         return self.load_result
 
 class Opentrons15Rack(CustomTubeRack):
-    def __init__(self, name, brand=None, default_well_geometry=None):
+    def __init__(self, config, name, brand=None, default_well_geometry=None):
         super().__init__(
+            config,
             dimensions=Vector(127.76, 85.48, 80.83),
             dimensions_measurement_geometry=Eppendorf5point0mlTubeGeometry,
             hangable_tube_height=71.40,
             name=name,
             brand=brand,
-            well_grids=[WellGrid(
+            well_grids=[WellGrid(config,
                 grid_size=Point(5, 3),
                 incr=PointF(25.0, 25.0),
                 offset=PointF(13.88, 17.74),

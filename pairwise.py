@@ -14,6 +14,8 @@ from atkinson.opentrons import *
 # Configurable protocol parameters
 ########################################################################################################################
 
+use_eppendorf_for_master_mix = True
+
 # Volumes of master mix ingredients. These are minimums in each tube.
 buffer_volumes = [1000, 1000]       # A1, A2, etc in screwcap rack
 evagreen_volumes = [600]            # B1, B2, etc in screwcap rack
@@ -61,7 +63,6 @@ assert len(per_well_water_volumes[0]) * num_replicates == columns_per_plate
 ## Protocol
 ########################################################################################################################
 
-
 # compute derived constants
 strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
 strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
@@ -89,15 +90,10 @@ p50.start_at_tip(tips300a[p50_start_tip])
 
 # All the labware containers
 
-# test = Opentrons15Rack(name='Atkinson 15 Tube Rack 5000 µL', default_well_geometry=Eppendorf5point0mlTubeGeometry)
-# test_loaded = test.load(slot=9)
-# print(test_loaded)
-
 temp_slot = 11
 temp_module = modules.load('tempdeck', temp_slot)
 screwcap_rack = labware.load('opentrons_24_aluminumblock_generic_2ml_screwcap', temp_slot, label='screwcap_rack', share=True)
 eppendorf_1_5_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 5, label='eppendorf_1_5_rack')
-falcon_rack = labware.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 8, label='falcon_rack')
 plate = labware.load('biorad_96_wellplate_200ul_pcr', 6, label='plate')
 trough = labware.load('usascientific_12_reservoir_22ml', 9, label='trough')
 
@@ -109,7 +105,6 @@ strand_a = eppendorf_1_5_rack['A1']
 strand_b = eppendorf_1_5_rack['B1']
 diluted_strand_a = eppendorf_1_5_rack['A6']
 diluted_strand_b = eppendorf_1_5_rack['B6']
-master_mix = falcon_rack['A1']  # note: this needs tape around it's mid-section to keep it in the holder!
 
 # Define geometries
 for well, __ in buffers:
@@ -120,9 +115,17 @@ config.set_well_geometry(strand_a, Eppendorf1point5mlTubeGeometry)
 config.set_well_geometry(strand_b, Eppendorf1point5mlTubeGeometry)
 config.set_well_geometry(diluted_strand_a, Eppendorf1point5mlTubeGeometry)
 config.set_well_geometry(diluted_strand_b, Eppendorf1point5mlTubeGeometry)
-config.set_well_geometry(master_mix, FalconTube15mlGeometry)
 for well in plate.wells():
     config.set_well_geometry(well, Biorad96WellPlateWellGeometry)
+
+if use_eppendorf_for_master_mix:
+    master_mix_rack_definition = Opentrons15Rack(config, name='Atkinson 15 Tube Rack 5000 µL', default_well_geometry=Eppendorf5point0mlTubeGeometry)
+    master_mix_rack = master_mix_rack_definition.load(slot=8, label='master_mix_rack')
+    master_mix = master_mix_rack['A1']
+else:
+    master_mix_rack = labware.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 8, label='master_mix_rack')
+    master_mix = master_mix_rack['A1']
+    config.set_well_geometry(master_mix, FalconTube15mlGeometry)
 
 # Remember initial liquid names and volumes
 log('Liquid Names')
