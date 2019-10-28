@@ -2004,7 +2004,9 @@ class EnhancedPipette(Pipette):
                     dispense_location = (well, dispense_coordinates + random_offset)
 
                     self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', self.config.layered_mix.aspirate_rate_factor), pre_wet=pre_wet)
+                    self.move_to(well.bottom(y_max))  # go up first, then over, to avoid hitting narrow spots on the way up
                     self.dispense(volume, dispense_location, rate=fetch('dispense_rate', self.config.layered_mix.dispense_rate_factor), full_dispense=full_dispense)
+                    self.move_to(well.bottom(y_max))  # move back to center for (possible) next aspirate
                     if need_new_tip:
                         self.done_tip()
                         tip_cycles = 0
@@ -2503,7 +2505,7 @@ strand_b_min_vol = 1100  # set as best one can
 
 # Tip usage
 p10_start_tip = 'A2'
-p50_start_tip = 'A5'
+p50_start_tip = 'B5'
 config.trash_control = True
 
 
@@ -2834,8 +2836,8 @@ def plateEverythingAndMix():
 ########################################################################################################################
 
 wells_to_verify = [master_mix, strand_a, strand_b, diluted_strand_a, diluted_strand_b, plate.wells('A1'), plate.wells('A12'), plate.wells('H1'), plate.wells('H12')]
-verify_well_locations(wells_to_verify, p50)
-verify_well_locations(wells_to_verify, p10)
+# verify_well_locations(wells_to_verify, p50)
+# verify_well_locations(wells_to_verify, p10)
 
 diluteStrands()
 createMasterMix()
