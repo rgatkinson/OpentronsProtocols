@@ -10,7 +10,7 @@ metadata = {
     'description': 'Tests precision by pipetting water in various mass sizes'
 }
 
-from atkinson.opentrons import *
+from rgatkinson_opentrons_enhancements import *
 
 ########################################################################################################################
 # Configurable protocol parameters

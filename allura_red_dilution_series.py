@@ -8,7 +8,7 @@ metadata = {
     'author': 'Robert Atkinson <bob@theatkinsons.org>'
     }
 
-from atkinson.opentrons import *
+from rgatkinson_opentrons_enhancements import *
 
 ########################################################################################################################
 # Configurable protocol parameters

@@ -10,7 +10,7 @@ metadata = {
     'description': 'Loads and retains a p50 tip to facilitate deck calibration'
 }
 
-from atkinson.opentrons import *
+from rgatkinson_opentrons_enhancements import *
 
 ########################################################################################################################
 # Configurable protocol parameters

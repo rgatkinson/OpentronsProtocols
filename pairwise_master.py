@@ -10,7 +10,7 @@ metadata = {
     'description': 'Study the interaction of two DNA strands'
 }
 
-from atkinson.opentrons import *
+from rgatkinson_opentrons_enhancements import *
 
 ########################################################################################################################
 # Configurable protocol parameters
