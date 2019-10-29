@@ -2,15 +2,13 @@
 @author Robert Atkinson
 """
 
-from opentrons.commands.commands import stringify_location
-
 metadata = {
     'protocolName': 'Calibrate Deck',
     'author': 'Robert Atkinson <bob@theatkinsons.org>',
     'description': 'Loads and retains a p50 tip to facilitate deck calibration'
 }
 
-from rgatkinson_opentrons_enhancements import *
+from opentrons import instruments, labware, modules, robot, types
 
 ########################################################################################################################
 # Configurable protocol parameters

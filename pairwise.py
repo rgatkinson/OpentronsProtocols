@@ -8,8 +8,14 @@ metadata = {
     'description': 'Study the interaction of two DNA strands'
 }
 
+from typing import List
+from opentrons import instruments, labware, modules, robot, types
+
 from rgatkinson_opentrons_enhancements import *
-from opentrons import labware, instruments, robot, modules, types
+from rgatkinson_opentrons_enhancements.custom_labware import Opentrons15Rack, load_tiprack
+from rgatkinson_opentrons_enhancements.liquid import note_liquid
+from rgatkinson_opentrons_enhancements.logging import log, fatal
+from rgatkinson_opentrons_enhancements.pipette import verify_well_locations
 
 ########################################################################################################################
 # Tweakable protocol parameters

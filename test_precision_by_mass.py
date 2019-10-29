@@ -2,15 +2,17 @@
 @author Robert Atkinson
 """
 
-from opentrons.commands.commands import stringify_location
-
 metadata = {
     'protocolName': 'Test Precision by Mass',
     'author': 'Robert Atkinson <bob@theatkinsons.org>',
     'description': 'Tests precision by pipetting water in various mass sizes'
 }
 
+from opentrons import instruments, labware, modules, robot, types
+
 from rgatkinson_opentrons_enhancements import *
+from rgatkinson_opentrons_enhancements.liquid import note_liquid
+from rgatkinson_opentrons_enhancements.logging import log
 
 ########################################################################################################################
 # Configurable protocol parameters
