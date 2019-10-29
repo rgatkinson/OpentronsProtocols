@@ -11,11 +11,11 @@ metadata = {
 from typing import List
 from opentrons import instruments, labware, modules, robot, types
 
-from rgatkinson_opentrons_enhancements import *
-from rgatkinson_opentrons_enhancements.custom_labware import Opentrons15Rack, load_tiprack
-from rgatkinson_opentrons_enhancements.liquid import note_liquid
-from rgatkinson_opentrons_enhancements.logging import log, fatal
-from rgatkinson_opentrons_enhancements.pipette import verify_well_locations
+from rgatkinson import *
+from rgatkinson.custom_labware import Opentrons15Rack, load_tiprack
+from rgatkinson.liquid import note_liquid
+from rgatkinson.logging import log, fatal
+from rgatkinson.pipette import verify_well_locations
 
 ########################################################################################################################
 # Tweakable protocol parameters

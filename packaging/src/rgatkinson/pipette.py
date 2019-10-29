@@ -17,11 +17,11 @@ from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANC
 from opentrons.trackers import pose_tracker
 from opentrons.util.vector import Vector
 
-from rgatkinson_opentrons_enhancements import pretty
-from rgatkinson_opentrons_enhancements.interval import is_close, fpu
-from rgatkinson_opentrons_enhancements.logging import pretty, warn, log_while, info, info_while
-from rgatkinson_opentrons_enhancements.util import zeroify, sqrt
-from rgatkinson_opentrons_enhancements.well import FalconTube15mlGeometry, Eppendorf5point0mlTubeGeometry, Eppendorf1point5mlTubeGeometry, IdtTubeWellGeometry, Biorad96WellPlateWellGeometry, is_well
+from rgatkinson import pretty
+from rgatkinson.interval import is_close, fpu
+from rgatkinson.logging import pretty, warn, log_while, info, info_while
+from rgatkinson.util import zeroify, sqrt
+from rgatkinson.well import FalconTube15mlGeometry, Eppendorf5point0mlTubeGeometry, Eppendorf1point5mlTubeGeometry, IdtTubeWellGeometry, Biorad96WellPlateWellGeometry, is_well
 
 
 class RadialClearanceManager(object):

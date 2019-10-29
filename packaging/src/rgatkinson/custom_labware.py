@@ -8,9 +8,9 @@ import collections
 from opentrons import robot
 from opentrons.util.vector import Vector
 
-from rgatkinson_opentrons_enhancements.interval import fpu
-from rgatkinson_opentrons_enhancements.util import is_indexable
-from rgatkinson_opentrons_enhancements.well import WellGeometry, Eppendorf5point0mlTubeGeometry
+from rgatkinson.interval import fpu
+from rgatkinson.util import is_indexable
+from rgatkinson.well import WellGeometry, Eppendorf5point0mlTubeGeometry
 
 class Point(object):
     def __init__(self, x=0, y=0):

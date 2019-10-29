@@ -10,8 +10,8 @@ from opentrons import robot
 from opentrons.commands import stringify_location, make_command, command_types
 from opentrons.legacy_api.containers.placeable import Placeable
 
-import rgatkinson_opentrons_enhancements
-from rgatkinson_opentrons_enhancements.interval import is_finite_scalar, is_close
+import rgatkinson
+from rgatkinson.interval import is_finite_scalar, is_close
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -94,7 +94,7 @@ def _z_from_bottom(location, clearance):
         raise ValueError('Location should be (Placeable, (x, y, z)) or Placeable')
 
 def command_aspirate(instrument, volume, location, rate):
-    local_config = instrument.config if hasattr(instrument, 'config') else rgatkinson_opentrons_enhancements.configuration.config
+    local_config = instrument.config if hasattr(instrument, 'config') else rgatkinson.configuration.config
     z = _z_from_bottom(location, local_config.aspirate.bottom_clearance)
     location_text = stringify_location(location)
     text = pretty.format('Aspirating {volume:n} uL z={z:n} rate={rate:n} at {location}', volume=volume, location=location_text, rate=rate, z=z)
@@ -110,7 +110,7 @@ def command_aspirate(instrument, volume, location, rate):
     )
 
 def command_dispense(instrument, volume, location, rate):
-    local_config = instrument.config if hasattr(instrument, 'config') else rgatkinson_opentrons_enhancements.configuration.config
+    local_config = instrument.config if hasattr(instrument, 'config') else rgatkinson.configuration.config
     z = _z_from_bottom(location, local_config.dispense.bottom_clearance)
     location_text = stringify_location(location)
     text = pretty.format('Dispensing {volume:n} uL z={z:n} rate={rate:n} at {location}', volume=volume, location=location_text, rate=rate, z=z)

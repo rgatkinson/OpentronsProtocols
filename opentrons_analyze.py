@@ -13,10 +13,10 @@ from opentrons import robot
 from opentrons.legacy_api.containers import Slot
 from opentrons.legacy_api.containers.placeable import Placeable
 
-from rgatkinson_opentrons_enhancements import config, format_log_msg
-from rgatkinson_opentrons_enhancements.interval import Interval
-from rgatkinson_opentrons_enhancements.liquid import Liquid, Concentration, Mixture, PipetteContents, LiquidVolume
-from rgatkinson_opentrons_enhancements.logging import Pretty, get_location_path
+from rgatkinson import config, format_log_msg
+from rgatkinson.interval import Interval
+from rgatkinson.liquid import Liquid, Concentration, Mixture, PipetteContents, LiquidVolume
+from rgatkinson.logging import Pretty, get_location_path
 
 
 ########################################################################################################################

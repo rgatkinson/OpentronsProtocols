@@ -9,8 +9,8 @@ from opentrons.legacy_api.containers import Well
 from opentrons.trackers import pose_tracker
 from opentrons.util.vector import Vector
 
-from rgatkinson_opentrons_enhancements.interval import fpu, is_interval, Interval
-from rgatkinson_opentrons_enhancements.util import sqrt, square, cube, cubeRoot
+from rgatkinson.interval import fpu, is_interval, Interval
+from rgatkinson.util import sqrt, square, cube, cubeRoot
 
 
 def is_well(location):

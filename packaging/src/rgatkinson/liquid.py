@@ -8,11 +8,11 @@ from enum import Enum
 from opentrons import robot
 from opentrons.legacy_api.containers import unpack_location
 
-import rgatkinson_opentrons_enhancements
-from rgatkinson_opentrons_enhancements.interval import is_scalar, supremum, Interval, fpu, is_interval
-from rgatkinson_opentrons_enhancements.logging import pretty, get_location_path
-from rgatkinson_opentrons_enhancements.util import first
-from rgatkinson_opentrons_enhancements.well import is_well
+import rgatkinson
+from rgatkinson.interval import is_scalar, supremum, Interval, fpu, is_interval
+from rgatkinson.logging import pretty, get_location_path
+from rgatkinson.util import first
+from rgatkinson.well import is_well
 
 class Liquid:
     def __init__(self, name):
@@ -290,7 +290,7 @@ class LiquidVolume(object):
 def note_liquid(location, name=None, initial_volume=None, min_volume=None, concentration=None, local_config=None):
     # Must keep in sync with Opentrons-Analyze controller.note_liquid_name
     if local_config is None:
-        local_config = rgatkinson_opentrons_enhancements.configuration.config
+        local_config = rgatkinson.configuration.config
     well, __ = unpack_location(location)
     assert is_well(well)
     if name is None:

@@ -10,9 +10,9 @@ metadata = {
 
 from opentrons import instruments, labware, modules, robot, types
 
-from rgatkinson_opentrons_enhancements import *
-from rgatkinson_opentrons_enhancements.liquid import note_liquid
-from rgatkinson_opentrons_enhancements.logging import log
+from rgatkinson import *
+from rgatkinson.liquid import note_liquid
+from rgatkinson.logging import log
 
 ########################################################################################################################
 # Configurable protocol parameters

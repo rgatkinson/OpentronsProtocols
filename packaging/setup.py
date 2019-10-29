@@ -13,7 +13,7 @@ from setuptools import setup
 
 #-----------------------------------------------------------------------------------------------------------------------
 
-DIST_NAME = 'rgatkinson_opentrons_enhancements'
+DIST_NAME = 'rgatkinson'
 AUTHOR = 'Robert Atkinson'
 EMAIL = 'bob@theatkinsons.org'
 KEYWORDS = ["robots", "protocols", "synbio", "pcr", "automation", "lab", "opentrons"]

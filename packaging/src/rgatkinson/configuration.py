@@ -2,8 +2,8 @@
 # configuration.py
 #
 
-from rgatkinson_opentrons_enhancements.liquid import LiquidVolume
-from rgatkinson_opentrons_enhancements.well import is_well, UnknownWellGeometry
+from rgatkinson.liquid import LiquidVolume
+from rgatkinson.well import is_well, UnknownWellGeometry
 
 
 class ConfigurationContext(object):
