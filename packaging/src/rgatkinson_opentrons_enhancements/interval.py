@@ -167,8 +167,7 @@ class IntervalMetaclass(type):  # See https://docs.python.org/3/reference/datamo
     def __getitem__(self, arg):
         return self(arg)
 
-# noinspection PyPep8Naming
-class interval(tuple, metaclass=IntervalMetaclass):
+class Interval(tuple, metaclass=IntervalMetaclass):
 
     def __new__(cls, *args):
         if len(args) == 1 and isinstance(args[0], cls):
@@ -429,7 +428,7 @@ def is_scalar(x):
     return float is x.__class__ or int is x.__class__ or isinstance(x, Number)
 
 def is_interval(x):
-    return x.__class__ is interval
+    return x.__class__ is Interval
 
 def is_nan(x):
     return x != x
@@ -457,5 +456,5 @@ def infimum(x):
     else:
         return x
 
-interval.inverse = interval.function(getattr(interval.inverse, '__func__', interval.inverse))
+Interval.inverse = Interval.function(getattr(Interval.inverse, '__func__', Interval.inverse))
 del coercing, comp_by_comp, IntervalMetaclass

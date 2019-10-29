@@ -9,6 +9,7 @@ metadata = {
 }
 
 from rgatkinson_opentrons_enhancements import *
+from opentrons import labware, instruments, robot, modules, types
 
 ########################################################################################################################
 # Tweakable protocol parameters

@@ -143,7 +143,7 @@ class MonitorController(object):
         well_monitor.set_liquid(liquid)
         if initial_volume is not None:
             if isinstance(initial_volume, list):  # work around json parsing deficiency
-                initial_volume = interval(*initial_volume)
+                initial_volume = Interval(*initial_volume)
             well_monitor.set_initial_volume(initial_volume)
 
     def well_monitor(self, well):

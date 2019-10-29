@@ -1,6 +1,7 @@
 #
 # atkinson.opentrons/__init__.py
 #
+# ToDo: refactor into reasonable, separate, modules
 
 # region Enhancements
 
@@ -16,16 +17,16 @@ from enum import Enum
 from typing import List
 
 import opentrons
-from opentrons import labware, instruments, robot, modules, types
+from opentrons import instruments, robot
 from opentrons.commands import stringify_location, make_command, command_types
 from opentrons.helpers import helpers
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
-from opentrons.legacy_api.containers.placeable import unpack_location, Well, WellSeries, Placeable
+from opentrons.legacy_api.containers.placeable import unpack_location, Well, Placeable
 from opentrons.trackers import pose_tracker
 from opentrons.util.vector import Vector
 
-from rgatkinson_opentrons_enhancements.interval import *
+from rgatkinson_opentrons_enhancements.interval import Interval, fpu, is_close, is_scalar, is_interval, is_infinite_scalar, is_finite_scalar, supremum, infimum
 
 ########################################################################################################################
 # Enhancements Configuration. Evolving; could use improvement
@@ -332,7 +333,7 @@ def note_liquid(location, name=None, initial_volume=None, min_volume=None, conce
         well.label = name
     d = {'name': name, 'location': get_location_path(well)}
     if initial_volume is None and min_volume is not None:
-        initial_volume = interval([min_volume, local_config.well_geometry(well).well_capacity])
+        initial_volume = Interval([min_volume, local_config.well_geometry(well).well_capacity])
     if initial_volume is not None:
         d['initial_volume'] = initial_volume
         local_config.well_volume(well).set_initial_volume(initial_volume)
@@ -357,7 +358,7 @@ class WellVolume(object):
         self.well = well
         self.config = config
         self.initial_volume_known = False
-        self.initial_volume = interval([0, fpu.infinity])
+        self.initial_volume = Interval([0, fpu.infinity])
         self.cum_delta = 0
         self.min_delta = 0
         self.max_delta = 0
@@ -413,7 +414,7 @@ class WellVolume(object):
     def aspirate(self, volume):
         assert volume >= 0
         if not self.initial_volume_known:
-            self.set_initial_volume(interval([volume,
+            self.set_initial_volume(Interval([volume,
                                               fpu.infinity if self.well is None else self.config.well_geometry(self.well).well_capacity]))
         self._track_volume(-volume)
 
@@ -526,10 +527,10 @@ class UnknownWellGeometry(WellGeometry):
         super().__init__(well, config)
 
     def depth_from_volume(self, vol):
-        return interval([0, self.well_depth])
+        return Interval([0, self.well_depth])
 
     def volume_from_depth(self, depth):
-        return interval([0, self.well_capacity])
+        return Interval([0, self.well_capacity])
 
     def radius_from_depth(self, depth):
         return self.well.properties['diameter'] / 2 if self.well is not None else fpu.infinity
