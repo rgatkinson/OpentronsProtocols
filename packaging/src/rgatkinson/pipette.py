@@ -747,7 +747,10 @@ class EnhancedPipette(Pipette):
                     dispense_location = (well, dispense_coordinates + random_offset)
 
                     self.aspirate(volume, well.bottom(y), rate=fetch('aspirate_rate', self.config.layered_mix.aspirate_rate_factor), pre_wet=pre_wet)
+                    self.move_to(well.bottom(y_max))  # ascend vertically from aspirate location
                     self.dispense(volume, dispense_location, rate=fetch('dispense_rate', self.config.layered_mix.dispense_rate_factor), full_dispense=full_dispense)
+                    self.move_to(well.bottom(y_max))  # prepare for vertical descent on a subsequent aspirate
+
                     if need_new_tip:
                         self.done_tip()
                         tip_cycles = 0
