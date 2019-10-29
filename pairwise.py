@@ -363,4 +363,5 @@ wells_to_verify = [master_mix, strand_a, strand_b, diluted_strand_a, diluted_str
 
 diluteStrands()
 createMasterMix()
+robot.pause('***** Check tube mixtures and resume')
 plateEverythingAndMix()
