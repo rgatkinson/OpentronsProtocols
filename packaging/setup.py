@@ -9,7 +9,7 @@ import codecs
 import os
 import re
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -19,8 +19,7 @@ EMAIL = 'bob@theatkinsons.org'
 KEYWORDS = ["robots", "protocols", "synbio", "pcr", "automation", "lab", "opentrons"]
 DESCRIPTION = "Capability enhancements to the Opentrons API"
 VERSION = '1.0.0'
-PACKAGES = find_packages(where="src")
-META_PATH = os.path.join("src", "rgatkinson_opentrons_enhancements", "__init__.py")
+PACKAGES = [DIST_NAME]
 CLASSIFIERS = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -43,6 +42,7 @@ if __name__ == "__main__":
         description=DESCRIPTION,
         version=VERSION,
         packages=PACKAGES,
+        zip_safe=False,
         author=AUTHOR,
         author_email=EMAIL,
         maintainer=AUTHOR,
@@ -50,6 +50,7 @@ if __name__ == "__main__":
         keywords=KEYWORDS,
         classifiers=CLASSIFIERS,
         install_requires=INSTALL_REQUIRES,
+        url='https://github.com/rgatkinson/OpentronsProtocols',
         package_dir={'': 'src'},
         project_urls={
             'Source Code On Github': "https://github.com/rgatkinson/OpentronsProtocols"

@@ -10,7 +10,7 @@ from typing import Optional
 import opentrons.simulate
 from opentrons.legacy_api.containers import Slot
 
-from atkinson.opentrons import *
+from rgatkinson_opentrons_enhancements import *
 
 ########################################################################################################################
 # Monitors
