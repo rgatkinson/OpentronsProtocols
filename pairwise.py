@@ -24,17 +24,17 @@ from rgatkinson_opentrons_enhancements.pipette import verify_well_locations
 use_eppendorf_for_master_mix = True
 
 # Volumes of master mix ingredients. These are minimums in each tube.
-buffer_volumes = [1000, 1000]        # A1, A2, etc in screwcap rack
-evagreen_volumes = [1000]            # B1, B2, etc in screwcap rack
+buffer_volumes = [2000, 2000]  # Fresh tubes of B9022S
+evagreen_volumes = [1000]      # Fresh tube of EvaGreen
 
-strand_a_conc = '10uM'  # '8.820 uM'  # Note: we'll use more Strand A than Strand B because of disposal_volumes
-strand_b_conc = '10uM'  # '9.117 uM'
-strand_a_min_vol = 1100  # set as best one can
-strand_b_min_vol = 1100  # set as best one can
+strand_a_conc = '8.820 uM'  # Note: we'll use more Strand A than Strand B because of disposal_volumes
+strand_b_conc = '9.117 uM'
+strand_a_min_vol = 1100  # records said we had 1200
+strand_b_min_vol = 1100  # ditto
 
 # Tip usage
-p10_start_tip = 'A2'
-p50_start_tip = 'B5'
+p10_start_tip = 'A1'
+p50_start_tip = 'A1'
 config.trash_control = True
 
 
