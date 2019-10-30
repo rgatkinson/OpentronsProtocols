@@ -11,10 +11,12 @@ import math
 from opentrons import instruments, labware, modules, robot, types
 from opentrons.legacy_api.containers import WellSeries
 
-from rgatkinson import *
+from rgatkinson.configuration import config
 from rgatkinson.custom_labware import load_tiprack
 from rgatkinson.liquid import note_liquid
 from rgatkinson.logging import log
+from rgatkinson.pipette import EnhancedPipette
+from rgatkinson.well import Eppendorf1point5mlTubeGeometry, Biorad96WellPlateWellGeometry
 
 ########################################################################################################################
 # Configurable protocol parameters
