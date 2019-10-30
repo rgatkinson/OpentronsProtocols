@@ -12,6 +12,7 @@ from opentrons import instruments, labware, modules, robot, types
 from opentrons.legacy_api.containers import WellSeries
 
 from rgatkinson import *
+from rgatkinson.custom_labware import load_tiprack
 from rgatkinson.liquid import note_liquid
 from rgatkinson.logging import log
 
@@ -31,12 +32,12 @@ stock_volume = 630
 ########################################################################################################################
 
 # Configure the tips
-tips10 = labware.load('opentrons_96_tiprack_10ul', 1)
-tips300a = labware.load('opentrons_96_tiprack_300ul', 4)
+tips10 = load_tiprack('opentrons_96_tiprack_10ul', 1, label='tips10')
+tips300a = load_tiprack('opentrons_96_tiprack_300ul', 4, label='tips300a')
 
 # Configure the pipettes.
-p10 = EnhancedPipette(instruments.P10_Single(mount='left', tip_racks=[tips10]))
-p50 = EnhancedPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a]))
+p10 = EnhancedPipette(instruments.P10_Single(mount='left', tip_racks=[tips10]), config)
+p50 = EnhancedPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a]), config)
 
 # Control tip usage
 p10.start_at_tip(tips10[p10_start_tip])
@@ -54,13 +55,13 @@ initial_stock = eppendorf_1_5_rack['A1']
 dilutions = eppendorf_1_5_rack.rows(1) + eppendorf_1_5_rack.rows(2)  # 12 in all
 
 # Define geometries
-Eppendorf1point5mlTubeGeometry(initial_stock)
+config.set_well_geometry(initial_stock, Eppendorf1point5mlTubeGeometry)
 for tube in dilutions:
-    Eppendorf1point5mlTubeGeometry(tube)
+    config.set_well_geometry(tube, Eppendorf1point5mlTubeGeometry)
 for well in plateA.wells():
-    Biorad96WellPlateWellGeometry(well)
+    config.set_well_geometry(well, Biorad96WellPlateWellGeometry)
 for well in plateB.wells():
-    Biorad96WellPlateWellGeometry(well)
+    config.set_well_geometry(well, Biorad96WellPlateWellGeometry)
 
 # Remember initial liquid names and volumes
 log('Liquid Names')
