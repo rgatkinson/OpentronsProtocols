@@ -3,7 +3,7 @@
 """
 
 metadata = {
-    'protocolName': 'Pairwise Interaction: Dilute & Master & Plate',
+    'protocolName': 'Pairwise Interaction: Dilute & Master & Plate - Manual Assist',
     'author': 'Robert Atkinson <bob@theatkinsons.org>',
     'description': 'Study the interaction of two DNA strands'
 }
@@ -105,7 +105,6 @@ plate = labware.load('biorad_96_wellplate_200ul_pcr', 6, label='plate')
 trough = labware.load('usascientific_12_reservoir_22ml', 9, label='trough')
 
 # Name specific places in the labware containers
-water = trough['A1']
 buffers = list(zip(screwcap_rack.rows(0), buffer_volumes))
 evagreens = list(zip(screwcap_rack.rows(1), evagreen_volumes))
 strand_a = eppendorf_1_5_rack['A1']
@@ -129,21 +128,24 @@ if use_eppendorf_for_master_mix:
     master_mix_rack_definition = Opentrons15Rack(config, name='Atkinson 15 Tube Rack 5000 µL', default_well_geometry=Eppendorf5point0mlTubeGeometry)
     master_mix_rack = master_mix_rack_definition.load(slot=8, label='master_mix_rack')
     master_mix = master_mix_rack['A1']
+    water = master_mix_rack['C5']
 else:
     master_mix_rack = labware.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 8, label='master_mix_rack')
     master_mix = master_mix_rack['A1']
     config.set_well_geometry(master_mix, FalconTube15mlGeometry)
+    water = trough['A1']
+
 
 # Remember initial liquid names and volumes
 log('Liquid Names')
-note_liquid(location=water, name='Water', min_volume=7000)  # volume is rough guess
+note_liquid(location=water, name='Water', initial_volume=3000)
 assert strand_a_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_a).min_aspiratable_volume
 assert strand_b_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_b).min_aspiratable_volume
 note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, min_volume=strand_a_min_vol)  # i.e.: we have enough, just not specified how much
 note_liquid(location=strand_b, name='StrandB', concentration=strand_b_conc, min_volume=strand_b_min_vol)  # ditto
-note_liquid(location=diluted_strand_a, name='Diluted StrandA')
-note_liquid(location=diluted_strand_b, name='Diluted StrandB')
-note_liquid(location=master_mix, name='Master Mix')
+note_liquid(location=diluted_strand_a, name='Diluted StrandA', initial_volume=strand_dilution_vol)
+note_liquid(location=diluted_strand_b, name='Diluted StrandB', initial_volume=strand_dilution_vol)
+note_liquid(location=master_mix, name='Master Mix', initial_volume=master_mix_vol)
 for buffer in buffers:
     note_liquid(location=buffer[0], name='Buffer', initial_volume=buffer[1], concentration='5x')
 for evagreen in evagreens:
@@ -368,7 +370,7 @@ wells_to_verify = [master_mix, strand_a, strand_b, diluted_strand_a, diluted_str
 # verify_well_locations(wells_to_verify, p50)
 # verify_well_locations(wells_to_verify, p10)
 
-diluteStrands()
-createMasterMix()
-robot.pause('***** Check tube mixtures and resume')
+# diluteStrands()
+# createMasterMix()
+robot.pause('***** Ensure master mix and strand dilutions are present *****')
 plateEverythingAndMix()
