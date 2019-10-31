@@ -302,7 +302,7 @@ def note_liquid(location, name=None, initial_volume=None, min_volume=None, conce
         initial_volume = Interval([min_volume, local_config.well_geometry(well).well_capacity])
     if initial_volume is not None:
         d['initial_volume'] = initial_volume
-        local_config.well_volume(well).set_initial_volume(initial_volume)
+        local_config.liquid_volume(well).set_initial_volume(initial_volume)
     if concentration is not None:
         d['concentration'] = str(Concentration(concentration))
     serialized = json.dumps(d).replace("{", "{{").replace("}", "}}")  # runtime calls comment.format(...) on our comment; avoid issues therewith

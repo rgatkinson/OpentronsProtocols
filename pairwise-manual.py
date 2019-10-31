@@ -138,7 +138,7 @@ else:
 
 # Remember initial liquid names and volumes
 log('Liquid Names')
-note_liquid(location=water, name='Water', initial_volume=3000)
+note_liquid(location=water, name='Water', initial_volume=4000)
 assert strand_a_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_a).min_aspiratable_volume
 assert strand_b_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_b).min_aspiratable_volume
 note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, min_volume=strand_a_min_vol)  # i.e.: we have enough, just not specified how much
@@ -366,11 +366,12 @@ def plateEverythingAndMix():
 # Off to the races
 ########################################################################################################################
 
-wells_to_verify = [master_mix, strand_a, strand_b, diluted_strand_a, diluted_strand_b, plate.wells('A1'), plate.wells('A12'), plate.wells('H1'), plate.wells('H12')]
-# verify_well_locations(wells_to_verify, p50)
-# verify_well_locations(wells_to_verify, p10)
-
 # diluteStrands()
 # createMasterMix()
-robot.pause('***** Ensure master mix and strand dilutions are present *****')
+info('***** Ensure master mix and strand dilutions are present *****')
+info(pretty.format('water: volume={0:n}', water.liquid_volume.current_volume))
+info(pretty.format('master mix: volume={0:n}', master_mix.liquid_volume.current_volume))
+info(pretty.format('diluted strand A: volume={0:n}', diluted_strand_a.liquid_volume.current_volume))
+info(pretty.format('diluted strand B: volume={0:n}', diluted_strand_b.liquid_volume.current_volume))
+robot.pause('Press Return To Continue :-)')
 plateEverythingAndMix()
