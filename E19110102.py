@@ -22,8 +22,8 @@ from rgatkinson.well import Eppendorf1point5mlTubeGeometry, Biorad96WellPlateWel
 ########################################################################################################################
 
 # Tip usage
-p10_start_tip = 'A2'
-p50_start_tip = 'A1'
+p10_start_tip = 'C5'
+p50_start_tip = 'E3'
 config.trash_control = True
 
 stock_volume = 630
@@ -35,21 +35,22 @@ stock_volume = 630
 # Configure the tips
 tips10 = load_tiprack('opentrons_96_tiprack_10ul', 1, label='tips10')
 tips300a = load_tiprack('opentrons_96_tiprack_300ul', 4, label='tips300a')
+tips300b = load_tiprack('opentrons_96_tiprack_300ul', 7, label='tips300b')
 
 # Configure the pipettes.
 p10 = EnhancedPipette(instruments.P10_Single(mount='left', tip_racks=[tips10]), config)
-p50 = EnhancedPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a]), config)
+p50 = EnhancedPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b]), config)
 
 # Control tip usage
 p10.start_at_tip(tips10[p10_start_tip])
 p50.start_at_tip(tips300a[p50_start_tip])
 
 # All the labware containers
+eppendorf_1_5_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 2, label='eppendorf_1_5_rack')
 eppendorf_5_0_rack_definition = Opentrons15Rack(config, name='Atkinson 15 Tube Rack 5000 µL', default_well_geometry=Eppendorf5point0mlTubeGeometry)
 eppendorf_5_0_rack = eppendorf_5_0_rack_definition.load(slot=5, label='eppendorf_5_0_rack')
 plate = labware.load('biorad_96_wellplate_200ul_pcr', 6, label='plateA')
-eppendorf_1_5_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 8, label='eppendorf_1_5_rack')
-trough = labware.load('usascientific_12_reservoir_22ml', 9, label='trough')
+trough = labware.load('usascientific_12_reservoir_22ml', 8, label='trough')
 
 # Name specific places in the labware containers
 water = trough['A1']
