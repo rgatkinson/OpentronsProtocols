@@ -373,7 +373,8 @@ def main() -> int:
             EnhancedSimulatingSmoothieDriver.mount(args.mount_right, 'right')
         robot.reset()
 
-    run_log = opentrons.simulate.simulate(args.protocol, args.protocol.name, log_level=args.log_level)
+    run_log_and_bundle = opentrons.simulate.simulate(args.protocol, args.protocol.name, log_level=args.log_level)
+    run_log = run_log_and_bundle[0]
     analysis = analyzeRunLog(run_log)
     print(opentrons.simulate.format_runlog(run_log))
     print("\n")
@@ -382,8 +383,9 @@ def main() -> int:
 
 
 def terminate_simulator_background_threads():
+    return  # seems to be no longer needed ????
     # hack-o-rama, but necessary or sys.exit() won't actually terminate
-    import opentrons.protocol_api.back_compat
+    import opentrons.protocol_api.back_compat  # module has been removed
     from opentrons.protocol_api.contexts import ProtocolContext
     rbt = opentrons.protocol_api.back_compat.robot
     protocol_context: ProtocolContext = rbt._ctx
