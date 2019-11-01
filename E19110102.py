@@ -14,7 +14,7 @@ from rgatkinson.configuration import config
 from rgatkinson.custom_labware import load_tiprack, Opentrons15Rack
 from rgatkinson.liquid import note_liquid
 from rgatkinson.logging import log, info
-from rgatkinson.pipette import EnhancedPipette
+from rgatkinson.pipette import EnhancedPipette, verify_well_locations
 from rgatkinson.well import Eppendorf1point5mlTubeGeometry, Biorad96WellPlateWellGeometry, Eppendorf5point0mlTubeGeometry
 
 ########################################################################################################################
@@ -22,11 +22,12 @@ from rgatkinson.well import Eppendorf1point5mlTubeGeometry, Biorad96WellPlateWel
 ########################################################################################################################
 
 # Tip usage
-p10_start_tip = 'C5'
-p50_start_tip = 'E3'
+p10_start_tip = 'D5'
+p50_start_tip = 'G3'
 config.trash_control = True
 
 stock_volume = 630
+water_volume = 5000
 
 ########################################################################################################################
 # Labware
@@ -50,23 +51,23 @@ eppendorf_1_5_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safeloc
 eppendorf_5_0_rack_definition = Opentrons15Rack(config, name='Atkinson 15 Tube Rack 5000 µL', default_well_geometry=Eppendorf5point0mlTubeGeometry)
 eppendorf_5_0_rack = eppendorf_5_0_rack_definition.load(slot=5, label='eppendorf_5_0_rack')
 plate = labware.load('biorad_96_wellplate_200ul_pcr', 6, label='plateA')
-trough = labware.load('usascientific_12_reservoir_22ml', 8, label='trough')
 
 # Name specific places in the labware containers
-water = trough['A1']
+water = eppendorf_5_0_rack['C5']
 initial_stock = eppendorf_1_5_rack['A1']
 dilutions = eppendorf_5_0_rack.rows['A']['1':2]
 
 # Define geometries
+config.set_well_geometry(water, Eppendorf5point0mlTubeGeometry)
 config.set_well_geometry(initial_stock, Eppendorf1point5mlTubeGeometry)
 for tube in dilutions:
-    config.set_well_geometry(tube, Eppendorf1point5mlTubeGeometry)
+    config.set_well_geometry(tube, Eppendorf5point0mlTubeGeometry)
 for well in plate.wells():
     config.set_well_geometry(well, Biorad96WellPlateWellGeometry)
 
 # Remember initial liquid names and volumes
 log('Liquid Names')
-note_liquid(location=water, name='Water', min_volume=7000)  # volume is rough guess
+note_liquid(location=water, name='Water', initial_volume=water_volume)
 note_liquid(location=initial_stock, name='AlluraRed', concentration="20.1442 mM", initial_volume=stock_volume)
 
 # Clean up namespace
@@ -118,6 +119,9 @@ def plate_dilutions():
 ########################################################################################################################
 # Off to the races
 ########################################################################################################################
+
+wells_to_verify = [dilutions[0], dilutions[1], water, plate.wells('A1'), plate.wells('A12'), plate.wells('H1'), plate.wells('H12')]
+verify_well_locations(wells_to_verify, p50)
 
 make_dilutions()
 log('Pausing to mix dilutions')
