@@ -75,20 +75,26 @@ del well
 # Dilutions
 ########################################################################################################################
 
-def make_dilution(water, source, dilution, dilution_volume, dilution_factor):
+def make_dilution(water, source, dilution, dilution_volume, dilution_factor, manual):
+    if manual:
+        name = f'Dilution of {source.get_name()} by {dilution_factor}x'
+        note_liquid(dilution, name, initial_volume=dilution_volume)
     log(f'diluting from {source.get_name()} to {dilution.get_name()}')
     dilution_source_volume = dilution_volume / dilution_factor
     dilution_water_volume = dilution_volume - dilution_source_volume
-    p50.transfer(dilution_water_volume, water, dilution)
-    p50.transfer(dilution_source_volume, source, dilution, new_tip='once', trash=config.trash_control, keep_last_tip=True)  # keep tip cause we can use it for mixing
-    p50.layered_mix([dilution])
+    if manual:
+        info(f'water vol={dilution_water_volume}')
+        info(f'source vol={dilution_source_volume}')
+    else:
+        p50.transfer(dilution_water_volume, water, dilution)
+        p50.transfer(dilution_source_volume, source, dilution, new_tip='once', trash=config.trash_control, keep_last_tip=True)  # keep tip cause we can use it for mixing
 
 def make_dilutions():
     # TODO: we might be better off mixing these by hand
-    make_dilution(water, initial_stock, dilutions[0], 3500, 125)
-    make_dilution(water, dilutions[0], dilutions[1], 3000, 625/125)
+    make_dilution(water, initial_stock, dilutions[0], 3500, 125, manual=True)
+    make_dilution(water, dilutions[0], dilutions[1], 3000, 625/125, manual=False)
 
-def plate_dilution(source, dy):
+def plate_dilution(source, dx):
     # We have two dilutions, three replicates each, so get 16 volumes per
     volumes = [1, 2, 3, 4, 5, 10, 15, 20, 25, 35, 50, 75, 100, 125, 150, 200]
     num_reps = 3
@@ -98,13 +104,13 @@ def plate_dilution(source, dy):
         col_first = int(i / 8)
         p = p10 if vol <= 10 else p50
         for j in range(num_reps):
-            col = col_first * num_reps + j + dy
+            col = col_first * num_reps + j + dx
             dest = plate.rows(row).wells(col)
-            info(f'dest={row},{col}')
+            # info(f'dest={row},{col}')
             p.transfer(vol, source, dest, trash=config.trash_control)
 
 def plate_dilutions():
-    log('plating dilutions')
+    log('Plating')
     plate_dilution(dilutions[0], 0)
     plate_dilution(dilutions[1], 6)
 
@@ -113,4 +119,6 @@ def plate_dilutions():
 ########################################################################################################################
 
 make_dilutions()
+log('Pausing to mix dilutions')
+robot.pause('Press Return to Continue')
 plate_dilutions()
