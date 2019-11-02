@@ -123,9 +123,8 @@ if use_eppendorf_for_master_mix:
     master_mix_rack = labware_manager.load('Atkinson 15 Tube Rack 5000 µL', slot=8, label='master_mix_rack')
     master_mix = master_mix_rack['A1']
 else:
-    master_mix_rack = labware_manager.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 8, label='master_mix_rack')
+    master_mix_rack = labware_manager.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', slot=8, label='master_mix_rack')
     master_mix = master_mix_rack['A1']
-    config.set_well_geometry(master_mix, FalconTube15mlGeometry)
 
 
 # Remember initial liquid names and volumes

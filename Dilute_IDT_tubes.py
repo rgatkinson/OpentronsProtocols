@@ -8,6 +8,9 @@ a designated volume in destination.
 
 from opentrons import labware, instruments, robot, modules
 
+from rgatkinson.custom_labware import labware_manager
+from rgatkinson.pipette import instruments_manager
+
 metadata = {
     'protocolName': 'Dilution in Tubes',
     'author': 'Robert Atkinson <bob@theatkinsons.org>',
@@ -19,13 +22,8 @@ metadata = {
 ########################################################################################################################
 
 # Configure the tips and the pipettes
-# tips10 = labware.load('opentrons_96_tiprack_10ul', 4)
-# tips300 = labware.load('opentrons_96_tiprack_300ul', 1)
-tips1000 = labware.load('opentrons_96_tiprack_1000uL', 1)
-# p10 = instruments.P10_Single(mount='left', tip_racks=[tips10])
-# p50 = instruments.P50_Single(mount='right', tip_racks=[tips300])
-# p300 = instruments.P300_Single(mount='right', tip_racks=[tips300])
-p1000 = instruments.P1000_Single(mount='right', tip_racks=[tips1000])
+tips1000 = labware_manager.load('opentrons_96_tiprack_1000uL', 1)
+p1000 = instruments_manager.P1000_Single(mount='right', tip_racks=[tips1000])
 pipette = p1000
 
 # Control tip usage
@@ -34,11 +32,9 @@ trash_control = True  # True trashes tips; False will return trip to rack (use f
 
 # Define labware locations
 temp_module = modules.load('tempdeck', 7)
-screwcap_rack = labware.load('opentrons_24_aluminumblock_generic_2ml_screwcap', 7, label='screwcap_rack', share=True)  # IDT tubes on temp module
-eppendorf_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 2, label='eppendorf_rack')  # Eppendorf tubes
-# falcon_rack = labware.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 8, label='falcon_rack')
-# plate = labware.load('biorad_96_wellplate_200ul_pcr', 3, label='plate')
-trough = labware.load('usascientific_12_reservoir_22ml', 6, label='trough')
+screwcap_rack = labware_manager.load('opentrons_24_aluminumblock_generic_2ml_screwcap', 7, label='screwcap_rack', share=True)  # IDT tubes on temp module
+eppendorf_rack = labware_manager.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 2, label='eppendorf_rack')  # Eppendorf tubes
+trough = labware_manager.load('usascientific_12_reservoir_22ml', 6, label='trough')
 
 # Name specific places in the labware
 diluent = trough.wells('A1')
