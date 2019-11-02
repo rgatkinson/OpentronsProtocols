@@ -561,14 +561,14 @@ class EnhancedPipette(Pipette):
 
     def pick_up_tip(self, location=None, presses=None, increment=None):
         if self.tip_attached:
-            info('tip is already attached')
+            info('pick_up_tip(): tip is already attached')
         result = super().pick_up_tip(location, presses, increment)
         self.tip_wetness = TipWetness.DRY
         return result
 
     def drop_tip(self, location=None, home_after=True):
-        if self.tip_attached:
-            info('no tip attached')
+        if not self.tip_attached:
+            info('drop_tip(): no tip attached')
         result = super().drop_tip(location, home_after)
         self.tip_wetness = TipWetness.NONE
         return result
@@ -782,7 +782,15 @@ class EnhancedPipette(Pipette):
 
 class InstrumentsManager(object):
     def __init__(self):
-        pass
+        self._instruments = set()
+
+    def _add_instrument(self, instrument):
+        self._instruments.add(instrument)
+        return instrument
+
+    @property
+    def instruments(self):
+        return self._instruments
 
     def P10_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
         if config is None:
@@ -796,7 +804,7 @@ class InstrumentsManager(object):
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
         result = EnhancedPipette(config, result)
-        return result
+        return self._add_instrument(result)
 
     def P50_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
         if config is None:
@@ -810,7 +818,7 @@ class InstrumentsManager(object):
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
         result = EnhancedPipette(config, result)
-        return result
+        return self._add_instrument(result)
 
     def P300_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
         if config is None:
@@ -824,7 +832,7 @@ class InstrumentsManager(object):
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
         result = EnhancedPipette(config, result)
-        return result
+        return self._add_instrument(result)
 
     def P1000_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
         if config is None:
@@ -838,7 +846,8 @@ class InstrumentsManager(object):
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
         result = EnhancedPipette(config, result)
-        return result
+        return self._add_instrument(result)
+
 
 instruments_manager = InstrumentsManager()
 

@@ -70,6 +70,13 @@ def fatal(msg: str, prefix="***********", suffix=' ***********'):
 def silent_log(msg):
     pass
 
+def user_prompt(msg: str, prefix="***********", suffix=' ***********'):
+    from rgatkinson.pipette import instruments_manager
+    log(msg=msg, prefix=prefix, suffix=suffix)
+    for pip in instruments_manager.instruments:
+        pip.retract()
+    robot.pause('Press Return to Continue :-)')
+
 #-----------------------------------------------------------------------------------------------------------------------
 
 def get_location_path(location):
