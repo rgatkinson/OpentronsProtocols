@@ -99,7 +99,7 @@ p50.start_at_tip(tips300a[p50_start_tip])
 
 temp_slot = 11
 temp_module = modules.load('tempdeck', temp_slot)
-screwcap_rack = labware_manager.load('opentrons_24_aluminumblock_generic_2ml_screwcap', temp_slot, label='screwcap_rack', share=True)
+screwcap_rack = labware_manager.load('opentrons_24_aluminumblock_generic_2ml_screwcap', temp_slot, label='screwcap_rack', share=True, geometry=IdtTubeWellGeometry)
 eppendorf_1_5_rack = labware_manager.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 5, label='eppendorf_1_5_rack')
 plate = labware_manager.load('biorad_96_wellplate_200ul_pcr', 6, label='plate')
 trough = labware_manager.load('usascientific_12_reservoir_22ml', 9, label='trough')
@@ -112,12 +112,6 @@ strand_a = eppendorf_1_5_rack['A1']
 strand_b = eppendorf_1_5_rack['B1']
 diluted_strand_a = eppendorf_1_5_rack['A6']
 diluted_strand_b = eppendorf_1_5_rack['B6']
-
-# Define geometries
-for well, __ in buffers:
-    config.set_well_geometry(well, IdtTubeWellGeometry)
-for well, __ in evagreens:
-    config.set_well_geometry(well, IdtTubeWellGeometry)
 
 if use_eppendorf_for_master_mix:
     master_mix_rack = labware_manager.load('Atkinson 15 Tube Rack 5000 µL', slot=8, label='master_mix_rack')

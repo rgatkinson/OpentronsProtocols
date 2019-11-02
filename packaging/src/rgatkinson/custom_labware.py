@@ -321,8 +321,11 @@ class LabwareManager(object):
             result = self._load_tiprack(name, slot=slot, label=label)
             return result
 
-        # If it's not something we know about, just pass it through
+        # If it's not something we know about, just pass it through. But set the geometry, if asked
         result = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
+        if geometry is not None:
+            for well in result.wells():
+                config.set_well_geometry(well, geometry)
         return result
 
     def _load_tiprack(self, name, slot, label=None):
