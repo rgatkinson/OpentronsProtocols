@@ -89,7 +89,7 @@ def make_dilution(water, source, dilution, dilution_volume, dilution_factor, man
         info(f'source vol={dilution_source_volume}')
     else:
         p50.transfer(dilution_water_volume, water, dilution)
-        p50.transfer(dilution_source_volume, source, dilution, new_tip='once', trash=config.trash_control, keep_last_tip=True)  # keep tip cause we can use it for mixing
+        p50.transfer(dilution_source_volume, source, dilution, new_tip='once', trash=config.trash_control, keep_last_tip=False)
 
 def make_dilutions():
     # TODO: we might be better off mixing these by hand
