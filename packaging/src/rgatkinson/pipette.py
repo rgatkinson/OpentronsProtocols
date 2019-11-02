@@ -17,6 +17,7 @@ from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANC
 from opentrons.trackers import pose_tracker
 from opentrons.util.vector import Vector
 
+import rgatkinson
 from rgatkinson.configuration import TopConfigurationContext
 from rgatkinson.interval import is_close, fpu
 from rgatkinson.logging import pretty, warn, log_while, info, info_while
@@ -122,14 +123,6 @@ class TipWetness(Enum):
 
 class EnhancedPipette(Pipette):
 
-    #-------------------------------------------------------------------------------------------------------------------
-    # Construction
-    #-------------------------------------------------------------------------------------------------------------------
-
-    def __new__(cls, parentInst, config):
-        parentInst.__class__ = EnhancedPipette
-        return parentInst
-
     class AspirateParamsHack(object):
         def __init__(self) -> None:
             self.pre_wet_during_transfer_kw = '_do_pre_wet_during_transfer'
@@ -144,8 +137,16 @@ class EnhancedPipette(Pipette):
             self.full_dispense_during_transfer = False
             self.fully_dispensed = False
 
+    #-------------------------------------------------------------------------------------------------------------------
+    # Construction
+    #-------------------------------------------------------------------------------------------------------------------
+
+    def __new__(cls, config, parentInst):
+        parentInst.__class__ = EnhancedPipette
+        return parentInst
+
     # noinspection PyMissingConstructor
-    def __init__(self, parentInst, config: TopConfigurationContext):
+    def __init__(self, config: TopConfigurationContext, parentInst):
         self.config = config
         self.prev_aspirated_location = None
         self.aspirate_params_hack = EnhancedPipette.AspirateParamsHack()
@@ -524,7 +525,7 @@ class EnhancedPipette(Pipette):
 
     @property
     def current_tip_overlap(self):  # tip_overlap with respect to the current tip
-        assert self.has_tip
+        assert self.tip_attached
         d = self.pipette_self.config.tip_overlap
         try:
             return d[self.current_tip_tiprack.uri]
@@ -549,7 +550,7 @@ class EnhancedPipette(Pipette):
 
     @property
     def current_tip_tiprack(self):  # tiprack of the current tip
-        assert self.has_tip
+        assert self.tip_attached
         return self.current_tip().parent
 
     #-------------------------------------------------------------------------------------------------------------------
@@ -559,17 +560,21 @@ class EnhancedPipette(Pipette):
         return Vector(xyz)
 
     def pick_up_tip(self, location=None, presses=None, increment=None):
+        if self.tip_attached:
+            info('tip is already attached')
         result = super().pick_up_tip(location, presses, increment)
         self.tip_wetness = TipWetness.DRY
         return result
 
     def drop_tip(self, location=None, home_after=True):
+        if self.tip_attached:
+            info('no tip attached')
         result = super().drop_tip(location, home_after)
         self.tip_wetness = TipWetness.NONE
         return result
 
     def done_tip(self):  # a handy little utility that looks at self.config.trash_control
-        if self.has_tip:
+        if self.tip_attached:
             if self.current_volume > 0:
                 info(pretty.format('{0} has {1:n} uL remaining', self.name, self.current_volume))
             if self.config.trash_control:
@@ -741,7 +746,7 @@ class EnhancedPipette(Pipette):
                     count_ = max(count_, count_per_incr)
                 else:
                     count_ = count_per_incr
-                if not self.has_tip:
+                if not self.tip_attached:
                     self.pick_up_tip()
 
                 radial_clearance_func = self.radial_clearance_manager.get_clearance_function(self, well)
@@ -775,9 +780,72 @@ class EnhancedPipette(Pipette):
         info_while(msg, do_one)
 
 
+class InstrumentsManager(object):
+    def __init__(self):
+        pass
+
+    def P10_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
+        if config is None:
+            config = rgatkinson.configuration.config
+        result = instruments.P10_Single(mount=mount,
+                                        trash_container=trash_container,
+                                        tip_racks=tip_racks,
+                                        aspirate_flow_rate=aspirate_flow_rate,
+                                        dispense_flow_rate=dispense_flow_rate,
+                                        min_volume=min_volume,
+                                        max_volume=max_volume,
+                                        blow_out_flow_rate=blow_out_flow_rate)
+        result = EnhancedPipette(config, result)
+        return result
+
+    def P50_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
+        if config is None:
+            config = rgatkinson.configuration.config
+        result = instruments.P50_Single(mount=mount,
+                                        trash_container=trash_container,
+                                        tip_racks=tip_racks,
+                                        aspirate_flow_rate=aspirate_flow_rate,
+                                        dispense_flow_rate=dispense_flow_rate,
+                                        min_volume=min_volume,
+                                        max_volume=max_volume,
+                                        blow_out_flow_rate=blow_out_flow_rate)
+        result = EnhancedPipette(config, result)
+        return result
+
+    def P300_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
+        if config is None:
+            config = rgatkinson.configuration.config
+        result = instruments.P300_Single(mount=mount,
+                                        trash_container=trash_container,
+                                        tip_racks=tip_racks,
+                                        aspirate_flow_rate=aspirate_flow_rate,
+                                        dispense_flow_rate=dispense_flow_rate,
+                                        min_volume=min_volume,
+                                        max_volume=max_volume,
+                                        blow_out_flow_rate=blow_out_flow_rate)
+        result = EnhancedPipette(config, result)
+        return result
+
+    def P1000_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
+        if config is None:
+            config = rgatkinson.configuration.config
+        result = instruments.P1000_Single(mount=mount,
+                                        trash_container=trash_container,
+                                        tip_racks=tip_racks,
+                                        aspirate_flow_rate=aspirate_flow_rate,
+                                        dispense_flow_rate=dispense_flow_rate,
+                                        min_volume=min_volume,
+                                        max_volume=max_volume,
+                                        blow_out_flow_rate=blow_out_flow_rate)
+        result = EnhancedPipette(config, result)
+        return result
+
+instruments_manager = InstrumentsManager()
+
+
 def verify_well_locations(well_list: List[Well], pipette: EnhancedPipette):
     picked_tip = False
-    if not pipette.has_tip:
+    if not pipette.tip_attached:
         pipette.pick_up_tip()
         picked_tip = True
 

@@ -11,8 +11,10 @@ metadata = {
 from opentrons import instruments, labware, modules, robot, types
 
 from rgatkinson import *
+from rgatkinson.custom_labware import labware_manager
 from rgatkinson.liquid import note_liquid
 from rgatkinson.logging import log
+from rgatkinson.pipette import instruments_manager
 
 ########################################################################################################################
 # Configurable protocol parameters
@@ -32,15 +34,15 @@ pipette_mount = 'right'
 ########################################################################################################################
 
 # Configure the pipette
-tips = labware.load('opentrons_96_tiprack_' + tips_vol + 'ul', 1)
-p = EnhancedPipette(getattr(instruments, 'P' + pipette_vol + '_Single')(mount=pipette_mount, tip_racks=[tips]))
+tips = labware_manager.load('opentrons_96_tiprack_' + tips_vol + 'ul', 1)
+p = getattr(instruments_manager, 'P' + pipette_vol + '_Single')(config, mount=pipette_mount, tip_racks=[tips])
 p.set_flow_rate(blow_out=p.get_flow_rates()['blow_out'] * config.blow_out_rate_factor)
 p.start_at_tip(start_tip)
 config.trash_control = True
 
 # All the labware containers
-eppendorf_1_5_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 5, label='eppendorf_1_5_rack')
-trough = labware.load('usascientific_12_reservoir_22ml', 9, label='trough')
+eppendorf_1_5_rack = labware_manager.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 5, label='eppendorf_1_5_rack')
+trough = labware_manager.load('usascientific_12_reservoir_22ml', 9, label='trough')
 
 # Name specific places in the labware containers
 water = trough['A1']

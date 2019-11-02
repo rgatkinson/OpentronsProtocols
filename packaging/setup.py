@@ -18,7 +18,7 @@ AUTHOR = 'Robert Atkinson'
 EMAIL = 'bob@theatkinsons.org'
 KEYWORDS = ["robots", "protocols", "synbio", "pcr", "automation", "lab", "opentrons"]
 DESCRIPTION = "Capability enhancements to the Opentrons API"
-VERSION = '1.0.1'
+VERSION = '1.0.2'
 PACKAGES = [DIST_NAME]
 CLASSIFIERS = [
     "Development Status :: 3 - Alpha",

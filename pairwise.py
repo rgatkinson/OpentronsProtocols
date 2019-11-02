@@ -12,10 +12,10 @@ from typing import List
 from opentrons import instruments, labware, modules, robot, types
 
 from rgatkinson import *
-from rgatkinson.custom_labware import Opentrons15Rack, load_tiprack
+from rgatkinson.custom_labware import labware_manager
 from rgatkinson.liquid import note_liquid
 from rgatkinson.logging import log, fatal
-from rgatkinson.pipette import verify_well_locations
+from rgatkinson.pipette import verify_well_locations, instruments_manager
 
 ########################################################################################################################
 # Tweakable protocol parameters
@@ -79,13 +79,13 @@ strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
 ########################################################################################################################
 
 # Configure the tips
-tips300a = load_tiprack('opentrons_96_tiprack_300ul', 1, label='tips300a')
-tips10 = load_tiprack('opentrons_96_tiprack_10ul', 4, label='tips10')
-tips300b = load_tiprack('opentrons_96_tiprack_300ul', 7, label='tips300b')
+tips300a = labware_manager.load('opentrons_96_tiprack_300ul', 1, label='tips300a')
+tips10 = labware_manager.load('opentrons_96_tiprack_10ul', 4, label='tips10')
+tips300b = labware_manager.load('opentrons_96_tiprack_300ul', 7, label='tips300b')
 
 # Configure the pipettes.
-p10 = EnhancedPipette(instruments.P10_Single(mount='left', tip_racks=[tips10]), config=config)
-p50 = EnhancedPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b]), config=config)
+p10 = instruments_manager.P10_Single(mount='left', tip_racks=[tips10])
+p50 = instruments_manager.P50_Single(mount='right', tip_racks=[tips300a, tips300b])
 
 # Blow out faster than default in an attempt to avoid hanging droplets on the pipettes after blowout
 p10.set_flow_rate(blow_out=p10.get_flow_rates()['blow_out'] * config.blow_out_rate_factor)
@@ -99,10 +99,10 @@ p50.start_at_tip(tips300a[p50_start_tip])
 
 temp_slot = 11
 temp_module = modules.load('tempdeck', temp_slot)
-screwcap_rack = labware.load('opentrons_24_aluminumblock_generic_2ml_screwcap', temp_slot, label='screwcap_rack', share=True)
-eppendorf_1_5_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 5, label='eppendorf_1_5_rack')
-plate = labware.load('biorad_96_wellplate_200ul_pcr', 6, label='plate')
-trough = labware.load('usascientific_12_reservoir_22ml', 9, label='trough')
+screwcap_rack = labware_manager.load('opentrons_24_aluminumblock_generic_2ml_screwcap', temp_slot, label='screwcap_rack', share=True)
+eppendorf_1_5_rack = labware_manager.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 5, label='eppendorf_1_5_rack')
+plate = labware_manager.load('biorad_96_wellplate_200ul_pcr', 6, label='plate')
+trough = labware_manager.load('usascientific_12_reservoir_22ml', 9, label='trough')
 
 # Name specific places in the labware containers
 water = trough['A1']
@@ -118,19 +118,12 @@ for well, __ in buffers:
     config.set_well_geometry(well, IdtTubeWellGeometry)
 for well, __ in evagreens:
     config.set_well_geometry(well, IdtTubeWellGeometry)
-config.set_well_geometry(strand_a, Eppendorf1point5mlTubeGeometry)
-config.set_well_geometry(strand_b, Eppendorf1point5mlTubeGeometry)
-config.set_well_geometry(diluted_strand_a, Eppendorf1point5mlTubeGeometry)
-config.set_well_geometry(diluted_strand_b, Eppendorf1point5mlTubeGeometry)
-for well in plate.wells():
-    config.set_well_geometry(well, Biorad96WellPlateWellGeometry)
 
 if use_eppendorf_for_master_mix:
-    master_mix_rack_definition = Opentrons15Rack(config, name='Atkinson 15 Tube Rack 5000 µL', default_well_geometry=Eppendorf5point0mlTubeGeometry)
-    master_mix_rack = master_mix_rack_definition.load(slot=8, label='master_mix_rack')
+    master_mix_rack = labware_manager.load('Atkinson 15 Tube Rack 5000 µL', slot=8, label='master_mix_rack')
     master_mix = master_mix_rack['A1']
 else:
-    master_mix_rack = labware.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 8, label='master_mix_rack')
+    master_mix_rack = labware_manager.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 8, label='master_mix_rack')
     master_mix = master_mix_rack['A1']
     config.set_well_geometry(master_mix, FalconTube15mlGeometry)
 

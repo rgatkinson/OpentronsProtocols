@@ -7,15 +7,13 @@ metadata = {
     'author': 'Robert Atkinson <bob@theatkinsons.org>'
     }
 
-import math
 from opentrons import instruments, labware, modules, robot, types
 
 from rgatkinson.configuration import config
-from rgatkinson.custom_labware import load_tiprack, Opentrons15Rack
+from rgatkinson.custom_labware import labware_manager
 from rgatkinson.liquid import note_liquid
 from rgatkinson.logging import log, info
-from rgatkinson.pipette import EnhancedPipette, verify_well_locations
-from rgatkinson.well import Eppendorf1point5mlTubeGeometry, Biorad96WellPlateWellGeometry, Eppendorf5point0mlTubeGeometry
+from rgatkinson.pipette import verify_well_locations, instruments_manager
 
 ########################################################################################################################
 # Configurable protocol parameters
@@ -34,44 +32,32 @@ water_volume = 5000
 ########################################################################################################################
 
 # Configure the tips
-tips10 = load_tiprack('opentrons_96_tiprack_10ul', 1, label='tips10')
-tips300a = load_tiprack('opentrons_96_tiprack_300ul', 4, label='tips300a')
-tips300b = load_tiprack('opentrons_96_tiprack_300ul', 7, label='tips300b')
+tips10 = labware_manager.load('opentrons_96_tiprack_10ul', 1, label='tips10')
+tips300a = labware_manager.load('opentrons_96_tiprack_300ul', 4, label='tips300a')
+tips300b = labware_manager.load('opentrons_96_tiprack_300ul', 7, label='tips300b')
 
 # Configure the pipettes.
-p10 = EnhancedPipette(instruments.P10_Single(mount='left', tip_racks=[tips10]), config)
-p50 = EnhancedPipette(instruments.P50_Single(mount='right', tip_racks=[tips300a, tips300b]), config)
+p10 = instruments_manager.P10_Single(mount='left', tip_racks=[tips10])
+p50 = instruments_manager.P50_Single(mount='right', tip_racks=[tips300a, tips300b])
 
 # Control tip usage
 p10.start_at_tip(tips10[p10_start_tip])
 p50.start_at_tip(tips300a[p50_start_tip])
 
 # All the labware containers
-eppendorf_1_5_rack = labware.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 2, label='eppendorf_1_5_rack')
-eppendorf_5_0_rack_definition = Opentrons15Rack(config, name='Atkinson 15 Tube Rack 5000 µL', default_well_geometry=Eppendorf5point0mlTubeGeometry)
-eppendorf_5_0_rack = eppendorf_5_0_rack_definition.load(slot=5, label='eppendorf_5_0_rack')
-plate = labware.load('biorad_96_wellplate_200ul_pcr', 6, label='plateA')
+eppendorf_1_5_rack = labware_manager.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 2, label='eppendorf_1_5_rack')
+eppendorf_5_0_rack = labware_manager.load('Atkinson 15 Tube Rack 5000 µL', slot=5, label='eppendorf_5_0_rack')
+plate = labware_manager.load('biorad_96_wellplate_200ul_pcr', slot=6, label='plateA')
 
 # Name specific places in the labware containers
 water = eppendorf_5_0_rack['C5']
 initial_stock = eppendorf_1_5_rack['A1']
 dilutions = eppendorf_5_0_rack.rows['A']['1':2]
 
-# Define geometries
-config.set_well_geometry(water, Eppendorf5point0mlTubeGeometry)
-config.set_well_geometry(initial_stock, Eppendorf1point5mlTubeGeometry)
-for tube in dilutions:
-    config.set_well_geometry(tube, Eppendorf5point0mlTubeGeometry)
-for well in plate.wells():
-    config.set_well_geometry(well, Biorad96WellPlateWellGeometry)
-
 # Remember initial liquid names and volumes
 log('Liquid Names')
 note_liquid(location=water, name='Water', initial_volume=water_volume)
 note_liquid(location=initial_stock, name='AlluraRed', concentration="20.1442 mM", initial_volume=stock_volume)
-
-# Clean up namespace
-del well
 
 ########################################################################################################################
 # Dilutions

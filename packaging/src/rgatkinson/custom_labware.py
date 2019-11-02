@@ -5,12 +5,15 @@
 
 import collections
 
-from opentrons import robot
+from opentrons import robot, labware
 from opentrons.util.vector import Vector
 
+import rgatkinson
 from rgatkinson.interval import fpu
 from rgatkinson.util import is_indexable
-from rgatkinson.well import WellGeometry, Eppendorf5point0mlTubeGeometry
+from rgatkinson.well import WellGeometry, Eppendorf5point0mlTubeGeometry, Biorad96WellPlateWellGeometry, \
+    Eppendorf1point5mlTubeGeometry
+
 
 class Point(object):
     def __init__(self, x=0, y=0):
@@ -236,13 +239,13 @@ class CustomTubeRack(object):
         result['cornerOffsetFromSlot'] = {'x': 0, 'y': 0, 'z': 0}
         return result
 
-    def load(self, slot=None, label=None):
+    def load(self, slot=None, label=None, share=None):
         slot = str(slot)
         if self.load_result is None:
             def_map = self._definition_map
             if label is None:
                 label = self.name
-            self.load_result = robot.add_container_by_definition(def_map, slot, label=label)
+            self.load_result = robot.add_container_by_definition(def_map, slot, label=label, share=share)
             for well_name in self.well_names:
                 well = self.load_result.wells(well_name)
                 geometry = self[well_name].get('geometry', None)
@@ -270,20 +273,56 @@ class Opentrons15Rack(CustomTubeRack):
             ])
 
 
-def load_tiprack(tiprack_type, slot, label=None):
-    # an enhanced version of labware.load(tiprack_type, slot) that grabs more metadata
-    from opentrons.protocol_api import labware as new_labware
-    from opentrons.legacy_api.robot.robot import _setup_container
-    from opentrons.legacy_api.containers import load_new_labware_def
-    slot = str(slot)
-    share = False
-    definition = new_labware.get_labware_definition(load_name=tiprack_type)
-    container = load_new_labware_def(definition)
-    container = _setup_container(container)
-    #
-    container.uri = new_labware.uri_from_definition(definition)
-    container.tip_length = definition['parameters']['tipLength']
-    container.tip_overlap = definition['parameters']['tipOverlap']
-    #
-    robot._add_container_obj(container, tiprack_type, slot, label, share)
-    return container
+class LabwareManager(object):
+    def __init__(self):
+        pass
+
+    def load(self, name, slot, label=None, share=False, version=None, config=None):
+        if config is None:
+            config = rgatkinson.configuration.config
+
+        if name == 'Atkinson 15 Tube Rack 5000 µL':
+            definition = Opentrons15Rack(config, name='Atkinson 15 Tube Rack 5000 µL', default_well_geometry=Eppendorf5point0mlTubeGeometry)
+            result = definition.load(slot=slot, label=label, share=share)
+            return result
+
+        if name == 'biorad_96_wellplate_200ul_pcr':
+            result = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
+            for well in result.wells():
+                config.set_well_geometry(well, Biorad96WellPlateWellGeometry)
+            return result
+
+        if name == 'opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap':
+            result = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
+            for well in result.wells():
+                config.set_well_geometry(well, Eppendorf1point5mlTubeGeometry)
+            return result
+
+        if name == 'opentrons_96_tiprack_10ul' or name == 'opentrons_96_tiprack_300ul' or name.lower().find('tiprack') >= 0:  # todo: last clause is a hack; fix
+            result = self._load_tiprack(name, slot=slot, label=label)
+            return result
+
+        # If it's not something we know about, just pass it through
+        result = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
+        return result
+
+    def _load_tiprack(self, name, slot, label=None):
+        # an enhanced version of labware.load(tiprack_type, slot) that grabs more metadata
+        from opentrons.protocol_api import labware as new_labware
+        from opentrons.legacy_api.robot.robot import _setup_container
+        from opentrons.legacy_api.containers import load_new_labware_def
+        slot = str(slot)
+        share = False
+        definition = new_labware.get_labware_definition(load_name=name)
+        container = load_new_labware_def(definition)
+        container = _setup_container(container)
+        #
+        container.uri = new_labware.uri_from_definition(definition)
+        container.tip_length = definition['parameters']['tipLength']
+        container.tip_overlap = definition['parameters']['tipOverlap']
+        #
+        robot._add_container_obj(container, name, slot, label, share)
+        return container
+
+labware_manager = LabwareManager()
+
