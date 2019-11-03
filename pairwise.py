@@ -21,16 +21,23 @@ from rgatkinson.pipette import verify_well_locations, instruments_manager
 # Tweakable protocol parameters
 ########################################################################################################################
 
-use_eppendorf_for_master_mix = True
+use_eppendorf_5_0_tubes = True
+
+waterA_initial_volume = waterB_initial_volume = water_min_volume = 0  # define all variables
+if use_eppendorf_5_0_tubes:
+    waterA_initial_volume = 5000
+    waterB_initial_volume = 5000
+else:
+    water_min_volume = 7000  # rough guess
 
 # Volumes of master mix ingredients. These are minimums in each tube.
 buffer_volumes = [2000, 2000]  # Fresh tubes of B9022S
 evagreen_volumes = [1000]      # Fresh tube of EvaGreen
 
-strand_a_conc = '8.820 uM'  # Note: we'll use more Strand A than Strand B because of disposal_volumes
+strand_a_conc = '8.820 uM'
 strand_b_conc = '9.117 uM'
-strand_a_min_vol = 1100  # records said we had 1200
-strand_b_min_vol = 1100  # ditto
+strand_a_min_vol = 1100
+strand_b_min_vol = 1100
 
 # Tip usage
 p10_start_tip = 'A1'
@@ -79,15 +86,15 @@ strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
 ########################################################################################################################
 
 # Configure the tips
-tips300a = labware_manager.load('opentrons_96_tiprack_300ul', 1, label='tips300a')
-tips10 = labware_manager.load('opentrons_96_tiprack_10ul', 4, label='tips10')
-tips300b = labware_manager.load('opentrons_96_tiprack_300ul', 7, label='tips300b')
+tips300a = labware_manager.load('opentrons_96_tiprack_300ul', slot=1, label='tips300a')
+tips10 = labware_manager.load('opentrons_96_tiprack_10ul', slot=4, label='tips10')
+tips300b = labware_manager.load('opentrons_96_tiprack_300ul', slot=7, label='tips300b')
 
 # Configure the pipettes.
 p10 = instruments_manager.P10_Single(mount='left', tip_racks=[tips10])
 p50 = instruments_manager.P50_Single(mount='right', tip_racks=[tips300a, tips300b])
 
-# Blow out faster than default in an attempt to avoid hanging droplets on the pipettes after blowout
+# Blow out faster than default in an attempt to avoid hanging droplets on the pipettes after blowout (probably not needed any more)
 p10.set_flow_rate(blow_out=p10.get_flow_rates()['blow_out'] * config.blow_out_rate_factor)
 p50.set_flow_rate(blow_out=p50.get_flow_rates()['blow_out'] * config.blow_out_rate_factor)
 
@@ -95,17 +102,14 @@ p50.set_flow_rate(blow_out=p50.get_flow_rates()['blow_out'] * config.blow_out_ra
 p10.start_at_tip(tips10[p10_start_tip])
 p50.start_at_tip(tips300a[p50_start_tip])
 
-# All the labware containers
-
+# Labware containers
 temp_slot = 11
-temp_module = modules.load('tempdeck', temp_slot)
-screwcap_rack = labware_manager.load('opentrons_24_aluminumblock_generic_2ml_screwcap', temp_slot, label='screwcap_rack', share=True, geometry=IdtTubeWellGeometry)
-eppendorf_1_5_rack = labware_manager.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', 5, label='eppendorf_1_5_rack')
-plate = labware_manager.load('biorad_96_wellplate_200ul_pcr', 6, label='plate')
-trough = labware_manager.load('usascientific_12_reservoir_22ml', 9, label='trough')
+temp_module = modules.load('tempdeck', slot=temp_slot)
+screwcap_rack = labware_manager.load('opentrons_24_aluminumblock_generic_2ml_screwcap', slot=temp_slot, label='screwcap_rack', share=True, geometry=IdtTubeWellGeometry)
+eppendorf_1_5_rack = labware_manager.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', slot=5, label='eppendorf_1_5_rack')
+plate = labware_manager.load('biorad_96_wellplate_200ul_pcr', slot=6, label='plate')
 
 # Name specific places in the labware containers
-water = trough['A1']
 buffers = list(zip(screwcap_rack.rows(0), buffer_volumes))
 evagreens = list(zip(screwcap_rack.rows(1), evagreen_volumes))
 strand_a = eppendorf_1_5_rack['A1']
@@ -113,16 +117,22 @@ strand_b = eppendorf_1_5_rack['B1']
 diluted_strand_a = eppendorf_1_5_rack['A6']
 diluted_strand_b = eppendorf_1_5_rack['B6']
 
-if use_eppendorf_for_master_mix:
-    master_mix_rack = labware_manager.load('Atkinson 15 Tube Rack 5000 µL', slot=8, label='master_mix_rack')
-    master_mix = master_mix_rack['A1']
+if use_eppendorf_5_0_tubes:
+    eppendorf_5_0_rack = labware_manager.load('Atkinson 15 Tube Rack 5000 µL', slot=8, label='eppendorf_5_0_rack')
+    master_mix = eppendorf_5_0_rack['A1']
+    waterA = eppendorf_5_0_rack['C4']
+    waterB = eppendorf_5_0_rack['C5']
+    note_liquid(location=waterA, name='Water', initial_volume=waterA_initial_volume)
+    note_liquid(location=waterB, name='Water', initial_volume=waterB_initial_volume)
 else:
-    master_mix_rack = labware_manager.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', slot=8, label='master_mix_rack')
-    master_mix = master_mix_rack['A1']
+    trough = labware_manager.load('usascientific_12_reservoir_22ml', slot=9, label='trough')
+    falcon_rack = labware_manager.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', slot=8, label='falcon_rack')
+    master_mix = falcon_rack['A1']
+    waterA = trough['A1']
+    waterB = waterA
+    note_liquid(location=waterA, name='Water', min_volume=water_min_volume)
 
 # Remember initial liquid names and volumes
-log('Liquid Names')
-note_liquid(location=water, name='Water', min_volume=7000)  # volume is rough guess
 assert strand_a_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_a).min_aspiratable_volume
 assert strand_b_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_b).min_aspiratable_volume
 note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, min_volume=strand_a_min_vol)  # i.e.: we have enough, just not specified how much
@@ -192,7 +202,7 @@ def diluteStrands():
 
     # Create dilutions of strands
     log('Moving water for diluting Strands A and B')
-    p50.transfer(strand_dilution_water_vol, water, [diluted_strand_a, diluted_strand_b],
+    p50.transfer(strand_dilution_water_vol, waterA, [diluted_strand_a, diluted_strand_b],
                  new_tip='once',  # can reuse for all diluent dispensing since dest tubes are initially empty
                  trash=config.trash_control
                  )
@@ -241,7 +251,7 @@ def createMasterMix():
         p50.layered_mix([master_mix], incr=2, initial_turnover=master_mix_evagreen_vol * 1.2, max_tip_cycles=config.layered_mix.max_tip_cycles_large)
 
     log('Creating Master Mix: Water')
-    p50.transfer(master_mix_common_water_vol, water, master_mix, trash=config.trash_control)
+    p50.transfer(master_mix_common_water_vol, waterB, master_mix, trash=config.trash_control)
 
     log('Creating Master Mix: Buffer')
     transfer_multiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', keep_last_tip=True)  # 'once' because we've only got water & buffer in context
@@ -277,7 +287,7 @@ def platePerWellWater():
                 index = (iCol * num_replicates + iReplicate) * rows_per_plate + iRow
                 water_volumes[index] = volume
 
-    p50.transfer(water_volumes, water, plate.wells(),
+    p50.transfer(water_volumes, waterB, plate.wells(),
                  new_tip='once',
                  trash=config.trash_control,
                  full_dispense=True)
