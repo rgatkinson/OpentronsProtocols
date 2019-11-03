@@ -14,15 +14,24 @@ from opentrons import instruments, labware, modules, robot, types
 from rgatkinson import *
 from rgatkinson.custom_labware import labware_manager
 from rgatkinson.liquid import note_liquid
-from rgatkinson.logging import log, fatal
+from rgatkinson.logging import log, fatal, user_prompt
 from rgatkinson.pipette import verify_well_locations, instruments_manager
 
 ########################################################################################################################
 # Tweakable protocol parameters
 ########################################################################################################################
 
-use_eppendorf_5_0_tubes = True
+# Tip usage
+p10_start_tip = 'A1'
+p50_start_tip = 'A1'
+config.trash_control = True
 
+# Automation control
+manually_dilute_strands = True
+manually_make_master_mix = True
+
+# Labware alternatives
+use_eppendorf_5_0_tubes = True
 waterA_initial_volume = waterB_initial_volume = water_min_volume = 0  # define all variables
 if use_eppendorf_5_0_tubes:
     waterA_initial_volume = 5000
@@ -38,11 +47,6 @@ strand_a_conc = '8.820 uM'
 strand_b_conc = '9.117 uM'
 strand_a_min_vol = 1100
 strand_b_min_vol = 1100
-
-# Tip usage
-p10_start_tip = 'A1'
-p50_start_tip = 'A1'
-config.trash_control = True
 
 
 ########################################################################################################################
@@ -110,10 +114,6 @@ eppendorf_1_5_rack = labware_manager.load('opentrons_24_tuberack_eppendorf_1.5ml
 plate = labware_manager.load('biorad_96_wellplate_200ul_pcr', slot=6, label='plate')
 
 # Name specific places in the labware containers
-buffers = list(zip(screwcap_rack.rows(0), buffer_volumes))
-evagreens = list(zip(screwcap_rack.rows(1), evagreen_volumes))
-strand_a = eppendorf_1_5_rack['A1']
-strand_b = eppendorf_1_5_rack['B1']
 diluted_strand_a = eppendorf_1_5_rack['A6']
 diluted_strand_b = eppendorf_1_5_rack['B6']
 
@@ -133,17 +133,6 @@ else:
     note_liquid(location=waterA, name='Water', min_volume=water_min_volume)
 
 # Remember initial liquid names and volumes
-assert strand_a_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_a).min_aspiratable_volume
-assert strand_b_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_b).min_aspiratable_volume
-note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, min_volume=strand_a_min_vol)  # i.e.: we have enough, just not specified how much
-note_liquid(location=strand_b, name='StrandB', concentration=strand_b_conc, min_volume=strand_b_min_vol)  # ditto
-note_liquid(location=diluted_strand_a, name='Diluted StrandA')
-note_liquid(location=diluted_strand_b, name='Diluted StrandB')
-note_liquid(location=master_mix, name='Master Mix')
-for buffer in buffers:
-    note_liquid(location=buffer[0], name='Buffer', initial_volume=buffer[1], concentration='5x')
-for evagreen in evagreens:
-    note_liquid(location=evagreen[0], name='Evagreen', initial_volume=evagreen[1], concentration='20x')
 
 # Clean up namespace
 del well
@@ -197,70 +186,107 @@ def usesP10(queriedVol, count, allow_zero):
 ########################################################################################################################
 
 def diluteStrands():
-    p50.layered_mix([strand_a])
-    p50.layered_mix([strand_b])
+    if manually_dilute_strands:
+        note_liquid(location=diluted_strand_a, name='Diluted StrandA', initial_volume=strand_dilution_vol)
+        note_liquid(location=diluted_strand_b, name='Diluted StrandB', initial_volume=strand_dilution_vol)
 
-    # Create dilutions of strands
-    log('Moving water for diluting Strands A and B')
-    p50.transfer(strand_dilution_water_vol, waterA, [diluted_strand_a, diluted_strand_b],
-                 new_tip='once',  # can reuse for all diluent dispensing since dest tubes are initially empty
-                 trash=config.trash_control
-                 )
-    log('Diluting Strand A')
-    p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=config.trash_control, keep_last_tip=True)
-    p50.layered_mix([diluted_strand_a])
+        log('Diluting Strands')
+        info(pretty.format('Diluted Strand A recipe: water={0:n} strandA={1:n} vol={2:n}', strand_dilution_water_vol, strand_dilution_source_vol, strand_dilution_vol))
+        info(pretty.format('Diluted Strand B recipe: water={0:n} strandB={1:n} vol={2:n}', strand_dilution_water_vol, strand_dilution_source_vol, strand_dilution_vol))
+        user_prompt('Ensure diluted strands manually present and mixed')
 
-    log('Diluting Strand B')
-    p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=config.trash_control, keep_last_tip=True)
-    p50.layered_mix([diluted_strand_b])
+    else:
+        strand_a = eppendorf_1_5_rack['A1']
+        strand_b = eppendorf_1_5_rack['B1']
+        assert strand_a_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_a).min_aspiratable_volume
+        assert strand_b_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_b).min_aspiratable_volume
+
+        note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, min_volume=strand_a_min_vol)  # i.e.: we have enough, just not specified how much
+        note_liquid(location=strand_b, name='StrandB', concentration=strand_b_conc, min_volume=strand_b_min_vol)  # ditto
+        note_liquid(location=diluted_strand_a, name='Diluted StrandA')
+        note_liquid(location=diluted_strand_b, name='Diluted StrandB')
+
+        p50.layered_mix([strand_a])
+        p50.layered_mix([strand_b])
+
+        # Create dilutions of strands
+        log('Moving water for diluting Strands A and B')
+        p50.transfer(strand_dilution_water_vol, waterA, [diluted_strand_a, diluted_strand_b],
+                     new_tip='once',  # can reuse for all diluent dispensing since dest tubes are initially empty
+                     trash=config.trash_control
+                     )
+        log('Diluting Strand A')
+        p50.transfer(strand_dilution_source_vol, strand_a, diluted_strand_a, trash=config.trash_control, keep_last_tip=True)
+        p50.layered_mix([diluted_strand_a])
+
+        log('Diluting Strand B')
+        p50.transfer(strand_dilution_source_vol, strand_b, diluted_strand_b, trash=config.trash_control, keep_last_tip=True)
+        p50.layered_mix([diluted_strand_b])
 
 
 def createMasterMix():
-    # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
-    p50.layered_mix([buffer for buffer, __ in buffers], incr=2)
+    if manually_make_master_mix:
+        note_liquid(location=master_mix, name='Master Mix', initial_volume=master_mix_vol)
 
-    # transfer from multiple source wells, each with a current defined volume
-    def transfer_multiple(msg, xfer_vol_remaining, tubes, dest, new_tip, *args, **kwargs):
-        tube_index = 0
-        cur_well = None
-        cur_vol = 0
-        min_vol = 0
-        while xfer_vol_remaining > 0:
-            if xfer_vol_remaining < p50_min_vol:
-                warn("remaining transfer volume of %f too small; ignored" % xfer_vol_remaining)
-                return
-            # advance to next tube if there's not enough in this tube
-            while cur_well is None or cur_vol <= min_vol:
-                if tube_index >= len(tubes):
-                    fatal('%s: more reagent needed' % msg)
-                cur_well = tubes[tube_index][0]
-                cur_vol = tubes[tube_index][1]
-                min_vol = max(p50_min_vol,
-                              cur_vol / config.min_aspirate_factor_hack,  # tolerance is proportional to specification of volume. can probably make better guess
-                              config.well_geometry(cur_well).min_aspiratable_volume)
-                tube_index = tube_index + 1
-            this_vol = min(xfer_vol_remaining, cur_vol - min_vol)
-            assert this_vol >= p50_min_vol  # TODO: is this always the case?
-            log('%s: xfer %f from %s in %s to %s in %s' % (msg, this_vol, cur_well, cur_well.parent, dest, dest.parent))
-            p50.transfer(this_vol, cur_well, dest, trash=config.trash_control, new_tip=new_tip, **kwargs)
-            xfer_vol_remaining -= this_vol
-            cur_vol -= this_vol
+        log('Creating Master Mix')
+        info(pretty.format('Master Mix recipe: water={0:n} buffer={1:n} EvaGreen={2:n}', master_mix_common_water_vol, master_mix_buffer_vol, master_mix_evagreen_vol))
+        user_prompt('Ensure master mix manually present and mixed')
 
-    def mix_master_mix():
-        log('Mixing Master Mix')
-        p50.layered_mix([master_mix], incr=2, initial_turnover=master_mix_evagreen_vol * 1.2, max_tip_cycles=config.layered_mix.max_tip_cycles_large)
+    else:
+        buffers = list(zip(screwcap_rack.rows(0), buffer_volumes))
+        evagreens = list(zip(screwcap_rack.rows(1), evagreen_volumes))
 
-    log('Creating Master Mix: Water')
-    p50.transfer(master_mix_common_water_vol, waterB, master_mix, trash=config.trash_control)
+        for buffer in buffers:
+            note_liquid(location=buffer[0], name='Buffer', initial_volume=buffer[1], concentration='5x')
+        for evagreen in evagreens:
+            note_liquid(location=evagreen[0], name='Evagreen', initial_volume=evagreen[1], concentration='20x')
+        note_liquid(location=master_mix, name='Master Mix')
 
-    log('Creating Master Mix: Buffer')
-    transfer_multiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', keep_last_tip=True)  # 'once' because we've only got water & buffer in context
-    p50.done_tip()  # EvaGreen needs a new tip
+        # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
+        p50.layered_mix([buffer for buffer, __ in buffers], incr=2)
 
-    log('Creating Master Mix: EvaGreen')
-    transfer_multiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always', keep_last_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
+        # transfer from multiple source wells, each with a current defined volume
+        def transfer_multiple(msg, xfer_vol_remaining, tubes, dest, new_tip, *args, **kwargs):
+            tube_index = 0
+            cur_well = None
+            cur_vol = 0
+            min_vol = 0
+            while xfer_vol_remaining > 0:
+                if xfer_vol_remaining < p50_min_vol:
+                    warn("remaining transfer volume of %f too small; ignored" % xfer_vol_remaining)
+                    return
+                # advance to next tube if there's not enough in this tube
+                while cur_well is None or cur_vol <= min_vol:
+                    if tube_index >= len(tubes):
+                        fatal('%s: more reagent needed' % msg)
+                    cur_well = tubes[tube_index][0]
+                    cur_vol = tubes[tube_index][1]
+                    min_vol = max(p50_min_vol,
+                                  cur_vol / config.min_aspirate_factor_hack,  # tolerance is proportional to specification of volume. can probably make better guess
+                                  config.well_geometry(cur_well).min_aspiratable_volume)
+                    tube_index = tube_index + 1
+                this_vol = min(xfer_vol_remaining, cur_vol - min_vol)
+                assert this_vol >= p50_min_vol  # TODO: is this always the case?
+                log('%s: xfer %f from %s in %s to %s in %s' % (msg, this_vol, cur_well, cur_well.parent, dest, dest.parent))
+                p50.transfer(this_vol, cur_well, dest, trash=config.trash_control, new_tip=new_tip, **kwargs)
+                xfer_vol_remaining -= this_vol
+                cur_vol -= this_vol
 
-    mix_master_mix()
+        def mix_master_mix():
+            log('Mixing Master Mix')
+            p50.layered_mix([master_mix], incr=2, initial_turnover=master_mix_evagreen_vol * 1.2, max_tip_cycles=config.layered_mix.max_tip_cycles_large)
+
+        log('Creating Master Mix: Water')
+        p50.transfer(master_mix_common_water_vol, waterB, master_mix, trash=config.trash_control)
+
+        log('Creating Master Mix: Buffer')
+        transfer_multiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', keep_last_tip=True)  # 'once' because we've only got water & buffer in context
+        p50.done_tip()  # EvaGreen needs a new tip
+
+        log('Creating Master Mix: EvaGreen')
+        transfer_multiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always', keep_last_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
+
+        mix_master_mix()
 
 
 ########################################################################################################################
@@ -360,11 +386,6 @@ def plateEverythingAndMix():
 # Off to the races
 ########################################################################################################################
 
-wells_to_verify = [master_mix, strand_a, strand_b, diluted_strand_a, diluted_strand_b, plate.wells('A1'), plate.wells('A12'), plate.wells('H1'), plate.wells('H12')]
-# verify_well_locations(wells_to_verify, p50)
-# verify_well_locations(wells_to_verify, p10)
-
 diluteStrands()
 createMasterMix()
-robot.pause('***** Check tube mixtures and resume')
 plateEverythingAndMix()
