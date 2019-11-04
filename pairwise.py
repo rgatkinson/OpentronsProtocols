@@ -5,7 +5,7 @@
 metadata = {
     'protocolName': 'Pairwise Interaction: Dilute & Master & Plate',
     'author': 'Robert Atkinson <bob@theatkinsons.org>',
-    'description': 'Study the interaction of two DNA strands'
+    'description': 'E19110401'
 }
 
 from typing import List
@@ -22,7 +22,7 @@ from rgatkinson.pipette import verify_well_locations, instruments_manager
 ########################################################################################################################
 
 # Tip usage
-p10_start_tip = 'A1'
+p10_start_tip = 'D10'
 p50_start_tip = 'A1'
 config.trash_control = True
 
@@ -43,8 +43,8 @@ else:
 buffer_volumes = [2000, 2000]  # Fresh tubes of B9022S
 evagreen_volumes = [1000]      # Fresh tube of EvaGreen
 
-strand_a_conc = '8.820 uM'
-strand_b_conc = '9.117 uM'
+strand_a_conc = '8.547 uM'
+strand_b_conc = '8.886 uM'
 strand_a_min_vol = 1100
 strand_b_min_vol = 1100
 
