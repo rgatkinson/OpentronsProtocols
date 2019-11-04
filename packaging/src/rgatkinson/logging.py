@@ -72,7 +72,8 @@ def silent_log(msg):
 
 def user_prompt(msg: str, prefix="***********", suffix=' ***********'):
     from rgatkinson.pipette import instruments_manager
-    log(msg=msg, prefix=prefix, suffix=suffix)
+    if msg:
+        log(msg=msg, prefix=prefix, suffix=suffix)
     for pip in instruments_manager.instruments:
         pip.retract()
     robot.pause('Press Return to Continue :-)')
