@@ -75,7 +75,7 @@ def user_prompt(msg: str, prefix="***********", suffix=' ***********'):
     if msg:
         log(msg=msg, prefix=prefix, suffix=suffix)
     for pip in instruments_manager.instruments:
-        pip.retract()
+        pass  # pip.retract()  # omit for now: Avoid 'Run encountered an error.'
     robot.pause('Press Return to Continue :-)')
 
 #-----------------------------------------------------------------------------------------------------------------------
