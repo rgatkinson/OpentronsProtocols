@@ -107,9 +107,6 @@ p10.start_at_tip(tips10[p10_start_tip])
 p50.start_at_tip(tips300a[p50_start_tip])
 
 # Labware containers
-temp_slot = 11
-temp_module = modules.load('tempdeck', slot=temp_slot)
-screwcap_rack = labware_manager.load('opentrons_24_aluminumblock_generic_2ml_screwcap', slot=temp_slot, label='screwcap_rack', share=True, geometry=IdtTubeWellGeometry)
 eppendorf_1_5_rack = labware_manager.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', slot=5, label='eppendorf_1_5_rack')
 plate = labware_manager.load('biorad_96_wellplate_200ul_pcr', slot=6, label='plate')
 
@@ -233,6 +230,11 @@ def createMasterMix():
         user_prompt('Ensure master mix manually present and mixed')
 
     else:
+        # Mostly just for fun, we put the ingredients for the master mix in a nice warm place to help them melt
+        temp_slot = 11
+        temp_module = modules.load('tempdeck', slot=temp_slot)
+        screwcap_rack = labware_manager.load('opentrons_24_aluminumblock_generic_2ml_screwcap', slot=temp_slot, label='screwcap_rack', share=True, geometry=IdtTubeWellGeometry)
+
         buffers = list(zip(screwcap_rack.rows(0), buffer_volumes))
         evagreens = list(zip(screwcap_rack.rows(1), evagreen_volumes))
 
