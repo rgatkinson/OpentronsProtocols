@@ -129,8 +129,6 @@ else:
     waterB = waterA
     note_liquid(location=waterA, name='Water', min_volume=water_min_volume)
 
-# Remember initial liquid names and volumes
-
 # Clean up namespace
 del well
 
