@@ -8,7 +8,9 @@ import random
 from enum import Enum
 from typing import List
 
+import opentrons
 from opentrons import instruments, robot
+from opentrons.commands import make_command
 from opentrons.helpers import helpers
 from opentrons.legacy_api.containers import unpack_location, Well
 from opentrons.legacy_api.containers.placeable import Placeable
@@ -607,6 +609,25 @@ class EnhancedPipette(Pipette):
         self.robot.poses = self._jog(self.robot.poses, 'x', shake_off_distance * 2)  # move right
         self.robot.poses = self._jog(self.robot.poses, 'x', -shake_off_distance)  # move left
         self.robot.gantry.pop_speed()
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Delaying
+    #-------------------------------------------------------------------------------------------------------------------
+
+    def dwell(self, seconds=0, minutes=0):
+        # like delay() but synchronous with the back-end
+
+        msg = pretty.format('Dwelling for {0:n}m {1:n}s', minutes, seconds)
+
+        minutes += int(seconds / 60)
+        seconds = seconds % 60
+        seconds += float(minutes * 60)
+
+        opentrons.commands.do_publish(robot.broker, opentrons.commands.comment, f=log_while, when='before', res=None, meta=None, msg=msg)
+        self.robot.pause()
+        self.robot._driver.delay(seconds)
+        self.robot.resume()
+        opentrons.commands.do_publish(robot.broker, opentrons.commands.comment, f=log_while, when='after', res=None, meta=None, msg=msg)
 
     #-------------------------------------------------------------------------------------------------------------------
     # Mixing
