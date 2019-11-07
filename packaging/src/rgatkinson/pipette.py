@@ -24,7 +24,7 @@ from rgatkinson.configuration import TopConfigurationContext
 from rgatkinson.interval import is_close, fpu
 from rgatkinson.logging import pretty, warn, log_while, info, info_while
 from rgatkinson.util import zeroify, sqrt
-from rgatkinson.well import FalconTube15mlGeometry, Eppendorf5point0mlTubeGeometry, Eppendorf1point5mlTubeGeometry, IdtTubeWellGeometry, Biorad96WellPlateWellGeometry, is_well
+from rgatkinson.well import FalconTube15mlGeometry, FalconTube50mlGeometry, Eppendorf5point0mlTubeGeometry, Eppendorf1point5mlTubeGeometry, IdtTubeWellGeometry, Biorad96WellPlateWellGeometry, is_well
 
 
 class RadialClearanceManager(object):
@@ -33,6 +33,7 @@ class RadialClearanceManager(object):
         self.config = config
         self._functions = {
             ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', FalconTube15mlGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_falcon15ml,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', FalconTube50mlGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_falcon50ml,
             ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Eppendorf1point5mlTubeGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_eppendorf1_5ml,
             ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Eppendorf5point0mlTubeGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_eppendorf5_0ml,
             ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', IdtTubeWellGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_idt_tube,
@@ -49,20 +50,33 @@ class RadialClearanceManager(object):
     def p50_single_v1_4_opentrons_96_tiprack_300ul_falcon15ml(self, depth):
         if depth < 0:
             return 0
-        if depth < 4.21826:
+        if depth < 4.42012:
             return 0.3181014675267553 + 0.2492912278496944*depth
         if depth < 52.59:
-            return 1.3356795812777742 + 0.008059412406212692*depth
+            return 1.3843756405067387 + 0.008059412406212692*depth
         if depth < 59.9064:
-            return -14.87960706782048 + 0.3163934426229509*depth
+            return -14.830911008591517 + 0.3163934426229509*depth
         if depth <= 118.07:
-            return 3.5915771349525776 + 0.008059412406212692*depth
+            return 3.640273194181542 + 0.008059412406212692*depth
+        return self._free_sailing()
+
+    def p50_single_v1_4_opentrons_96_tiprack_300ul_falcon50ml(self, depth):
+        if depth < 0:
+            return 0
+        if depth < 6.69969:
+            return 3.036768510671534 + 0.7002075382097096*depth
+        if depth < 47.19:
+            return 7.678249659109892 + 0.0074166666666666305*depth
+        if depth < 54.9388:
+            return -6.90236439826716 + 0.3163934426229509*depth
+        if depth <= 112.67:
+            return 10.164032546012043 + 0.0057498667891316*depth
         return self._free_sailing()
 
     def p50_single_v1_4_opentrons_96_tiprack_300ul_eppendorf1_5ml(self, depth):
         if depth <= 0.0220787:
             return 0
-        if depth < 0.114979:
+        if depth < 0.114975:
             return -0.505 + 2.2698281410529737 * sqrt((2.2462247020231834 - 0.19409486595347666 * depth) * depth)
         if depth < 12.2688:
             return 0.6233463136480737 + 0.16904507285715673*depth
@@ -95,12 +109,14 @@ class RadialClearanceManager(object):
         return self._free_sailing()
 
     def p50_single_v1_4_opentrons_96_tiprack_300ul_biorad_plate_well(self, depth):
-        if depth < 0:
+        if depth <= 0:
             return 0
-        if depth < 7.47114:
-            return 0.4900373532550715 + 0.15391472105982892*depth
+        if depth < 3.72084:
+            return 0.6610777502824954 + 0.1789907029367993*depth
+        if depth <= 6.28:
+            return 1.1722035122811951 + 0.04162219850586984*depth
         if depth <= 14.81:
-            return 1.0443669402110198 + 0.07971864009378668*depth
+            return 0.9329578591090766 + 0.07971864009378668*depth
         return self._free_sailing()
 
 
