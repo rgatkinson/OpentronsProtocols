@@ -6,7 +6,7 @@ Cell["Well & Pipette Tip Geometry", \
 
 Cell["\<\
 Robert Atkinson
-06 November 2019\
+07 November 2019\
 \>", "Author",ExpressionUUID->"05aea015-05f3-4e99-899d-20a8cd5792a1"],
 
 Cell["We explore the geometry of various labware.", \
@@ -13037,9 +13037,9 @@ Cell[BoxData[
       ",", " ", 
      RowBox[{"{", 
       RowBox[{
-      "falcon15ml", ",", " ", "eppendorf1$5ml", ",", " ", "eppendorf5$0ml", 
-       ",", " ", "idtTube", ",", " ", "bioradPlateWell"}], " ", "}"}]}], 
-    "}"}], "\[IndentingNewLine]", 
+      "falcon15ml", ",", " ", "falcon50ml", ",", " ", "eppendorf1$5ml", ",", 
+       " ", "eppendorf5$0ml", ",", " ", "idtTube", ",", " ", 
+       "bioradPlateWell"}], " ", "}"}]}], "}"}], "\[IndentingNewLine]", 
    "}"}]}]], "Input",ExpressionUUID->"bd4ada82-b130-40bf-8cfc-d86b3852429a"],
 
 Cell[BoxData[{
@@ -13474,8 +13474,8 @@ Cell[BoxData[{
 }, Open  ]]
 }, Open  ]]
 },
-WindowSize->{1445, 1548},
-WindowMargins->{{1109, Automatic}, {Automatic, 0}},
+WindowSize->{1445, 1541},
+WindowMargins->{{220, Automatic}, {Automatic, 10}},
 PrintingCopies->1,
 PrintingPageRange->{32000, 32000},
 PrintingOptions->{"Magnification"->1.,
@@ -13485,7 +13485,6 @@ PrivateNotebookOptions->{"FileOutlineCache"->False},
 CellContext->Notebook,
 CellLabelAutoDelete->True,
 TrackCellChangeTimes->False,
-Magnification:>0.9 Inherited,
 FrontEndVersion->"12.0 for Microsoft Windows (64-bit) (April 8, 2019)",
 StyleDefinitions->Notebook[{
    Cell[
