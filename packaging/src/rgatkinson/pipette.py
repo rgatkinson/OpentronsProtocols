@@ -455,7 +455,7 @@ class EnhancedPipette(Pipette):
         if ms_pause is None:
             ms_pause = self.config.aspirate.pause.ms_default
         if self.config.enable_enhancements and ms_pause > 0 and not self.is_mix_in_progress():
-            self.delay(ms_pause / 1000.0)
+            self.dwell(seconds=ms_pause / 1000.0)
 
         # track volume todo: what if we're doing an air gap
         well, __ = unpack_location(location)
@@ -639,11 +639,11 @@ class EnhancedPipette(Pipette):
         seconds = seconds % 60
         seconds += float(minutes * 60)
 
-        opentrons.commands.do_publish(robot.broker, opentrons.commands.comment, f=log_while, when='before', res=None, meta=None, msg=msg)
+        opentrons.commands.do_publish(self.robot.broker, opentrons.commands.comment, f=self.dwell, when='before', res=None, meta=None, msg=msg)
         self.robot.pause()
         self.robot._driver.delay(seconds)
         self.robot.resume()
-        opentrons.commands.do_publish(robot.broker, opentrons.commands.comment, f=log_while, when='after', res=None, meta=None, msg=msg)
+        opentrons.commands.do_publish(self.robot.broker, opentrons.commands.comment, f=self.dwell, when='after', res=None, meta=None, msg=msg)
 
     #-------------------------------------------------------------------------------------------------------------------
     # Mixing
@@ -776,7 +776,7 @@ class EnhancedPipette(Pipette):
             while do_layer(y):
                 looped = True
                 if not first and ms_pause > 0:
-                    self.delay(ms_pause / 1000.0)  # pause to let dispensed liquid disperse
+                    self.dwell(seconds=ms_pause / 1000.0)  # pause to let dispensed liquid disperse
                 #
                 if first and initial_turnover is not None:
                     count_ = int(0.5 + (initial_turnover / volume))
@@ -812,7 +812,7 @@ class EnhancedPipette(Pipette):
                 y += y_incr
                 first = False
             if looped and ms_final_pause > 0:
-                self.delay(ms_final_pause / 1000.0)
+                self.dwell(seconds=ms_final_pause / 1000.0)
 
         info_while(msg, do_one)
 
