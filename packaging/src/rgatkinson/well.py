@@ -117,12 +117,13 @@ class UnknownWellGeometry(WellGeometry):
 
 
 class IdtTubeWellGeometry(WellGeometry):
+    # parts[tube] -> <|cylindrical->cylinder[38.3037,4.16389],conical->invertedCone[3.69629,4.16389],cap->cylinder[0,0]|>
     def __init__(self, well, config):
         super().__init__(well, config)
 
     @property
     def radial_clearance_tolerance(self):
-        return 1.5  # extra because these tubes have some slop in their labware, don't want to rattle tube todo: make retval dependent on labware
+        return 1.5  # extra because these tubes have some slop as they sit in their rack, don't want to rattle tube todo: make retval dependent on labware
 
     def depth_from_volume(self, vol):
         if vol <= 0.0:
@@ -171,6 +172,7 @@ class IdtTubeWellGeometry(WellGeometry):
 
 
 class Biorad96WellPlateWellGeometry(WellGeometry):
+    # parts[tube]-><|cylindrical->cylinder[6.69498,2.61859],conical->invertedFrustum[8.11502,2.61859,1.16608],cap->cylinder[0,0]|>
     def __init__(self, well, config):
         super().__init__(well, config)
 
@@ -209,6 +211,7 @@ class Biorad96WellPlateWellGeometry(WellGeometry):
 
 
 class Eppendorf1point5mlTubeGeometry(WellGeometry):
+    # parts[tube] -> <|cylindrical->invertedFrustum[21.1258,4.66267,4.272],conical->invertedFrustum[16.4801,4.272,1.48612],cap->invertedSphericalCap[0.194089,1.48612,rCap]|>
     def __init__(self, well, config):
         super().__init__(well, config)
 
@@ -261,6 +264,7 @@ class Eppendorf1point5mlTubeGeometry(WellGeometry):
 
 
 class Eppendorf5point0mlTubeGeometry(WellGeometry):
+    # parts[tube] -> <|cylindrical->invertedFrustum[35.8967,7.08628,6.37479],conical->invertedFrustum[18.3424,6.37479,1.50899],cap->invertedSphericalCap[1.16088,1.50899,rCap]|>
     def __init__(self, well, config):
         super().__init__(well, config)
 
@@ -313,33 +317,34 @@ class Eppendorf5point0mlTubeGeometry(WellGeometry):
 
 
 class FalconTube15mlGeometry(WellGeometry):
+    # parts[tube] -> <|cylindrical->invertedFrustum[95.7737,7.47822,6.70634],conical->invertedFrustum[22.2963,6.70634,1.14806],cap->cylinder[0,0]|>
     def __init__(self, well, config):
         super().__init__(well, config)
 
     def depth_from_volume(self, vol):
         if vol <= 0.0:
             return 0.0
-        if vol <= 1232.34:
-            return -4.605312927271903 + 1.4295474713971166*cubeRoot(33.43348831212188 + 5.259708112808352*vol)
-        return -803.7743858256094 + 27.100445027181177*cubeRoot(27390.881699748476 + 0.7386443071956942*vol)
+        if vol <= 1260.65:
+            return -4.605312927271903 + 1.425220154402649*cubeRoot(33.73895064080807 + 5.3077630053562075*vol)
+        return -809.8165210055173 + 27.119471721476614*cubeRoot(27957.824136197134 + 0.7370907258662586*vol)
 
     def volume_from_depth(self, depth):
         if depth <= 0:
             return 0.0
-        if depth <= 22.0945:
+        if depth <= 22.2963:
             return depth*(4.1407799998941535 + (0.8991310830091779 + 0.06507926078773585*depth)*depth)
-        return -1761.2447144832822 + depth*(131.83324928521762 + (0.1640177288677879 + 0.00006801980413086297*depth)*depth)
+        return -1806.0097363707396 + depth*(133.82273354274736 + (0.1652506834221966 + 0.00006801980413086301*depth)*depth)
 
     def radius_from_depth(self, depth):
         if depth <= 0:
             return 0.0
-        if depth <= 22.0945:
+        if depth <= 22.2963:
             return 1.1480641142716852 + 0.2492912278496944*depth
-        return 6.477949256918969 + 0.008059412406212692*depth
+        return 6.526645316147934 + 0.008059412406212692*depth
 
     @property
     def well_capacity(self):
-        return 16202.8  # compare to 15000 in opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical
+        return 16410.1  # compare to 15000 in opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical
 
     @property
     def outside_height(self):
@@ -359,6 +364,7 @@ class FalconTube15mlGeometry(WellGeometry):
 
 
 class FalconTube50mlGeometry(WellGeometry):
+    # parts[tube] -> <|cylindrical->invertedFrustum[99.4458,13.6982,13.1264],conical->invertedFrustum[13.2242,13.1264,3.86673],cap->cylinder[0,0]|>
     def __init__(self, well, config):
         super().__init__(well, config)
 
