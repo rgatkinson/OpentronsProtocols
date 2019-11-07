@@ -11,7 +11,7 @@ from opentrons.util.vector import Vector
 import rgatkinson
 from rgatkinson.interval import fpu
 from rgatkinson.util import is_indexable
-from rgatkinson.well import WellGeometry, Eppendorf5point0mlTubeGeometry, Biorad96WellPlateWellGeometry, Eppendorf1point5mlTubeGeometry, FalconTube15mlGeometry
+from rgatkinson.well import WellGeometry, Eppendorf5point0mlTubeGeometry, Biorad96WellPlateWellGeometry, Eppendorf1point5mlTubeGeometry, FalconTube15mlGeometry, FalconTube50mlGeometry
 
 
 class Point(object):
@@ -307,11 +307,13 @@ class LabwareManager(object):
             # https://labware.opentrons.com/opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical?category=tubeRack
             if geometry is None:
                 geometry = FalconTube15mlGeometry
+            if secondGeometry is None:
+                secondGeometry = FalconTube50mlGeometry
             result = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
             for well_name in ['A1', 'B1', 'C1', 'A2', 'B2', 'C2']:
                 well = result.wells(well_name)
                 config.set_well_geometry(well, geometry)
-            if secondGeometry is not None:  # todo: when we model the 50mL falcon tubes, use same here
+            if secondGeometry is not None:
                 for well_name in ['A3', 'B3', 'A4', 'B4']:
                     well = result.wells(well_name)
                     config.set_well_geometry(well, secondGeometry)

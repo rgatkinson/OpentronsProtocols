@@ -177,27 +177,27 @@ class Biorad96WellPlateWellGeometry(WellGeometry):
     def depth_from_volume(self, vol):
         if vol <= 0.0:
             return 0.0
-        if vol <= 122.784:
-            return -8.576177710037857 + 3.105085210707993*cubeRoot(21.069816179177707 + 1.3464508185574342*vol)
-        return 3.9168885170626426 + 0.04270953403155694*vol
+        if vol <= 95.7748:
+            return -6.514739207958923 + 2.7801804906856553*cubeRoot(12.86684682940816 + 1.3870479041474308*vol)
+        return 3.669055001226564 + 0.04642103427328387*vol
 
     def volume_from_depth(self, depth):
         if depth <= 0.0:
             return 0.0
-        if depth <= 9.16092:
-            return depth*(5.473911039614858 + (0.6382693111883633 + 0.024807839139547*depth)*depth)
-        return -91.7099332942513 + 23.41397588793937*depth
+        if depth <= 8.11502:
+            return depth*(4.271740774393597 + (0.6557040332750236 + 0.033549771389874604*depth)*depth)
+        return -79.03863105734744 + 21.541958632651962*depth
 
     def radius_from_depth(self, depth):
         if depth <= 0:
             return 0
-        if depth <= 9.16092:
-            return 1.32 + 0.15391472105982892*depth
-        return 2.73
+        if depth <= 8.11502:
+            return 1.166077750282495 + 0.1789907029367993*depth
+        return 2.6185909188980574
 
     @property
     def well_capacity(self):
-        return 255.051
+        return 239.998
 
     @property
     def well_depth(self):
@@ -343,7 +343,7 @@ class FalconTube15mlGeometry(WellGeometry):
 
     @property
     def outside_height(self):
-        return 119.40
+        return 119.46
 
     @property
     def well_depth(self):
@@ -358,34 +358,46 @@ class FalconTube15mlGeometry(WellGeometry):
         return 7.28
 
 
-class FalconTube50mlGeometry(WellGeometry):  # not yet finished
+class FalconTube50mlGeometry(WellGeometry):
     def __init__(self, well, config):
         super().__init__(well, config)
 
-    def depth_from_volume(self, volume):
-        pass
+    def depth_from_volume(self, vol):
+        if vol <= 0.0:
+            return 0.0
+        if vol <= 3296.08:
+            return -5.522264395071952 + 0.6039249881108911*cubeRoot(764.5441851977812 + 8.842372775534407*vol)
+        return -2269.6881765411304 + 37.538777353484434*cubeRoot(223119.88753911393 + 0.5460286683567588*vol)
 
     def volume_from_depth(self, depth):
-        pass
+        if depth <= 0:
+            return 0.0
+        if depth <= 13.2242:
+            return depth*(46.97186764441949 + (8.505907048988277 + 0.5134311120983222*depth)*depth)
+        return -3820.9148917040493 + depth*(535.0542643832791 + (0.23573910721016753 + 0.00003462136482692524*depth)*depth)
 
     def radius_from_depth(self, depth):
-        pass
+        if depth <= 0:
+            return 0.0
+        if depth <= 13.2242:
+            return 3.8667311574164636 + 0.7002075382097096*depth
+        return 13.050404667978436 + 0.0057498667891316*depth
 
     @property
     def well_capacity(self):
-        return 50000  # nominal
+        return 59505.8
 
     @property
     def outside_height(self):
-        return 114.11
+        return 114.55
 
     @property
     def well_depth(self):
-        return 113.5
+        return 112.67
 
     @property
     def well_diameter_at_top(self):
-        return 27.74
+        return 27.86
 
     @property
     def rim_lip_height(self):
