@@ -13493,6 +13493,8 @@ StyleDefinitions->Notebook[{
      FrontEnd`FileName[{"Report"}, "StandardReport.nb", CharacterEncoding -> 
        "UTF-8"]]], 
    Cell[
+    StyleData["Graphics"], MenuSortingValue -> 10000, Background -> None], 
+   Cell[
     StyleData[All, "Printout"], Magnification -> 0.5]}, Visible -> False, 
   FrontEndVersion -> "12.0 for Microsoft Windows (64-bit) (April 8, 2019)", 
   StyleDefinitions -> "PrivateStylesheetFormatting.nb"]
