@@ -4,8 +4,7 @@
 
 metadata = {
     'protocolName': 'Pairwise Interaction: Dilute & Master & Plate',
-    'author': 'Robert Atkinson <bob@theatkinsons.org>',
-    'description': 'E19110401'
+    'author': 'Robert Atkinson <bob@theatkinsons.org>'
 }
 
 from typing import List
@@ -22,12 +21,12 @@ from rgatkinson.pipette import verify_well_locations, instruments_manager
 ########################################################################################################################
 
 # Tip usage
-p10_start_tip = 'D10'
-p50_start_tip = 'A1'
+p10_start_tip = 'A1'
+p50_start_tip = 'D1'
 config.trash_control = True
 
 # Automation control
-manually_dilute_strands = True
+manually_dilute_strands = False
 manually_make_master_mix = True
 
 # Labware alternatives
@@ -39,12 +38,12 @@ if use_eppendorf_5_0_tubes:
 else:
     water_min_volume = 7000  # rough guess
 
-# Volumes of master mix ingredients. These are minimums in each tube.
+# Volumes of master mix ingredients, used when automatically making master mix. These are minimums in each tube.
 buffer_volumes = [2000, 2000]  # Fresh tubes of B9022S
 evagreen_volumes = [1000]      # Fresh tube of EvaGreen
 
-strand_a_conc = '8.547 uM'
-strand_b_conc = '8.886 uM'
+strand_a_conc = '9.659 uM'
+strand_b_conc = '8.897 uM'
 strand_a_min_vol = 1100
 strand_b_min_vol = 1100
 
@@ -58,7 +57,7 @@ strand_dilution_factor = 25.0 / 9.0  # per Excel worksheet
 strand_dilution_vol = 1225
 
 # Master mix, values per Excel worksheet
-mm_overhead_factor = 1.0375
+mm_overhead_factor = 1.10  # 1.0375
 master_mix_buffer_vol = 1612.8 * mm_overhead_factor
 master_mix_evagreen_vol = 403.2 * mm_overhead_factor
 master_mix_common_water_vol = 672 * mm_overhead_factor
