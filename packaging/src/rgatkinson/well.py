@@ -465,8 +465,8 @@ class FalconTube50mlGeometry(WellGeometry):
         return 10.26
 
     def height_above_reference_plane(self, space_below_reference_plane, rack):
-        from rgatkinson.custom_labware import Opentrons10Rack
-        if self._is_rack(rack, [Opentrons10Rack], ['opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 'opentrons_6_tuberack_falcon_50ml_conical']):
+        from rgatkinson.custom_labware import Opentrons6Rack, Opentrons10Rack
+        if self._is_rack(rack, [Opentrons6Rack, Opentrons10Rack], ['opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 'opentrons_6_tuberack_falcon_50ml_conical']):
             return 42.04  # a measured value that accounts for the portion of the tube lying in the dimple at the bottom
         return super().height_above_reference_plane(space_below_reference_plane, rack)
 
