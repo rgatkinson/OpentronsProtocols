@@ -230,7 +230,7 @@ def createMasterMix():
         # Mostly just for fun, we put the ingredients for the master mix in a nice warm place to help them melt
         temp_slot = 11
         temp_module = modules.load('tempdeck', slot=temp_slot)
-        screwcap_rack = labware_manager.load('opentrons_24_aluminumblock_generic_2ml_screwcap', slot=temp_slot, label='screwcap_rack', share=True, geometry=IdtTubeWellGeometry)
+        screwcap_rack = labware_manager.load('opentrons_24_aluminumblock_generic_2ml_screwcap', slot=temp_slot, label='screwcap_rack', share=True, well_geometry=IdtTubeWellGeometry)
 
         buffers = list(zip(screwcap_rack.rows(0), buffer_volumes))
         evagreens = list(zip(screwcap_rack.rows(1), evagreen_volumes))

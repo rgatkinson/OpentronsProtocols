@@ -5,7 +5,7 @@
 from abc import abstractmethod
 
 from opentrons import robot
-from opentrons.legacy_api.containers import Well
+from opentrons.legacy_api.containers import Well, Container
 from opentrons.trackers import pose_tracker
 from opentrons.util.vector import Vector
 
@@ -85,7 +85,25 @@ class WellGeometry(object):
         :param space_below_reference_plane: how much space (at least) is available below the reference plane of this rack
         :param rack: the rack in question
         """
-        return max(0, self.outside_height - space_below_reference_plane, self.rim_lip_height);
+        return max(0, self.outside_height - space_below_reference_plane, self.rim_lip_height)
+
+    def _is_rack(self, rack, custom_tube_rack_classes, load_names):
+        load_names = [load_name.lower() for load_name in load_names]
+        if rack is None:
+            if self.well is not None:
+                rack = self.well.parent
+        if rack is not None:
+            if rack.__class__ in custom_tube_rack_classes:
+                # custom tube rack, before loading
+                return True
+            if isinstance(rack, Container):
+                if rack.properties['type'] in load_names:
+                    return True
+                custom = rack.properties.get('custom_tube_rack', None)
+                if custom is not None and custom.__class__ in custom_tube_rack_classes:
+                    # custom tube rack, after loading
+                    return True
+        return False
 
     @property
     def well_diameter_at_top(self):
@@ -195,7 +213,7 @@ class IdtTubeWellGeometry(WellGeometry):
 
     @property
     def rim_lip_height(self):
-        raise 6.38
+        return 6.38
 
     @property
     def outside_height(self):
@@ -346,11 +364,6 @@ class Eppendorf5point0mlTubeGeometry(WellGeometry):
     def rim_lip_height(self):
         return 2.2
 
-    def height_above_reference_plane(self, space_below_reference_plane, rack):
-        if rack.name == 'opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical':
-            return 42.04  # a measured value that accounts for the portion of the tube lying in the dimple at the bottom
-        return super().height_above_reference_plane(space_below_reference_plane, rack)
-
 
 class FalconTube15mlGeometry(WellGeometry):
     # parts[tube] -> <|cylindrical->invertedFrustum[95.7737,7.47822,6.70634],conical->invertedFrustum[22.2963,6.70634,1.14806],cap->cylinder[0,0]|>
@@ -387,7 +400,8 @@ class FalconTube15mlGeometry(WellGeometry):
         return 119.46
 
     def height_above_reference_plane(self, space_below_reference_plane, rack):
-        if rack.name == 'Atkinson_15_tuberack_5ml_eppendorf' or rack.name == 'opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical':
+        from rgatkinson.custom_labware import Opentrons10Rack, Opentrons15Rack
+        if self._is_rack(rack, [Opentrons15Rack, Opentrons10Rack], ['opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical']):
             return 45.65  # a measured value that accounts for the portion of the tube lying in the dimple at the bottom
         return super().height_above_reference_plane(space_below_reference_plane, rack)
 
@@ -449,6 +463,12 @@ class FalconTube50mlGeometry(WellGeometry):
     @property
     def rim_lip_height(self):
         return 10.26
+
+    def height_above_reference_plane(self, space_below_reference_plane, rack):
+        from rgatkinson.custom_labware import Opentrons10Rack
+        if self._is_rack(rack, [Opentrons10Rack], ['opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical']):
+            return 42.04  # a measured value that accounts for the portion of the tube lying in the dimple at the bottom
+        return super().height_above_reference_plane(space_below_reference_plane, rack)
 
 
 def Well_get_name(self):
