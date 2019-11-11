@@ -45,33 +45,61 @@ class WellGeometry(object):
     #-------------------------------------------------------------------------------------------------------------------
 
     @property
-    def well_capacity(self):  # default to what Opentrons gave us
+    def shape(self):
+        return 'circular'
+
+    @property
+    def well_capacity(self):
+        """
+        How much can the well hold, in microliters? Default here to what Opentrons provides.
+        """
         result = self.well.max_volume() if self.well is not None else None
         if result is None:
             result = fpu.infinity
         return result
 
     @property
-    def well_depth(self):  # default to what Opentrons gave us
+    def well_depth(self):
+        """
+        How deep is the interior of the well, in mm? Default here to what Opentrons provides.
+        """
         return self.well.z_size() if self.well is not None else fpu.infinity
 
     @property
-    def outside_height(self):  # outside height of the tube
-        return 0
+    def outside_height(self):
+        """
+        External height of the tube, in mm
+        """
+        pass
 
     @property
-    def rim_lip_height(self):  # when hanging in a rack, this is how much the tube sits about the reference plane of the rack
+    def rim_lip_height(self):
+        """
+        when hanging in a rack, this is how much the tube sits about the reference plane of the rack
+        """
         return 0
 
-    def height_above_reference_plane(self, hangable_tube_height, rack):
-        return max(0, self.outside_height - hangable_tube_height, self.rim_lip_height);
+    def height_above_reference_plane(self, space_below_reference_plane, rack):
+        """
+        how high does this well extend about the reference plane of this rack
+        :param space_below_reference_plane: how much space (at least) is available below the reference plane of this rack
+        :param rack: the rack in question
+        """
+        return max(0, self.outside_height - space_below_reference_plane, self.rim_lip_height);
 
     @property
     def well_diameter_at_top(self):
+        """
+        what is the diameter of this well at it's top
+        todo: what's the reasonable behavior for non-circular wells?
+        """
         return self.radius_from_depth(self.well_depth) * 2  # a generic impl; subclasses can optimize
 
     @property
-    def min_aspiratable_volume(self):  # minimum volume we can aspirate from (i.e.: we leave at least this much behind when aspirating)
+    def min_aspiratable_volume(self):
+        """
+        minimum volume we can aspirate from (i.e.: we leave at least this much behind when aspirating)
+        """
         return 0
 
     @property
@@ -79,7 +107,10 @@ class WellGeometry(object):
         return self.config.wells.radial_clearance_tolerance
 
     @abstractmethod
-    def depth_from_volume(self, volume):  # best calc'n of depth from the given volume. may be an interval
+    def depth_from_volume(self, volume):
+        """
+        best calc'n of depth from the given volume. may be an interval
+        """
         pass
 
     @abstractmethod
@@ -315,6 +346,11 @@ class Eppendorf5point0mlTubeGeometry(WellGeometry):
     def rim_lip_height(self):
         return 2.2
 
+    def height_above_reference_plane(self, space_below_reference_plane, rack):
+        if rack.name == 'opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical':
+            return 42.04  # a measured value that accounts for the portion of the tube lying in the dimple at the bottom
+        return super().height_above_reference_plane(space_below_reference_plane, rack)
+
 
 class FalconTube15mlGeometry(WellGeometry):
     # parts[tube] -> <|cylindrical->invertedFrustum[95.7737,7.47822,6.70634],conical->invertedFrustum[22.2963,6.70634,1.14806],cap->cylinder[0,0]|>
@@ -349,6 +385,11 @@ class FalconTube15mlGeometry(WellGeometry):
     @property
     def outside_height(self):
         return 119.46
+
+    def height_above_reference_plane(self, space_below_reference_plane, rack):
+        if rack.name == 'Atkinson_15_tuberack_5ml_eppendorf' or rack.name == 'opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical':
+            return 45.65  # a measured value that accounts for the portion of the tube lying in the dimple at the bottom
+        return super().height_above_reference_plane(space_below_reference_plane, rack)
 
     @property
     def well_depth(self):

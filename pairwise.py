@@ -115,7 +115,7 @@ diluted_strand_a = eppendorf_1_5_rack['A6']
 diluted_strand_b = eppendorf_1_5_rack['B6']
 
 if use_eppendorf_5_0_tubes:
-    eppendorf_5_0_rack = labware_manager.load('Atkinson 15 Tube Rack 5000 µL', slot=8, label='eppendorf_5_0_rack')
+    eppendorf_5_0_rack = labware_manager.load('Atkinson_15_tuberack_5ml_eppendorf', slot=8, label='eppendorf_5_0_rack')
     master_mix = eppendorf_5_0_rack['A1']
     waterA = eppendorf_5_0_rack['C4']
     waterB = eppendorf_5_0_rack['C5']

@@ -81,7 +81,7 @@ class WellGrid(object):
     def contains_indices(self, indices):
         return self.origin.x <= indices[0] < self.max.x and self.origin.y <= indices[1] < self.max.y
 
-    def definition_map(self, rack, z_reference, hangable_tube_height):
+    def definition_map(self, rack, z_reference, space_below_reference_plane):
         result = collections.OrderedDict()
         for col in range(self.grid_size.x):
             for row in range(self.grid_size.y):
@@ -89,13 +89,13 @@ class WellGrid(object):
                 if rc['geometry'] is not None:
                     d = dict()
                     geometry: WellGeometry = rc['geometry']
+                    d['shape'] = geometry.shape
                     d['depth'] = geometry.well_depth
                     d['totalLiquidVolume'] = geometry.well_capacity
-                    d['shape'] = 'circular'
                     d['diameter'] = geometry.well_diameter_at_top
                     d['x'] = rc['x']
                     d['y'] = rc['y']
-                    d['z'] = geometry.height_above_reference_plane(hangable_tube_height, rack) + z_reference - d['depth']
+                    d['z'] = geometry.height_above_reference_plane(space_below_reference_plane, rack) + z_reference - d['depth']
                     result[rc['name']] = d
         return result
 
@@ -138,7 +138,7 @@ class CustomTubeRack(object):
     def __init__(self, config, name,
                  dimensions=None,  # is either to reference plane (dimensions_measurement_geometry is None) or to the top of rack measure with some tube in place (otherwise)
                  dimensions_measurement_geometry=None,  # geometry used, if any, when 'dimensions' were measured
-                 hangable_tube_height=None,  # tubes taller than this don't hang. this value is conservative, in that tubes slightly larger than this might still hang, depending on geometries of the tube and rack indentations
+                 space_below_reference_plane=None,  # tubes taller than this don't hang. this value is conservative, in that tubes slightly larger than this might still hang, depending on geometries of the tube and rack indentations
                  brand=None,
                  brandIds=None,
                  well_grids=None
@@ -150,7 +150,7 @@ class CustomTubeRack(object):
         if dimensions_measurement_geometry is not None:
             # find the z height of the reference plane of the labware
             self.reference_dimensions = self.reference_dimensions - (0, 0, dimensions_measurement_geometry(well=None, config=self.config).rim_lip_height)
-        self.hangable_tube_height = hangable_tube_height if hangable_tube_height is not None else fpu.infinity
+        self.space_below_reference_plane = space_below_reference_plane if space_below_reference_plane is not None else fpu.infinity
         self.brand = {
             'brand': brand if brand is not None else 'Atkinson Labs'
         }
@@ -185,7 +185,7 @@ class CustomTubeRack(object):
     def max_tube_height_above_reference_plane(self):
         result = 0
         for geometry in self.well_geometries:
-            result = max(result, geometry.height_above_reference_plane(self.hangable_tube_height, self))
+            result = max(result, geometry.height_above_reference_plane(self.space_below_reference_plane, self))
         return result
 
     @property
@@ -222,7 +222,7 @@ class CustomTubeRack(object):
         }
         result['wells'] = collections.OrderedDict()
         for well_grid in self.well_grids:
-            for name, definition in well_grid.definition_map(self, self.reference_dimensions.coordinates.z, self.hangable_tube_height).items():
+            for name, definition in well_grid.definition_map(self, self.reference_dimensions.coordinates.z, self.space_below_reference_plane).items():
                 result['wells'][name] = definition
         # todo: add 'groups', if that's still significant / worthwhile
         result['parameters'] = {
@@ -261,7 +261,7 @@ class Opentrons15Rack(CustomTubeRack):
             config,
             dimensions=Vector(127.76, 85.48, 80.83),
             dimensions_measurement_geometry=Eppendorf5point0mlTubeGeometry,
-            hangable_tube_height=71.40,
+            space_below_reference_plane=71.40,  # does *not* include space in the dimples in the bottom
             name=name,
             brand=brand,
             well_grids=[WellGrid(config,
@@ -280,10 +280,11 @@ class LabwareManager(object):
         if config is None:
             config = rgatkinson.configuration.config
 
-        if name == 'Atkinson 15 Tube Rack 5000 µL':
+        if name == 'Atkinson_15_tuberack_5ml_eppendorf':
             if geometry is None:
                 geometry = Eppendorf5point0mlTubeGeometry
-            definition = Opentrons15Rack(config, name='Atkinson 15 Tube Rack 5000 µL', default_well_geometry=geometry)
+            definition = Opentrons15Rack(config, name=name, default_well_geometry=geometry)
+            # todo: allow alternate geometries for some wells
             result = definition.load(slot=slot, label=label, share=share)
             return result
 

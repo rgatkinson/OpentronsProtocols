@@ -47,7 +47,7 @@ p50.start_at_tip(tips300a[p50_start_tip])
 
 # All the labware containers
 eppendorf_1_5_rack = labware_manager.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', slot=2, label='eppendorf_1_5_rack')
-eppendorf_5_0_rack = labware_manager.load('Atkinson 15 Tube Rack 5000 µL', slot=5, label='eppendorf_5_0_rack')
+eppendorf_5_0_rack = labware_manager.load('Atkinson_15_tuberack_5ml_eppendorf', slot=5, label='eppendorf_5_0_rack')
 plate = labware_manager.load('biorad_96_wellplate_200ul_pcr', slot=6, label='plateA')
 
 # Name specific places in the labware containers
