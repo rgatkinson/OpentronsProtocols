@@ -308,6 +308,23 @@ class LabwareManager(object):
         if config is None:
             config = rgatkinson.configuration.config
 
+        def set_well_geometries_custom(custom_tube_rack):
+            if well_geometries is not None:
+                for well_name, geometry_class in well_geometries.items():
+                    well_dict = custom_tube_rack[well_name]
+                    well_dict['geometry'] = geometry_class(config=config, well=None)
+
+        def set_well_geometries(container, well_geometry):
+            if well_geometry is not None:
+                for well in container.wells():
+                    config.set_well_geometry(well, well_geometry)
+            if well_geometries is not None:
+                for well_name, geometry_class in well_geometries.items():
+                    well = container.well(well_name)
+                    config.set_well_geometry(well, geometry_class)
+
+        #---------------------------------------------------------------------------------------------------------------
+
         if name == 'opentrons_96_tiprack_10ul' or name == 'opentrons_96_tiprack_300ul' or name.lower().find('tiprack') >= 0:  # todo: last clause is a hack; fix
             result = self._load_tiprack(name, slot=slot, label=label)
             return result
@@ -316,42 +333,14 @@ class LabwareManager(object):
             if well_geometry is None:
                 well_geometry = Biorad96WellPlateWellGeometry
             result = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
-            for well in result.wells():
-                config.set_well_geometry(well, well_geometry)
+            set_well_geometries(result, well_geometry)
             return result
 
         if name == 'opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap':
             if well_geometry is None:
                 well_geometry = Eppendorf1point5mlTubeGeometry
             result = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
-            for well in result.wells():
-                config.set_well_geometry(well, well_geometry)
-            return result
-
-        if name == 'Atkinson_15_tuberack_5ml_eppendorf':
-            if well_geometry is None:
-                well_geometry = Eppendorf5point0mlTubeGeometry
-            custom_tube_rack = Opentrons15Rack(config, name=name, well_geometry=well_geometry)
-            if well_geometries is not None:
-                for well_name, geometry_class in well_geometries.items():
-                    well_dict = custom_tube_rack[well_name]
-                    well_dict['geometry'] = geometry_class(config=config, well=None)
-            result = custom_tube_rack.load(slot=slot, label=label, share=share)
-            result.properties['custom_tube_rack'] = custom_tube_rack
-            return result
-
-        if name == 'Atkinson_10_tuberack_6x5ml_eppendorf_4x50ml_falcon':
-            if well_geometry is None:
-                well_geometry = Eppendorf5point0mlTubeGeometry
-            if second_well_geometry is None:
-                second_well_geometry = FalconTube50mlGeometry
-            custom_tube_rack = Opentrons10Rack(config, name=name, well_geometry=well_geometry, second_well_geometry=second_well_geometry)
-            if well_geometries is not None:
-                for well_name, geometry_class in well_geometries.items():
-                    well_dict = custom_tube_rack[well_name]
-                    well_dict['geometry'] = geometry_class(well=None)
-            result = custom_tube_rack.load(slot=slot, label=label, share=share)
-            result.properties['custom_tube_rack'] = custom_tube_rack
+            set_well_geometries(result, well_geometry)
             return result
 
         if name == 'opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical':
@@ -369,13 +358,44 @@ class LabwareManager(object):
                 for well_name in ['A3', 'B3', 'A4', 'B4']:
                     well = result.wells(well_name)
                     config.set_well_geometry(well, second_well_geometry)
+            set_well_geometries(result, None)
             return result
+
+        if name == 'opentrons_6_tuberack_falcon_50ml_conical':
+            # https://labware.opentrons.com/opentrons_6_tuberack_falcon_50ml_conical?category=tubeRack
+            if well_geometry is None:
+                well_geometry = FalconTube50mlGeometry
+            result: Container = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
+            set_well_geometries(result, well_geometry)
+            return result
+
+        #---------------------------------------------------------------------------------------------------------------
+
+        if name == 'Atkinson_15_tuberack_5ml_eppendorf':
+            if well_geometry is None:
+                well_geometry = Eppendorf5point0mlTubeGeometry
+            custom_tube_rack = Opentrons15Rack(config, name=name, well_geometry=well_geometry)
+            set_well_geometries_custom(custom_tube_rack)
+            result = custom_tube_rack.load(slot=slot, label=label, share=share)
+            result.properties['custom_tube_rack'] = custom_tube_rack
+            return result
+
+        if name == 'Atkinson_10_tuberack_6x5ml_eppendorf_4x50ml_falcon':
+            if well_geometry is None:
+                well_geometry = Eppendorf5point0mlTubeGeometry
+            if second_well_geometry is None:
+                second_well_geometry = FalconTube50mlGeometry
+            custom_tube_rack = Opentrons10Rack(config, name=name, well_geometry=well_geometry, second_well_geometry=second_well_geometry)
+            set_well_geometries_custom(custom_tube_rack)
+            result = custom_tube_rack.load(slot=slot, label=label, share=share)
+            result.properties['custom_tube_rack'] = custom_tube_rack
+            return result
+
+        #---------------------------------------------------------------------------------------------------------------
 
         # If it's not something we know about, just pass it through. But set the geometry, if asked
         result = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
-        if well_geometry is not None:
-            for well in result.wells():
-                config.set_well_geometry(well, well_geometry)
+        set_well_geometries(result, well_geometry)
         return result
 
     def _load_tiprack(self, name, slot, label=None):
