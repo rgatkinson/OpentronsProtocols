@@ -465,7 +465,6 @@ class EnhancedPipette(Pipette):
 
         if top_clearance is None:
             top_clearance = self.config.dispense.top_clearance
-        top_clearance += getattr(well, self.config.aspirate.extra_top_clearance_name, 0)
         if bottom_clearance is None:
             bottom_clearance = self.config.dispense.bottom_clearance
         current_liquid_volume = self.liquid_volume(well).current_volume_min
@@ -507,7 +506,6 @@ class EnhancedPipette(Pipette):
 
         if top_clearance is None:
             top_clearance = self.config.dispense.top_clearance
-        top_clearance += getattr(well, self.config.dispense.extra_top_clearance_name, 0)
         if bottom_clearance is None:
             bottom_clearance = self.config.dispense.bottom_clearance
         if is_close(volume, self.current_volume):  # avoid finicky floating-point precision issues

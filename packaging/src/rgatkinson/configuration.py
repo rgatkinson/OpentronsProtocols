@@ -14,15 +14,14 @@ class PauseConfigurationContext(ConfigurationContext):
         self.ms_default = ms_default
 
 class ClearanceConfigurationContext(ConfigurationContext):
-    def __init__(self):
+    def __init__(self, top, bottom):
         super().__init__()
-        self.extra_top_clearance_name = 'extra_top_clearance'  # todo: is this worth it
+        self.top_clearance = top
+        self.bottom_clearance = bottom
 
 class AspirateConfigurationContext(ClearanceConfigurationContext):
     def __init__(self):
-        super().__init__()
-        self.bottom_clearance = 1.0  # see Pipette._position_for_aspirate
-        self.top_clearance = -3.5
+        super().__init__(-3.5, 1.0)
         self.pre_wet = ConfigurationContext()
         self.pre_wet.default = True
         self.pre_wet.count = 2  # save some time vs 3
@@ -32,17 +31,13 @@ class AspirateConfigurationContext(ClearanceConfigurationContext):
 
 class DispenseConfigurationContext(ClearanceConfigurationContext):
     def __init__(self):
-        super().__init__()
-        self.bottom_clearance = 0.5  # see Pipette._position_for_dispense
-        self.top_clearance = -2.0
+        super().__init__(-2.0, 0.5)
         self.full_dispense = ConfigurationContext()
         self.full_dispense.default = True
 
-class LayeredMixConfigurationContext(ConfigurationContext):
+class LayeredMixConfigurationContext(ClearanceConfigurationContext):
     def __init__(self):
-        super().__init__()
-        self.top_clearance = -1.5  # close, so we mix top layers too
-        self.bottom_clearance = 1.0
+        super().__init__(-1.5, 1.0)  # close, so we mix top layers too
         self.aspirate_rate_factor = 4.0
         self.dispense_rate_factor = 4.0
         self.incr = 1.0
