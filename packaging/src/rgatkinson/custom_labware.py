@@ -319,7 +319,6 @@ class Opentrons15Rack(CustomTubeRack):
             ])
 
 
-
 class LabwareManager(object):
     def __init__(self):
         pass
