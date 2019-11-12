@@ -145,42 +145,60 @@ class EnhancedPipette(Pipette):
     class AspirateParamsHack(object):
         def __init__(self, config: AspirateConfigurationContext) -> None:
             self.config = config
-            self.pre_wet_during_transfer_kw = '_do_pre_wet_during_transfer'
-            self.ms_pause_during_transfer_kw = '_do_pause_during_transfer'
-            self.pre_wet_during_transfer = None
-            self.ms_pause_during_transfer = None
+            self.pre_wet_during_transfer_kw = '_pre_wet_transfer'
+            self.ms_pause_during_transfer_kw = '_ms_pause_transfer'
+            self.top_clearance_transfer_kw = '_top_clearance_transfer'
+            self.bottom_clearance_transfer_kw = '_bottom_clearance_transfer'
+            self.pre_wet_transfer = None
+            self.ms_pause_transfer = None
+            self.top_clearance_transfer = None
+            self.bottom_clearance_transfer = None
 
         def clear_transfer(self):
-            self.pre_wet_during_transfer = None
-            self.ms_pause_during_transfer = None
+            self.pre_wet_transfer = None
+            self.ms_pause_transfer = None
+            self.top_clearance_transfer = None
+            self.bottom_clearance_transfer = None
 
         def sequester_transfer(self, kwargs):
             kwargs[self.pre_wet_during_transfer_kw] = not not kwargs.get('pre_wet', self.config.pre_wet.default)
             kwargs[self.ms_pause_during_transfer_kw] = kwargs.get('ms_pause', self.config.pause.ms_default)
+            kwargs[self.top_clearance_transfer_kw] = kwargs.get('aspirate_top_clearance', None)
+            kwargs[self.bottom_clearance_transfer_kw] = kwargs.get('aspirate_bottom_clearance', None)
 
         def unsequester_transfer(self, kwargs):
-            assert kwargs.get(self.pre_wet_during_transfer_kw, None) is not None
-            assert kwargs.get(self.ms_pause_during_transfer_kw, None) is not None
-            self.pre_wet_during_transfer = kwargs.get(self.pre_wet_during_transfer_kw)
-            self.ms_pause_during_transfer = kwargs.get(self.ms_pause_during_transfer_kw)
+            self.pre_wet_transfer = kwargs.get(self.pre_wet_during_transfer_kw)
+            self.ms_pause_transfer = kwargs.get(self.ms_pause_during_transfer_kw)
+            self.top_clearance_transfer = kwargs.get(self.top_clearance_transfer_kw)
+            self.bottom_clearance_transfer = kwargs.get(self.bottom_clearance_transfer_kw)
 
     class DispenseParamsHack(object):
         def __init__(self, config: DispenseConfigurationContext) -> None:
             self.config = config
             self.full_dispense_from_dispense = False
-            self.full_dispense_during_transfer_kw = '_do_full_dispense_during_transfer'
-            self.full_dispense_during_transfer = False
+            self.full_dispense_transfer_kw = '_full_dispense_transfer'
+            self.full_dispense_transfer = False
             self.fully_dispensed = False
+            self.top_clearance_transfer_kw = '_top_clearance_transfer'
+            self.bottom_clearance_transfer_kw = '_bottom_clearance_transfer'
+            self.top_clearance_transfer = None
+            self.bottom_clearance_transfer = None
 
         def clear_transfer(self):
-            self.full_dispense_during_transfer = False
+            self.full_dispense_transfer = False
+            self.top_clearance_transfer = None
+            self.bottom_clearance_transfer = None
 
         def sequester_transfer(self, kwargs, can_full_dispense):
-            kwargs[self.full_dispense_during_transfer_kw] = not not (kwargs.get('full_dispense', self.config.full_dispense.default) and can_full_dispense)
+            kwargs[self.full_dispense_transfer_kw] = not not (kwargs.get('full_dispense', self.config.full_dispense.default) and can_full_dispense)
+            kwargs[self.top_clearance_transfer_kw] = kwargs.get('dispense_top_clearance', None)
+            kwargs[self.bottom_clearance_transfer_kw] = kwargs.get('dispense_bottom_clearance', None)
 
         def unsequester_transfer(self, kwargs):
-            assert kwargs.get(self.full_dispense_during_transfer_kw, None) is not None
-            self.full_dispense_during_transfer = kwargs.get(self.full_dispense_during_transfer_kw)
+            assert kwargs.get(self.full_dispense_transfer_kw, None) is not None
+            self.full_dispense_transfer = kwargs.get(self.full_dispense_transfer_kw)
+            self.top_clearance_transfer = kwargs.get(self.top_clearance_transfer_kw)
+            self.bottom_clearance_transfer = kwargs.get(self.bottom_clearance_transfer_kw)
 
     #-------------------------------------------------------------------------------------------------------------------
     # Construction
@@ -438,7 +456,7 @@ class EnhancedPipette(Pipette):
 
     def _pre_wet(self, well, volume, location: Placeable, rate, pre_wet: bool):
         if pre_wet is None:
-            pre_wet = self.aspirate_params_hack.pre_wet_during_transfer
+            pre_wet = self.aspirate_params_hack.pre_wet_transfer
         if pre_wet is None:
             pre_wet = self.config.aspirate.pre_wet.default
         if pre_wet and self.config.enable_enhancements:
@@ -464,9 +482,14 @@ class EnhancedPipette(Pipette):
         well, _ = unpack_location(location)
 
         if top_clearance is None:
-            top_clearance = self.config.dispense.top_clearance
+            top_clearance = self.aspirate_params_hack.top_clearance_transfer
+            if top_clearance is None:
+                top_clearance = self.config.dispense.top_clearance
         if bottom_clearance is None:
-            bottom_clearance = self.config.dispense.bottom_clearance
+            bottom_clearance = self.aspirate_params_hack.bottom_clearance_transfer
+            if bottom_clearance is None:
+                bottom_clearance = self.config.dispense.bottom_clearance
+
         current_liquid_volume = self.liquid_volume(well).current_volume_min
         needed_liquid_volume = self.well_geometry(well).min_aspiratable_volume + volume;
         if current_liquid_volume < needed_liquid_volume:
@@ -479,7 +502,7 @@ class EnhancedPipette(Pipette):
 
         # if we're asked to, pause after aspiration to let liquid rise
         if ms_pause is None:
-            ms_pause = self.aspirate_params_hack.ms_pause_during_transfer
+            ms_pause = self.aspirate_params_hack.ms_pause_transfer
         if ms_pause is None:
             ms_pause = self.config.aspirate.pause.ms_default
         if self.config.enable_enhancements and ms_pause > 0 and not self.is_mix_in_progress():
@@ -505,9 +528,14 @@ class EnhancedPipette(Pipette):
         well, _ = unpack_location(location)
 
         if top_clearance is None:
-            top_clearance = self.config.dispense.top_clearance
+            top_clearance = self.dispense_params_hack.top_clearance_transfer
+            if top_clearance is None:
+                top_clearance = self.config.dispense.top_clearance
         if bottom_clearance is None:
-            bottom_clearance = self.config.dispense.bottom_clearance
+            bottom_clearance = self.dispense_params_hack.bottom_clearance_transfer
+            if bottom_clearance is None:
+                bottom_clearance = self.config.dispense.bottom_clearance
+
         if is_close(volume, self.current_volume):  # avoid finicky floating-point precision issues
             volume = self.current_volume
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None, top_clearance=top_clearance, bottom_clearance=bottom_clearance)
@@ -532,7 +560,7 @@ class EnhancedPipette(Pipette):
 
     def _dispense_plunger_position(self, ul):
         mm_from_vol = super()._dispense_plunger_position(ul)  # retrieve position historically used
-        if self.config.enable_enhancements and (self.dispense_params_hack.full_dispense_from_dispense or self.dispense_params_hack.full_dispense_during_transfer):
+        if self.config.enable_enhancements and (self.dispense_params_hack.full_dispense_from_dispense or self.dispense_params_hack.full_dispense_transfer):
             mm_from_blow = self._get_plunger_position('blow_out')
             info(pretty.format('full dispensing to mm={0:n} instead of mm={1:n}', mm_from_blow, mm_from_vol))
             self.dispense_params_hack.fully_dispensed = True
