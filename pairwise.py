@@ -298,7 +298,9 @@ def plateMasterMix():
     p50.transfer(master_mix_per_well, master_mix, usedWells(),
                  new_tip='once',
                  trash=config.trash_control,
-                 full_dispense=True)
+                 full_dispense=True,
+                 aspirate_top_clearance=-5.0  # large to help avoid soap bubbles. remove when we no longer use detergent in buffer
+                 )
 
 def platePerWellWater():
     log('Plating per-well water')
