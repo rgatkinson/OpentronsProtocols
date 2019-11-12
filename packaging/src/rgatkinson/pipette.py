@@ -6,6 +6,7 @@ import enum
 import math
 import random
 from enum import Enum
+from numbers import Real
 from typing import List
 
 import opentrons
@@ -142,18 +143,44 @@ class TipWetness(Enum):
 class EnhancedPipette(Pipette):
 
     class AspirateParamsHack(object):
-        def __init__(self) -> None:
+        def __init__(self, config) -> None:
+            self.config = config
             self.pre_wet_during_transfer_kw = '_do_pre_wet_during_transfer'
-            self.pre_wet_during_transfer = None
             self.ms_pause_during_transfer_kw = '_do_pause_during_transfer'
+            self.pre_wet_during_transfer = None
             self.ms_pause_during_transfer = None
 
+        def clear_transfer(self):
+            self.pre_wet_during_transfer = None
+            self.ms_pause_during_transfer = None
+
+        def sequester_transfer(self, kwargs):
+            kwargs[self.pre_wet_during_transfer_kw] = not not kwargs.get('pre_wet', self.config.aspirate.pre_wet.default)
+            kwargs[self.ms_pause_during_transfer_kw] = kwargs.get('ms_pause', self.config.aspirate.pause.ms_default)
+
+        def unsequester_transfer(self, kwargs):
+            assert kwargs.get(self.pre_wet_during_transfer_kw, None) is not None
+            assert kwargs.get(self.ms_pause_during_transfer_kw, None) is not None
+            self.pre_wet_during_transfer = kwargs.get(self.pre_wet_during_transfer_kw)
+            self.ms_pause_during_transfer = kwargs.get(self.ms_pause_during_transfer_kw)
+
     class DispenseParamsHack(object):
-        def __init__(self) -> None:
+        def __init__(self, config) -> None:
+            self.config = config
             self.full_dispense_from_dispense = False
             self.full_dispense_during_transfer_kw = '_do_full_dispense_during_transfer'
             self.full_dispense_during_transfer = False
             self.fully_dispensed = False
+
+        def clear_transfer(self):
+            self.full_dispense_during_transfer = False
+
+        def sequester_transfer(self, kwargs, can_full_dispense):
+            kwargs[self.full_dispense_during_transfer_kw] = not not (kwargs.get('full_dispense', self.config.dispense.full_dispense.default) and can_full_dispense)
+
+        def unsequester_transfer(self, kwargs):
+            assert kwargs.get(self.full_dispense_during_transfer_kw, None) is not None
+            self.full_dispense_during_transfer = kwargs.get(self.full_dispense_during_transfer_kw)
 
     #-------------------------------------------------------------------------------------------------------------------
     # Construction
@@ -167,8 +194,8 @@ class EnhancedPipette(Pipette):
     def __init__(self, config: TopConfigurationContext, parentInst):
         self.config = config
         self.prev_aspirated_location = None
-        self.aspirate_params_hack = EnhancedPipette.AspirateParamsHack()
-        self.dispense_params_hack = EnhancedPipette.DispenseParamsHack()
+        self.aspirate_params_hack = EnhancedPipette.AspirateParamsHack(self.config)
+        self.dispense_params_hack = EnhancedPipette.DispenseParamsHack(self.config)
         self.tip_wetness = TipWetness.NONE
         self.mixes_in_progress = list()
         self.radial_clearance_manager = RadialClearanceManager(self.config)
@@ -341,8 +368,7 @@ class EnhancedPipette(Pipette):
                                        self.has_disposal_vol(plan, i, step_info_map, **kwargs),
                                        aspirate['volume']))
                     self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
-                kwargs[self.aspirate_params_hack.pre_wet_during_transfer_kw] = not not kwargs.get('pre_wet', self.config.aspirate.pre_wet.default)
-                kwargs[self.aspirate_params_hack.ms_pause_during_transfer_kw] = kwargs.get('pause', self.config.aspirate.pause.ms_default)
+                self.aspirate_params_hack.sequester_transfer(kwargs)
                 self._aspirate_during_transfer(aspirate['volume'], aspirate['location'], **kwargs)
 
             if dispense:
@@ -350,7 +376,7 @@ class EnhancedPipette(Pipette):
                     warn(pretty.format('current {0:n} uL will truncate dispense of {1:n} uL', self.current_volume, dispense['volume']))
 
                 can_full_dispense = self.current_volume - dispense['volume'] <= 0
-                kwargs[self.dispense_params_hack.full_dispense_during_transfer_kw] = not not (kwargs.get('full_dispense', self.config.dispense.full_dispense.default) and can_full_dispense)
+                self.dispense_params_hack.sequester_transfer(kwargs, can_full_dispense)
                 self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
 
                 do_touch = touch_tip or touch_tip is 0
@@ -410,7 +436,7 @@ class EnhancedPipette(Pipette):
     # Aspirate and dispense
     #-------------------------------------------------------------------------------------------------------------------
 
-    def _pre_wet(self, well, volume, location, rate, pre_wet):
+    def _pre_wet(self, well, volume, location: Placeable, rate, pre_wet: bool):
         if pre_wet is None:
             pre_wet = self.aspirate_params_hack.pre_wet_during_transfer
         if pre_wet is None:
@@ -429,7 +455,7 @@ class EnhancedPipette(Pipette):
                 info_while(pretty.format('prewetting tip in well {0} vol={1:n}', well.get_name(), pre_wet_volume), do_pre_wet)
                 self.tip_wetness = TipWetness.WET
 
-    def aspirate(self, volume=None, location=None, rate=1.0, pre_wet=None, ms_pause=None):
+    def aspirate(self, volume=None, location=None, rate: Real = 1.0, pre_wet: bool = None, ms_pause: Real = None):
         if not helpers.is_number(volume):  # recapitulate super
             if volume and not location:
                 location = volume
@@ -464,13 +490,9 @@ class EnhancedPipette(Pipette):
             self.prev_aspirated_location = well
 
     def _aspirate_during_transfer(self, vol, loc, **kwargs):
-        assert kwargs.get(self.aspirate_params_hack.pre_wet_during_transfer_kw) is not None
-        assert kwargs.get(self.aspirate_params_hack.ms_pause_during_transfer_kw) is not None
-        self.aspirate_params_hack.pre_wet_during_transfer = kwargs.get(self.aspirate_params_hack.pre_wet_during_transfer_kw)
-        self.aspirate_params_hack.ms_pause_during_transfer = kwargs.get(self.aspirate_params_hack.ms_pause_during_transfer_kw)
+        self.aspirate_params_hack.unsequester_transfer(kwargs)
         super()._aspirate_during_transfer(vol, loc, **kwargs)  # might 'mix_before' todo: is that ok? seems like it is...
-        self.aspirate_params_hack.pre_wet_during_transfer = None
-        self.aspirate_params_hack.ms_pause_during_transfer = None
+        self.aspirate_params_hack.clear_transfer()
 
     def dispense(self, volume=None, location=None, rate=1.0, full_dispense: bool = False):
         if not helpers.is_number(volume):  # recapitulate super
@@ -499,10 +521,9 @@ class EnhancedPipette(Pipette):
         self.liquid_volume(well).dispense(volume)
 
     def _dispense_during_transfer(self, vol, loc, **kwargs):
-        assert kwargs.get(self.dispense_params_hack.full_dispense_during_transfer_kw) is not None
-        self.dispense_params_hack.full_dispense_during_transfer = kwargs.get(self.dispense_params_hack.full_dispense_during_transfer_kw)
+        self.dispense_params_hack.unsequester_transfer(kwargs)
         super()._dispense_during_transfer(vol, loc, **kwargs)  # might 'mix_after' todo: is that ok? probably: we'd just do full_dispense on all of those too?
-        self.dispense_params_hack.full_dispense_during_transfer = False
+        self.dispense_params_hack.clear_transfer()
 
     def _dispense_plunger_position(self, ul):
         mm_from_vol = super()._dispense_plunger_position(ul)  # retrieve position historically used
