@@ -14,8 +14,9 @@ from rgatkinson.interval import fpu
 from rgatkinson.util import is_indexable
 from rgatkinson.well import WellGeometry, Eppendorf5point0mlTubeGeometry, Biorad96WellPlateWellGeometry, Eppendorf1point5mlTubeGeometry, FalconTube15mlGeometry, FalconTube50mlGeometry
 
+#-----------------------------------------------------------------------------------------------------------------------
 
-class Point(object):
+class XY(object):
     def __init__(self, x=0, y=0):
         if is_indexable(x):
             y = x[1]
@@ -23,23 +24,26 @@ class Point(object):
         self.x = x
         self.y = y
 
+    def _make(self, newX, newY):
+        return self.__class__(newX, newY)
+
     def __add__(self, p):
-        return Point(self.x + p.x, self.y + p.y)
+        return self._make(self.x + p.x, self.y + p.y)
 
     def __radd__(self, other):
         return self + other
 
     def __sub__(self, p):
-        return Point(self.x - p.x, self.y - p.y)
+        return self._make(self.x - p.x, self.y - p.y)
 
     def __mul__(self, scalar):
-        return Point(self.x * scalar, self.y * scalar)
+        return self._make(self.x * scalar, self.y * scalar)
 
     def __rmul__(self, other):
         return self * other
 
     def __truediv__(self, scalar):
-        return Point(self.x / scalar, self.y / scalar)
+        return self._make(self.x / scalar, self.y / scalar)
 
     def __getitem__(self, index):
         if index == 0:
@@ -48,14 +52,18 @@ class Point(object):
             return self.y
         raise IndexError
 
+class PointZ(XY):
+    def __init__(self, x: int = 0, y: int = 0):
+        super().__init__(x, y)
 
-class PointF(Point):
+class PointF(XY):
     def __init__(self, x: float = 0.0, y: float = 0.0):
-        super().__init__(x,y)
+        super().__init__(x, y)
 
+#-----------------------------------------------------------------------------------------------------------------------
 
 class WellGrid(object):
-    def __init__(self, config, grid_size: Point, incr: PointF, offset=PointF(), origin_name='A1', origin=None, well_geometry=None):
+    def __init__(self, config, grid_size: PointZ, incr: PointF, offset=PointF(), origin_name='A1', origin=None, well_geometry=None):
         self.config = config
         self.grid_size = grid_size
         self.origin = self.well_name_to_indices(origin_name) if origin is None else origin
@@ -77,7 +85,7 @@ class WellGrid(object):
 
     @staticmethod
     def well_name_to_indices(name):  # zero-based
-        return Point(ord(name[1]) - ord('1'), ord(name[0]) - ord('A'))
+        return PointZ(ord(name[1]) - ord('1'), ord(name[0]) - ord('A'))
 
     def contains_indices(self, index_pair):
         return self.origin.x <= index_pair[0] < self.max.x and self.origin.y <= index_pair[1] < self.max.y
@@ -134,6 +142,7 @@ class WellGrid(object):
                 result[row][col] = d
         return result
 
+#-----------------------------------------------------------------------------------------------------------------------
 
 class CustomTubeRack(object):
     def __init__(self, config, name,
@@ -172,7 +181,7 @@ class CustomTubeRack(object):
         if is_indexable(item_name):
             for well_grid in self.well_grids:
                 if well_grid.contains_indices(item_name):
-                    return well_grid.__getitem__(Point(item_name) - well_grid.origin)
+                    return well_grid.__getitem__(PointZ(item_name) - well_grid.origin)
         raise IndexError
 
     @property
@@ -245,7 +254,8 @@ class CustomTubeRack(object):
             def_map = self._definition_map
             if label is None:
                 label = self.name
-            self.load_result = robot.add_container_by_definition(def_map, slot, label=label, share=share)
+            self.load_result = robot.add_container_by_definition(def_map, slot=slot, label=label, share=share)
+            # plumb up any pre-created geometries to the wells they now represent
             for well_name in self.well_names:
                 well = self.load_result.wells(well_name)
                 geometry = self[well_name].get('geometry', None)
@@ -254,6 +264,8 @@ class CustomTubeRack(object):
                     assert getattr(well, 'geometry', None) is None or well.geometry is geometry
                     geometry.well = well
         return self.load_result
+
+#-----------------------------------------------------------------------------------------------------------------------
 
 class Opentrons6Rack(CustomTubeRack):
     """
@@ -268,7 +280,7 @@ class Opentrons6Rack(CustomTubeRack):
             name=name,
             brand=brand,
             well_grids=[WellGrid(config,  # 50ml Falcon Tubes
-                                 grid_size=Point(3, 2),
+                                 grid_size=PointZ(3, 2),
                                  incr=PointF(35.0, 35.0),
                                  offset=PointF(36.38, 25.24),
                                  well_geometry=well_geometry)
@@ -289,13 +301,13 @@ class Opentrons10Rack(CustomTubeRack):
             brand=brand,
             well_grids=[
                 WellGrid(config,  # uses include: 15ml Falcon tubes, 5ml Eppendorf tubes
-                         grid_size=Point(2, 3),
+                         grid_size=PointZ(2, 3),
                          incr=PointF(25.0, 25.0),
                          offset=PointF(13.88, 17.74),
                          well_geometry=well_geometry),
 
                 WellGrid(config,  # uses include: 50ml Falcon tubes
-                         grid_size=Point(2, 2),
+                         grid_size=PointZ(2, 2),
                          incr=PointF(35.0, 25.0),
                          offset=PointF(71.38, 25.25),
                          well_geometry=second_well_geometry)
@@ -312,12 +324,13 @@ class Opentrons15Rack(CustomTubeRack):
             name=name,
             brand=brand,
             well_grids=[WellGrid(config,  # 15ml Falcon tubes, 5ml Eppendorf tubes
-                                 grid_size=Point(5, 3),
+                                 grid_size=PointZ(5, 3),
                                  incr=PointF(25.0, 25.0),
                                  offset=PointF(13.88, 17.74),
                                  well_geometry=well_geometry)
             ])
 
+#-----------------------------------------------------------------------------------------------------------------------
 
 class LabwareManager(object):
     def __init__(self):
@@ -327,14 +340,14 @@ class LabwareManager(object):
         if config is None:
             config = rgatkinson.configuration.config
 
-        def set_well_geometries_custom(custom_tube_rack: CustomTubeRack):
+        def set_custom_well_geometries(custom_tube_rack: CustomTubeRack):
             if well_geometries is not None:
                 for well_name, geometry_class in well_geometries.items():
                     well_dict = custom_tube_rack[well_name]
                     well_dict['geometry'] = geometry_class(config=config, well=None)
 
-        def set_well_geometries(container: Container, well_geometry):
-            if well_geometry is not None:
+        def set_well_geometries(container: Container, use_well_geometry=True):
+            if use_well_geometry and well_geometry is not None:
                 for well in container.wells():
                     config.set_well_geometry(well, well_geometry)
             if well_geometries is not None:
@@ -352,14 +365,14 @@ class LabwareManager(object):
             if well_geometry is None:
                 well_geometry = Biorad96WellPlateWellGeometry
             result = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
-            set_well_geometries(result, well_geometry)
+            set_well_geometries(result)
             return result
 
         if name == 'opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap':
             if well_geometry is None:
                 well_geometry = Eppendorf1point5mlTubeGeometry
             result = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
-            set_well_geometries(result, well_geometry)
+            set_well_geometries(result)
             return result
 
         if name == 'opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical':
@@ -376,7 +389,7 @@ class LabwareManager(object):
                 for well_name in ['A3', 'B3', 'A4', 'B4']:
                     well = result.wells(well_name)
                     config.set_well_geometry(well, second_well_geometry)
-            set_well_geometries(result, None)
+            set_well_geometries(result, False)
             return result
 
         if name == 'opentrons_6_tuberack_falcon_50ml_conical':
@@ -384,7 +397,7 @@ class LabwareManager(object):
             if well_geometry is None:
                 well_geometry = FalconTube50mlGeometry
             result: Container = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
-            set_well_geometries(result, well_geometry)
+            set_well_geometries(result)
             return result
 
         #---------------------------------------------------------------------------------------------------------------
@@ -393,7 +406,7 @@ class LabwareManager(object):
             if well_geometry is None:
                 well_geometry = FalconTube50mlGeometry
             custom_tube_rack = Opentrons6Rack(config, name=name, well_geometry=well_geometry)
-            set_well_geometries_custom(custom_tube_rack)
+            set_custom_well_geometries(custom_tube_rack)
             result = custom_tube_rack.load(slot=slot, label=label, share=share)
             result.properties['custom_tube_rack'] = custom_tube_rack
             return result
@@ -404,7 +417,7 @@ class LabwareManager(object):
             if second_well_geometry is None:
                 second_well_geometry = FalconTube50mlGeometry
             custom_tube_rack = Opentrons10Rack(config, name=name, well_geometry=well_geometry, second_well_geometry=second_well_geometry)
-            set_well_geometries_custom(custom_tube_rack)
+            set_custom_well_geometries(custom_tube_rack)
             result = custom_tube_rack.load(slot=slot, label=label, share=share)
             result.properties['custom_tube_rack'] = custom_tube_rack
             return result
@@ -413,7 +426,7 @@ class LabwareManager(object):
             if well_geometry is None:
                 well_geometry = Eppendorf5point0mlTubeGeometry
             custom_tube_rack = Opentrons15Rack(config, name=name, well_geometry=well_geometry)
-            set_well_geometries_custom(custom_tube_rack)
+            set_custom_well_geometries(custom_tube_rack)
             result = custom_tube_rack.load(slot=slot, label=label, share=share)
             result.properties['custom_tube_rack'] = custom_tube_rack
             return result
@@ -422,7 +435,7 @@ class LabwareManager(object):
 
         # If it's not something we know about, just pass it through. But set the geometry, if asked
         result = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
-        set_well_geometries(result, well_geometry)
+        set_well_geometries(result)
         return result
 
     def _load_tiprack(self, name, slot, label=None):
