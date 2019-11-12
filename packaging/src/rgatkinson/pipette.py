@@ -455,7 +455,7 @@ class EnhancedPipette(Pipette):
                 info_while(pretty.format('prewetting tip in well {0} vol={1:n}', well.get_name(), pre_wet_volume), do_pre_wet)
                 self.tip_wetness = TipWetness.WET
 
-    def aspirate(self, volume=None, location=None, rate: Real = 1.0, pre_wet: bool = None, ms_pause: Real = None):
+    def aspirate(self, volume=None, location=None, rate: Real = 1.0, pre_wet: bool = None, ms_pause: Real = None, top_clearance=None, bottom_clearance=None):
         if not helpers.is_number(volume):  # recapitulate super
             if volume and not location:
                 location = volume
@@ -463,6 +463,11 @@ class EnhancedPipette(Pipette):
         location = location if location else self.previous_placeable
         well, _ = unpack_location(location)
 
+        if top_clearance is None:
+            top_clearance = self.config.dispense.top_clearance
+        top_clearance += getattr(well, self.config.aspirate.extra_top_clearance_name, 0)
+        if bottom_clearance is None:
+            bottom_clearance = self.config.dispense.bottom_clearance
         current_liquid_volume = self.liquid_volume(well).current_volume_min
         needed_liquid_volume = self.well_geometry(well).min_aspiratable_volume + volume;
         if current_liquid_volume < needed_liquid_volume:
@@ -470,9 +475,7 @@ class EnhancedPipette(Pipette):
             warn(msg)
 
         self._pre_wet(well, volume, location, rate, pre_wet)
-        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume,
-                                                       clearances=self.config.aspirate,
-                                                       extra_clearance=getattr(well, self.config.aspirate.extra_top_clearance_name, 0))
+        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume, top_clearance=top_clearance, bottom_clearance=bottom_clearance)
         super().aspirate(volume=volume, location=location, rate=rate)
 
         # if we're asked to, pause after aspiration to let liquid rise
@@ -494,18 +497,22 @@ class EnhancedPipette(Pipette):
         super()._aspirate_during_transfer(vol, loc, **kwargs)  # might 'mix_before' todo: is that ok? seems like it is...
         self.aspirate_params_hack.clear_transfer()
 
-    def dispense(self, volume=None, location=None, rate=1.0, full_dispense: bool = False):
+    def dispense(self, volume=None, location=None, rate=1.0, full_dispense: bool = False, top_clearance=None, bottom_clearance=None):
         if not helpers.is_number(volume):  # recapitulate super
             if volume and not location:
                 location = volume
             volume = self._working_volume - self.current_volume
         location = location if location else self.previous_placeable
         well, _ = unpack_location(location)
+
+        if top_clearance is None:
+            top_clearance = self.config.dispense.top_clearance
+        top_clearance += getattr(well, self.config.dispense.extra_top_clearance_name, 0)
+        if bottom_clearance is None:
+            bottom_clearance = self.config.dispense.bottom_clearance
         if is_close(volume, self.current_volume):  # avoid finicky floating-point precision issues
             volume = self.current_volume
-        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None,
-                                                       clearances=self.config.dispense,
-                                                       extra_clearance=getattr(well, self.config.dispense.extra_top_clearance_name, 0))
+        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None, top_clearance=top_clearance, bottom_clearance=bottom_clearance)
         self.dispense_params_hack.full_dispense_from_dispense = full_dispense
         super().dispense(volume=volume, location=location, rate=rate)
         self.dispense_params_hack.full_dispense_from_dispense = False
@@ -536,14 +543,14 @@ class EnhancedPipette(Pipette):
             self.dispense_params_hack.fully_dispensed = False
             return mm_from_vol
 
-    def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, clearances=None, extra_clearance=0, allow_above=False):
+    def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, top_clearance=None, bottom_clearance=None, allow_above=False):
         if isinstance(location, Placeable):
             well = location; assert is_well(well)
             current_liquid_volume = self.liquid_volume(well).current_volume_min
             liquid_depth = self.well_geometry(well).depth_from_volume_min(current_liquid_volume if aspirate_volume is None else current_liquid_volume - aspirate_volume)
-            z = self._top_clearance(liquid_depth=liquid_depth, clearance=(0 if clearances is None else clearances.top_clearance) + extra_clearance)
-            if clearances is not None:
-                z = max(z, clearances.bottom_clearance)
+            z = self._top_clearance(liquid_depth=liquid_depth, clearance=(0 if top_clearance is None else top_clearance))
+            if bottom_clearance is not None:
+                z = max(z, bottom_clearance)
             if not allow_above:
                 z = min(z, well.z_size())
             result = well.bottom(z)

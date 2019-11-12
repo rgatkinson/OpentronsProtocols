@@ -17,7 +17,6 @@ class ClearanceConfigurationContext(ConfigurationContext):
     pass
 
 class AspirateConfigurationContext(ClearanceConfigurationContext):
-
     def __init__(self):
         self.bottom_clearance = 1.0  # see Pipette._position_for_aspirate
         self.top_clearance = -3.5
@@ -33,7 +32,7 @@ class DispenseConfigurationContext(ClearanceConfigurationContext):
     def __init__(self):
         self.bottom_clearance = 0.5  # see Pipette._position_for_dispense
         self.top_clearance = -2.0
-        self.extra_top_clearance_name = 'extra_dispense_top_clearance'
+        self.extra_top_clearance_name = 'extra_dispense_top_clearance'  # todo: is this worth it?
         self.full_dispense = ConfigurationContext()
         self.full_dispense.default = True
 
