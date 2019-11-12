@@ -21,7 +21,7 @@ from opentrons.trackers import pose_tracker
 from opentrons.util.vector import Vector
 
 import rgatkinson
-from rgatkinson.configuration import TopConfigurationContext
+from rgatkinson.configuration import TopConfigurationContext, AspirateConfigurationContext, DispenseConfigurationContext
 from rgatkinson.interval import is_close, fpu
 from rgatkinson.logging import pretty, warn, log_while, info, info_while
 from rgatkinson.util import zeroify, sqrt
@@ -143,7 +143,7 @@ class TipWetness(Enum):
 class EnhancedPipette(Pipette):
 
     class AspirateParamsHack(object):
-        def __init__(self, config) -> None:
+        def __init__(self, config: AspirateConfigurationContext) -> None:
             self.config = config
             self.pre_wet_during_transfer_kw = '_do_pre_wet_during_transfer'
             self.ms_pause_during_transfer_kw = '_do_pause_during_transfer'
@@ -155,8 +155,8 @@ class EnhancedPipette(Pipette):
             self.ms_pause_during_transfer = None
 
         def sequester_transfer(self, kwargs):
-            kwargs[self.pre_wet_during_transfer_kw] = not not kwargs.get('pre_wet', self.config.aspirate.pre_wet.default)
-            kwargs[self.ms_pause_during_transfer_kw] = kwargs.get('ms_pause', self.config.aspirate.pause.ms_default)
+            kwargs[self.pre_wet_during_transfer_kw] = not not kwargs.get('pre_wet', self.config.pre_wet.default)
+            kwargs[self.ms_pause_during_transfer_kw] = kwargs.get('ms_pause', self.config.pause.ms_default)
 
         def unsequester_transfer(self, kwargs):
             assert kwargs.get(self.pre_wet_during_transfer_kw, None) is not None
@@ -165,7 +165,7 @@ class EnhancedPipette(Pipette):
             self.ms_pause_during_transfer = kwargs.get(self.ms_pause_during_transfer_kw)
 
     class DispenseParamsHack(object):
-        def __init__(self, config) -> None:
+        def __init__(self, config: DispenseConfigurationContext) -> None:
             self.config = config
             self.full_dispense_from_dispense = False
             self.full_dispense_during_transfer_kw = '_do_full_dispense_during_transfer'
@@ -176,7 +176,7 @@ class EnhancedPipette(Pipette):
             self.full_dispense_during_transfer = False
 
         def sequester_transfer(self, kwargs, can_full_dispense):
-            kwargs[self.full_dispense_during_transfer_kw] = not not (kwargs.get('full_dispense', self.config.dispense.full_dispense.default) and can_full_dispense)
+            kwargs[self.full_dispense_during_transfer_kw] = not not (kwargs.get('full_dispense', self.config.full_dispense.default) and can_full_dispense)
 
         def unsequester_transfer(self, kwargs):
             assert kwargs.get(self.full_dispense_during_transfer_kw, None) is not None
@@ -192,10 +192,10 @@ class EnhancedPipette(Pipette):
 
     # noinspection PyMissingConstructor
     def __init__(self, config: TopConfigurationContext, parentInst):
-        self.config = config
+        self.config: TopConfigurationContext = config
         self.prev_aspirated_location = None
-        self.aspirate_params_hack = EnhancedPipette.AspirateParamsHack(self.config)
-        self.dispense_params_hack = EnhancedPipette.DispenseParamsHack(self.config)
+        self.aspirate_params_hack = EnhancedPipette.AspirateParamsHack(self.config.aspirate)
+        self.dispense_params_hack = EnhancedPipette.DispenseParamsHack(self.config.dispense)
         self.tip_wetness = TipWetness.NONE
         self.mixes_in_progress = list()
         self.radial_clearance_manager = RadialClearanceManager(self.config)
@@ -719,7 +719,9 @@ class EnhancedPipette(Pipette):
                     dispense_rate=None,
                     initial_turnover=None,
                     max_tip_cycles=None,
-                    pre_wet=None
+                    pre_wet=None,
+                    top_clearance=None,
+                    bottom_clearance=None
                     ):
 
         def do_layered_mix():
@@ -739,7 +741,9 @@ class EnhancedPipette(Pipette):
                                       dispense_rate=dispense_rate,
                                       initial_turnover=initial_turnover,
                                       max_tip_cycles=max_tip_cycles,
-                                      pre_wet=pre_wet
+                                      pre_wet=pre_wet,
+                                      top_clearance=top_clearance,
+                                      bottom_clearance=bottom_clearance
                                       )
             if not local_keep_last_tip:
                 self.done_tip()
@@ -757,10 +761,10 @@ class EnhancedPipette(Pipette):
     def _layered_mix_one(self, well, msg, **kwargs):
         def fetch(name, default=None):
             if default is None:
-                default = getattr(self.config.layered_mix, name)
+                default = getattr(self.config.layered_mix, name, None)
             result = kwargs.get(name, default)
             if result is None:
-                result = default
+                result = default  # replace any explicitly stored 'None' with default
             return result
 
         count = fetch('count')
@@ -775,6 +779,8 @@ class EnhancedPipette(Pipette):
         initial_turnover = fetch('initial_turnover')
         max_tip_cycles = fetch('max_tip_cycles', fpu.infinity)
         pre_wet = fetch('pre_wet', False)  # not much point in pre-wetting during mixing; save some time, simpler. but we do so if asked
+        top_clearance = fetch('top_clearance')
+        bottom_clearance = fetch('bottom_clearance')
 
         current_liquid_volume = self.liquid_volume(well).current_volume_min
         liquid_depth = self.well_geometry(well).depth_from_volume(current_liquid_volume)
@@ -783,8 +789,8 @@ class EnhancedPipette(Pipette):
 
         def do_one():
             count_ = count
-            y_min = y = self.config.layered_mix.aspirate_bottom_clearance
-            y_max = self._top_clearance(liquid_depth=liquid_depth_after_asp, clearance=self.config.layered_mix.top_clearance)
+            y_min = y = bottom_clearance
+            y_max = self._top_clearance(liquid_depth=liquid_depth_after_asp, clearance=top_clearance)
             if count_ is not None:
                 if count_ <= 1:
                     y_max = y_min

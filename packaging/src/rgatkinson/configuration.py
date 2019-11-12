@@ -14,13 +14,15 @@ class PauseConfigurationContext(ConfigurationContext):
         self.ms_default = ms_default
 
 class ClearanceConfigurationContext(ConfigurationContext):
-    pass
+    def __init__(self):
+        super().__init__()
+        self.extra_top_clearance_name = 'extra_top_clearance'  # todo: is this worth it
 
 class AspirateConfigurationContext(ClearanceConfigurationContext):
     def __init__(self):
+        super().__init__()
         self.bottom_clearance = 1.0  # see Pipette._position_for_aspirate
         self.top_clearance = -3.5
-        self.extra_top_clearance_name = 'extra_aspirate_top_clearance'
         self.pre_wet = ConfigurationContext()
         self.pre_wet.default = True
         self.pre_wet.count = 2  # save some time vs 3
@@ -30,16 +32,17 @@ class AspirateConfigurationContext(ClearanceConfigurationContext):
 
 class DispenseConfigurationContext(ClearanceConfigurationContext):
     def __init__(self):
+        super().__init__()
         self.bottom_clearance = 0.5  # see Pipette._position_for_dispense
         self.top_clearance = -2.0
-        self.extra_top_clearance_name = 'extra_dispense_top_clearance'  # todo: is this worth it?
         self.full_dispense = ConfigurationContext()
         self.full_dispense.default = True
 
 class LayeredMixConfigurationContext(ConfigurationContext):
     def __init__(self):
+        super().__init__()
         self.top_clearance = -1.5  # close, so we mix top layers too
-        self.aspirate_bottom_clearance = 1.0
+        self.bottom_clearance = 1.0
         self.aspirate_rate_factor = 4.0
         self.dispense_rate_factor = 4.0
         self.incr = 1.0
@@ -57,10 +60,12 @@ class LayeredMixConfigurationContext(ConfigurationContext):
 
 class WellsMixConfigurationContext(ConfigurationContext):
     def __init__(self):
+        super().__init__()
         self.radial_clearance_tolerance = 0.5
 
 class TopConfigurationContext(ConfigurationContext):
     def __init__(self):
+        super().__init__()
         self.enable_enhancements = True
         self.trash_control = True
         self.blow_out_rate_factor = 3.0
@@ -68,9 +73,9 @@ class TopConfigurationContext(ConfigurationContext):
         self.allow_blow_elision_default = True
         self.allow_overspill_default = True
 
-        self.aspirate = AspirateConfigurationContext()
-        self.dispense = DispenseConfigurationContext()
-        self.layered_mix = LayeredMixConfigurationContext()
+        self.aspirate: AspirateConfigurationContext = AspirateConfigurationContext()
+        self.dispense: DispenseConfigurationContext = DispenseConfigurationContext()
+        self.layered_mix: LayeredMixConfigurationContext = LayeredMixConfigurationContext()
         self.wells = WellsMixConfigurationContext()
 
     def well_geometry(self, well):
