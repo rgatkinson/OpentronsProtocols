@@ -6,7 +6,7 @@ Cell["Data Analysis", \
 
 Cell["\<\
 Robert Atkinson
-11 November 2019\
+13 November 2019\
 \>", "Author",ExpressionUUID->"05aea015-05f3-4e99-899d-20a8cd5792a1"],
 
 Cell["We analyze data from various experiments", \
@@ -577,12 +577,406 @@ Cell[BoxData[{
      RowBox[{"expr", ",", " ", "vars", ",", " ", "dom"}], "]"}], ",", " ", 
     RowBox[{"{", 
      RowBox[{"Reduce", "::", "ratnz"}], "}"}]}], 
-   "]"}]}]}], "Input",ExpressionUUID->"ae93f216-c13a-4fa8-8c55-51d96176c90a"]
+   "]"}]}]}], "Input",ExpressionUUID->"ae93f216-c13a-4fa8-8c55-51d96176c90a"],
+
+Cell["\<\
+ToString is entirely unreasonable about newlines. So we fix. Note that we don\
+\[CloseCurlyQuote]t yet support newlines in the values themselves.\
+\>", "Text",ExpressionUUID->"01eaa123-f89c-4e73-a01b-9b6b353bb418"],
+
+Cell[BoxData[{
+ RowBox[{"Clear", "[", "formatString", "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"formatString", "[", 
+    RowBox[{"str_", ",", " ", "values__"}], "]"}], " ", ":=", " ", 
+   RowBox[{"Module", "[", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"raw", ",", " ", "flag", ",", " ", "query"}], "}"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{"raw", " ", "=", " ", "str"}], ";", "\[IndentingNewLine]", 
+      RowBox[{"flag", " ", "=", " ", "\"\<<<~~~NEWLINE~~~>>\>\""}], ";", 
+      "\[IndentingNewLine]", 
+      RowBox[{"raw", " ", "=", " ", 
+       RowBox[{"StringReplace", "[", 
+        RowBox[{"raw", ",", " ", 
+         RowBox[{"{", 
+          RowBox[{"\"\<\\n\>\"", " ", "\[Rule]", " ", "flag"}], "}"}]}], 
+        "]"}]}], ";", "\[IndentingNewLine]", 
+      RowBox[{"query", " ", "=", " ", 
+       RowBox[{"StringForm", "[", 
+        RowBox[{"raw", " ", ",", " ", 
+         RowBox[{"Sequence", " ", "@@", " ", 
+          RowBox[{"{", "values", "}"}]}]}], "]"}]}], ";", 
+      "\[IndentingNewLine]", 
+      RowBox[{"query", " ", "=", " ", 
+       RowBox[{"ToString", "[", 
+        RowBox[{"query", ",", " ", "OutputForm"}], "]"}]}], ";", 
+      "\[IndentingNewLine]", 
+      RowBox[{"query", " ", "=", " ", 
+       RowBox[{"StringReplace", "[", 
+        RowBox[{"query", ",", " ", 
+         RowBox[{"{", 
+          RowBox[{"flag", " ", "\[Rule]", " ", "\"\<\\n\>\""}], "}"}]}], 
+        "]"}]}]}]}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"formatString", "[", 
+  RowBox[{"\"\<`` ==\n ``\>\"", ",", " ", "a", ",", " ", "b"}], 
+  "]"}]}], "Input",ExpressionUUID->"27386294-4980-4369-9ecb-00ffac2cd55e"]
+}, Closed]],
+
+Cell[CellGroupData[{
+
+Cell["Database", \
+"Section",ExpressionUUID->"357464a5-45ea-48a2-a12a-751cf054f7cf"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", 
+   RowBox[{
+    RowBox[{"<<", "DatabaseLink`DatabaseExamples`"}], ";", 
+    "\[IndentingNewLine]", 
+    RowBox[{"DatabaseExamplesBuild", "[", "]"}]}], "\[IndentingNewLine]", 
+   "*)"}], 
+  RowBox[{"(*", 
+   RowBox[{"JavaClassPath", "[", "]"}], 
+   "*)"}]}]], "Input",ExpressionUUID->"302e56cc-aa82-4b28-b4ea-a0424818b568"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+  "databaseDirectory", " ", "=", " ", 
+   "\"\<C:\\\\Users\\\\bob\\\\Dropbox\\\\Grad School\\\\Lutz \
+Lab\\\\Data\\\\Pairwise\>\""}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"databasePath", " ", "=", " ", 
+  RowBox[{"FileNameJoin", "[", 
+   RowBox[{"{", 
+    RowBox[{"databaseDirectory", ",", " ", "\"\<Pairwise.accdb\>\""}], "}"}], 
+   "]"}]}]}], "Input",ExpressionUUID->"6088f7bc-e275-418e-b0e6-c9a046de71a4"],
+
+Cell["\<\
+https://www.easysoft.com/blog/wolfram-mathematica.html
+https://www.easysoft.com/products/data_access/jdbc-access-gateway/getting-\
+started.html
+https://docs.microsoft.com/en-us/office/troubleshoot/access/cannot-use-odbc-\
+or-oledb\
+\>", "Text",ExpressionUUID->"6c234aaf-66a1-4576-b74e-f6173b6434cf"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"Needs", "[", "\"\<JLink`\>\"", "]"}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"Needs", "[", "\"\<DatabaseLink`\>\"", "]"}], ";"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{"(*", 
+   RowBox[{
+    RowBox[{
+    "AddToClassPath", "[", 
+     "\"\<C:\\\\Program Files\\\\Easysoft Limited\\\\Easysoft JDBC-Access \
+Gateway\\\\Libs\\\\esmdb.jar\>\"", "]"}], ";"}], "*)"}]}], "\n", 
+ RowBox[{
+  RowBox[{"(*", 
+   RowBox[{"JavaClassPath", "[", "]"}], 
+   "*)"}]}]}], "Input",ExpressionUUID->"ffd9e70f-ba90-4dae-8b57-91c56d14f7eb"],
+
+Cell[BoxData[
+ RowBox[{"CloseSQLConnection", "[", "database", 
+  "]"}]], "Input",ExpressionUUID->"155b08d0-729a-44f7-bff8-33e954c70f50"],
+
+Cell[BoxData[
+ RowBox[{"database", " ", "=", " ", 
+  RowBox[{"OpenSQLConnection", "[", 
+   RowBox[{"JDBC", "[", 
+    RowBox[{"\"\<easysoft.sql.esMdbDriver\>\"", ",", 
+     RowBox[{
+     "\"\<jdbc:easysoft:mdb?DBQ=\>\"", " ", "<>", " ", "databasePath"}]}], 
+    "]"}], "]"}]}]], \
+"Input",ExpressionUUID->"f1b950b2-748a-42df-8adc-a3aa845f9834"],
+
+Cell[BoxData[
+ RowBox[{"SQLExecute", "[", 
+  RowBox[{"database", ",", "\"\<select * from BadWells\>\"", ",", " ", 
+   RowBox[{"\"\<ShowColumnHeadings\>\"", " ", "\[Rule]", " ", "True"}]}], 
+  "]"}]], "Input",ExpressionUUID->"d9a54f38-f1fa-45dd-907b-9ff96efcb80c"],
+
+Cell[BoxData[
+ RowBox[{"SQLExecute", "[", 
+  RowBox[{"database", ",", "\"\<Select * from BadWells Where [Row] = 8\>\""}],
+   "]"}]], "Input",ExpressionUUID->"01a02530-3ff7-4adb-a2eb-a777427eecee"],
+
+Cell[BoxData[
+ RowBox[{"SQLExecute", "[", 
+  RowBox[{
+  "database", ",", 
+   "\"\<Select * from BadWells Where [Experiment] = 'E19110401'\>\""}], 
+  "]"}]], "Input",ExpressionUUID->"d4c33b5e-ed55-495c-904f-868aa8a3d361"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"makeDataset", "[", "table_", "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"headings", ",", " ", "body"}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"headings", " ", "=", " ", 
+      RowBox[{"table", "[", 
+       RowBox[{"[", "1", "]"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"body", " ", "=", " ", 
+      RowBox[{"table", "[", 
+       RowBox[{"[", 
+        RowBox[{"2", ";;"}], "]"}], "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"Dataset", "[", 
+      RowBox[{
+       RowBox[{"Function", "[", 
+        RowBox[{"row", ",", " ", 
+         RowBox[{
+          RowBox[{
+           RowBox[{
+            RowBox[{"Rule", " ", "@@", " ", "#"}], "&"}], " ", "/@", " ", 
+           RowBox[{"Transpose", "[", 
+            RowBox[{"{", 
+             RowBox[{"headings", ",", " ", "row"}], "}"}], "]"}]}], " ", "//",
+           " ", "Association"}]}], "]"}], "/@", " ", "body"}], "]"}]}]}], 
+   "\[IndentingNewLine]", 
+   "]"}]}]], "Input",ExpressionUUID->"36e3099d-fd11-4d05-ad1d-a5ea0d2c475f"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+  "dataColumns", " ", "=", " ", 
+   "\"\<Experiments.Experiment, FluorescenceByIndex.Temperature, \
+FluorescenceByIndex.Name, FluorescenceByIndex.Value, Experiments.StrandA, \
+Experiments.StrandB, Experiments.StrandAName, Experiments.StrandBName, \
+Experiments.StrandAConcentration, Experiments.StrandBConcentration, \
+Experiments.Index, Experiments.Row, Experiments.Column, \
+Experiments.StrandAVolume, Experiments.StrandBVolume, \
+Experiments.TotalVolume, Experiments.StrandALength, \
+Experiments.StrandBLength, Experiments.Overlap \>\""}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+  "dataTable", " ", "=", " ", 
+   "\"\<Experiments LEFT JOIN FluorescenceByIndex ON (Experiments.Experiment \
+= FluorescenceByIndex.Experiment) AND (Experiments.Index = \
+FluorescenceByIndex.Index)\>\""}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{
+   "dataOrder", " ", "=", " ", 
+    "\"\<Experiments.Experiment, FluorescenceByIndex.Temperature, \
+Experiments.Index\>\""}], ";"}], 
+  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"experimentAtTemp", "[", 
+   RowBox[{"experiment_", ",", " ", "temp_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"raw", ",", " ", "query"}], "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"raw", " ", "=", " ", 
+      RowBox[{
+      "\"\<SELECT \>\"", " ", "<>", " ", "dataColumns", " ", "<>", " ", 
+       "\"\< FROM \>\"", " ", "<>", " ", "dataTable", " ", "<>", 
+       "\"\<WHERE (((Experiments.Experiment)='`1`') AND \
+((FluorescenceByIndex.Temperature)=`2`)) ORDER BY \>\"", " ", "<>", " ", 
+       "dataOrder"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"query", " ", "=", " ", 
+      RowBox[{"formatString", "[", 
+       RowBox[{"raw", " ", ",", " ", "experiment", ",", " ", "temp"}], 
+       "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"makeDataset", "[", 
+      RowBox[{"SQLExecute", "[", 
+       RowBox[{"database", ",", " ", "query", ",", " ", 
+        RowBox[{"\"\<ShowColumnHeadings\>\"", " ", "\[Rule]", " ", "True"}]}],
+        "]"}], "]"}]}]}], "\[IndentingNewLine]", 
+   "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"noStrandsControl", "[", "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"raw", ",", " ", "query"}], "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"raw", " ", "=", " ", 
+      RowBox[{
+      "\"\<SELECT \>\"", " ", "<>", " ", "dataColumns", " ", "<>", " ", 
+       "\"\< FROM \>\"", " ", "<>", " ", "dataTable", " ", "<>", 
+       "\"\<WHERE (([FluorescenceByIndex.Temperature] Is Not Null) AND \
+[Experiments.StrandAConcentration]=0 AND \
+[Experiments.StrandBConcentration]=0) ORDER BY \>\"", " ", "<>", " ", 
+       "dataOrder"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"query", " ", "=", " ", "raw"}], ";", "\[IndentingNewLine]", 
+     RowBox[{"makeDataset", "[", 
+      RowBox[{"SQLExecute", "[", 
+       RowBox[{"database", ",", " ", "query", ",", " ", 
+        RowBox[{"\"\<ShowColumnHeadings\>\"", " ", "\[Rule]", " ", "True"}]}],
+        "]"}], "]"}]}]}], "\[IndentingNewLine]", 
+   "]"}]}]}], "Input",ExpressionUUID->"d690b350-772b-4e1f-bed6-a70bcc7d7845"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["EvaGreen vs Temperature", \
+"Section",ExpressionUUID->"2374d7e8-4705-4218-986b-0ac0f79fe3c6"],
+
+Cell[BoxData[
+ RowBox[{"control", " ", "=", " ", 
+  RowBox[{
+  "noStrandsControl", "[", 
+   "]"}]}]], "Input",ExpressionUUID->"7bfc77eb-d86e-4911-8d3a-15d0aed66a42"],
+
+Cell[BoxData[
+ RowBox[{"Union", "[", 
+  RowBox[{"Normal", "[", 
+   RowBox[{"control", "[", 
+    RowBox[{"[", 
+     RowBox[{"All", ",", " ", "\"\<Experiment\>\""}], "]"}], "]"}], "]"}], 
+  "]"}]], "Input",ExpressionUUID->"a9b99ac6-d18e-4fb7-81de-323811be8dcd"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"controlsByExperiment", " ", "=", " ", 
+   RowBox[{
+    RowBox[{"Function", "[", 
+     RowBox[{"expr", ",", " ", 
+      RowBox[{"control", "[", 
+       RowBox[{
+        RowBox[{"Select", "[", 
+         RowBox[{
+          RowBox[{
+           RowBox[{"#", "[", "\"\<Experiment\>\"", "]"}], "\[Equal]", 
+           "expr"}], "&"}], "]"}], ",", " ", 
+        RowBox[{"{", 
+         RowBox[{"\"\<Temperature\>\"", ",", " ", "\"\<Value\>\""}], "}"}]}], 
+       "]"}]}], " ", "]"}], " ", "/@", " ", 
+    RowBox[{"Union", "[", 
+     RowBox[{"Normal", "[", 
+      RowBox[{"control", "[", 
+       RowBox[{"[", 
+        RowBox[{"All", ",", " ", "\"\<Experiment\>\""}], "]"}], "]"}], "]"}], 
+     "]"}]}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"ListPlot", "[", 
+  RowBox[{"controlsByExperiment", ",", " ", 
+   RowBox[{"ImageSize", "\[Rule]", "Large"}]}], 
+  "]"}]}], "Input",ExpressionUUID->"a6f5dbd2-36af-4f51-82c5-ea315881bb89"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["One Experiment, One Temp", \
+"Section",ExpressionUUID->"8803bca1-d677-4f9a-a93a-e880bc96b40f"],
+
+Cell[BoxData[
+ RowBox[{"data", " ", "=", " ", 
+  RowBox[{"experimentAtTemp", "[", 
+   RowBox[{"\"\<E19110401\>\"", ",", " ", "54"}], 
+   "]"}]}]], "Input",ExpressionUUID->"6fb6c0f8-9e39-44bf-b225-afbd9aa5419f"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"strandASingleData", " ", "=", " ", 
+   RowBox[{"data", "[", 
+    RowBox[{
+     RowBox[{"Select", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"#", "[", "\"\<StrandBConcentration\>\"", "]"}], "\[Equal]", 
+        " ", "0"}], " ", "&"}], "]"}], ",", " ", 
+     RowBox[{"{", 
+      RowBox[{"\"\<StrandAConcentration\>\"", ",", " ", "\"\<Value\>\""}], 
+      "}"}]}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"fitStrandASingle", " ", "=", " ", 
+  RowBox[{"LinearModelFit", "[", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"Values", "[", "#", "]"}], "&"}], "/@", " ", 
+     RowBox[{"Normal", "[", "strandASingleData", "]"}]}], ",", " ", 
+    "singleConc", ",", " ", "singleConc"}], "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"strandBSingleData", " ", "=", " ", 
+   RowBox[{"data", "[", 
+    RowBox[{
+     RowBox[{"Select", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"#", "[", "\"\<StrandAConcentration\>\"", "]"}], "\[Equal]", 
+        " ", "0"}], " ", "&"}], "]"}], ",", " ", 
+     RowBox[{"{", 
+      RowBox[{"\"\<StrandBConcentration\>\"", ",", " ", "\"\<Value\>\""}], 
+      "}"}]}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"fitStrandBSingle", " ", "=", " ", 
+  RowBox[{"LinearModelFit", "[", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"Values", "[", "#", "]"}], "&"}], "/@", " ", 
+     RowBox[{"Normal", "[", "strandBSingleData", "]"}]}], ",", " ", 
+    "singleConc", ",", " ", "singleConc"}], 
+   "]"}]}]}], "Input",ExpressionUUID->"007a83a4-cce3-435a-89b4-4acc60807130"],
+
+Cell[BoxData[{
+ RowBox[{"fitStrandASingle", "[", "\"\<AdjustedRSquared\>\"", 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{"fitStrandBSingle", "[", "\"\<AdjustedRSquared\>\"", "]"}]}], "Input",
+ NumberMarks->False,ExpressionUUID->"fe4b375b-e866-487e-991a-3ac5bd3d2f90"],
+
+Cell[BoxData[{
+ RowBox[{"Show", "[", 
+  RowBox[{
+   RowBox[{"ListPlot", "[", 
+    RowBox[{"strandASingleData", ",", " ", 
+     RowBox[{"AxesOrigin", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
+     RowBox[{"AxesLabel", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"\"\<\[Mu]M\>\"", ",", "\"\<RFU\>\""}], "}"}]}]}], "]"}], ",", 
+   " ", 
+   RowBox[{"Plot", "[", 
+    RowBox[{
+     RowBox[{"fitStrandASingle", "[", "conc", "]"}], ",", " ", 
+     RowBox[{"{", 
+      RowBox[{"conc", ",", " ", "0", ",", " ", "1"}], "}"}]}], "]"}]}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{"Show", "[", 
+  RowBox[{
+   RowBox[{"ListPlot", "[", 
+    RowBox[{"strandBSingleData", ",", " ", 
+     RowBox[{"AxesOrigin", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
+     RowBox[{"AxesLabel", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"\"\<\[Mu]M\>\"", ",", "\"\<RFU\>\""}], "}"}]}]}], "]"}], ",", 
+   " ", 
+   RowBox[{"Plot", "[", 
+    RowBox[{
+     RowBox[{"fitStrandBSingle", "[", "conc", "]"}], ",", " ", 
+     RowBox[{"{", 
+      RowBox[{"conc", ",", " ", "0", ",", " ", "1"}], "}"}]}], "]"}]}], 
+  "]"}]}], "Input",ExpressionUUID->"8199b080-1238-4b8b-81b4-2a081b25b493"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Experiments", \
+"Section",ExpressionUUID->"77386c64-cbe1-49a7-bdbf-c47696c08719"],
+
+Cell["\<\
+https://stackoverflow.com/questions/29855062/setting-parameter-values-in-sql-\
+for-ms-access\
+\>", "Text",ExpressionUUID->"aa3a8019-a87d-47f5-a6bc-033900d84f92"]
 }, Open  ]]
 }, Open  ]]
 },
-WindowSize->{1445, 1541},
-WindowMargins->{{Automatic, 838}, {Automatic, 18}},
+WindowSize->{1642, 1548},
+WindowMargins->{{Automatic, 741}, {Automatic, 5}},
 PrintingCopies->1,
 PrintingPageRange->{32000, 32000},
 PrintingOptions->{"Magnification"->1.,
