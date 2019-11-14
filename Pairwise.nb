@@ -579,57 +579,105 @@ Cell[BoxData[{
      RowBox[{"Reduce", "::", "ratnz"}], "}"}]}], 
    "]"}]}]}], "Input",ExpressionUUID->"ae93f216-c13a-4fa8-8c55-51d96176c90a"],
 
-Cell["\<\
-ToString is entirely unreasonable about newlines. So we fix. Note that we don\
-\[CloseCurlyQuote]t yet support newlines in the values themselves.\
-\>", "Text",ExpressionUUID->"01eaa123-f89c-4e73-a01b-9b6b353bb418"],
+Cell["ToString is entirely unreasonable about newlines. So we fix.", \
+"Text",ExpressionUUID->"01eaa123-f89c-4e73-a01b-9b6b353bb418"],
+
+Cell[BoxData[{
+ RowBox[{"Clear", "[", "toString", "]"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"toString", "[", "expr_", "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{
+     "result", ",", " ", "reapedStrings", ",", " ", "token", ",", " ", 
+      "rules", ",", " ", "reverseRules", ",", " ", "clean"}], "}"}], ",", 
+    "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{"result", ",", " ", "reapedStrings"}], "}"}], " ", "=", 
+      RowBox[{"Reap", "[", 
+       RowBox[{"Scan", "[", 
+        RowBox[{
+         RowBox[{
+          RowBox[{"(", 
+           RowBox[{"If", "[", 
+            RowBox[{
+             RowBox[{"StringQ", "[", "#", "]"}], ",", 
+             RowBox[{"Sow", "[", "#", "]"}]}], "]"}], ")"}], "&"}], ",", 
+         "expr", ",", "Infinity"}], "]"}], "]"}]}], ";", 
+     "\[IndentingNewLine]", 
+     RowBox[{"token", " ", "=", 
+      RowBox[{"FromCharacterCode", "[", "1", "]"}]}], ";", " ", 
+     RowBox[{"(*", " ", 
+      RowBox[{
+      "something", " ", "not", " ", "in", " ", "any", " ", "actual", " ", 
+       "string"}], " ", "*)"}], "\[IndentingNewLine]", 
+     RowBox[{"If", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"Length", "[", "reapedStrings", "]"}], " ", ">", " ", "0"}], 
+       ",", "\[IndentingNewLine]", 
+       RowBox[{
+        RowBox[{"rules", " ", "=", " ", 
+         RowBox[{
+          RowBox[{
+           RowBox[{"#", " ", "\[Rule]", " ", 
+            RowBox[{"StringReplace", "[", 
+             RowBox[{"#", ",", " ", 
+              RowBox[{"{", 
+               RowBox[{"\"\<\\n\>\"", " ", "\[Rule]", " ", "token"}], "}"}]}],
+              "]"}]}], " ", "&"}], "/@", " ", 
+          RowBox[{"reapedStrings", "[", 
+           RowBox[{"[", "1", "]"}], "]"}]}]}], ";", "\[IndentingNewLine]", 
+        RowBox[{"clean", " ", "=", " ", 
+         RowBox[{"expr", " ", "/.", " ", "rules"}]}], ";", 
+        "\[IndentingNewLine]", 
+        RowBox[{"result", " ", "=", " ", 
+         RowBox[{"ToString", "[", "clean", "]"}]}], ";", 
+        "\[IndentingNewLine]", 
+        RowBox[{"result", " ", "=", " ", 
+         RowBox[{"StringReplace", "[", 
+          RowBox[{"result", ",", " ", 
+           RowBox[{"{", 
+            RowBox[{"token", " ", "\[Rule]", " ", "\"\<\\n\>\""}], "}"}]}], 
+          "]"}]}], ";", "\[IndentingNewLine]", "result"}], 
+       "\[IndentingNewLine]", ",", "\[IndentingNewLine]", 
+       RowBox[{"ToString", "[", "expr", "]"}]}], "\[IndentingNewLine]", 
+      "]"}]}]}], "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"toString", "[", 
+   RowBox[{"StringForm", "[", 
+    RowBox[{"\"\<fre\nd ``\>\"", ",", " ", "\"\<barney\>\""}], "]"}], "]"}], 
+  " ", "//", " ", "FullForm"}], "\[IndentingNewLine]", 
+ RowBox[{"toString", "[", "3", 
+  "]"}]}], "Input",ExpressionUUID->"fa4ede11-3c6d-455f-abf3-95b6141118d6"],
 
 Cell[BoxData[{
  RowBox[{"Clear", "[", "formatString", "]"}], "\[IndentingNewLine]", 
  RowBox[{
-  RowBox[{
-   RowBox[{"formatString", "[", 
-    RowBox[{"str_", ",", " ", "values__"}], "]"}], " ", ":=", " ", 
-   RowBox[{"Module", "[", 
-    RowBox[{
-     RowBox[{"{", 
-      RowBox[{"raw", ",", " ", "flag", ",", " ", "query"}], "}"}], ",", 
-     "\[IndentingNewLine]", 
-     RowBox[{
-      RowBox[{"raw", " ", "=", " ", "str"}], ";", "\[IndentingNewLine]", 
-      RowBox[{"flag", " ", "=", " ", "\"\<<<~~~NEWLINE~~~>>\>\""}], ";", 
-      "\[IndentingNewLine]", 
-      RowBox[{"raw", " ", "=", " ", 
-       RowBox[{"StringReplace", "[", 
-        RowBox[{"raw", ",", " ", 
-         RowBox[{"{", 
-          RowBox[{"\"\<\\n\>\"", " ", "\[Rule]", " ", "flag"}], "}"}]}], 
-        "]"}]}], ";", "\[IndentingNewLine]", 
-      RowBox[{"query", " ", "=", " ", 
-       RowBox[{"StringForm", "[", 
-        RowBox[{"raw", " ", ",", " ", 
-         RowBox[{"Sequence", " ", "@@", " ", 
-          RowBox[{"{", "values", "}"}]}]}], "]"}]}], ";", 
-      "\[IndentingNewLine]", 
-      RowBox[{"query", " ", "=", " ", 
-       RowBox[{"ToString", "[", 
-        RowBox[{"query", ",", " ", "OutputForm"}], "]"}]}], ";", 
-      "\[IndentingNewLine]", 
-      RowBox[{"query", " ", "=", " ", 
-       RowBox[{"StringReplace", "[", 
-        RowBox[{"query", ",", " ", 
-         RowBox[{"{", 
-          RowBox[{"flag", " ", "\[Rule]", " ", "\"\<\\n\>\""}], "}"}]}], 
-        "]"}]}]}]}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+  RowBox[{"formatString", "[", 
+   RowBox[{"str_", ",", " ", "values__"}], "]"}], " ", ":=", " ", 
+  RowBox[{"toString", " ", "@", " ", 
+   RowBox[{"StringForm", "[", 
+    RowBox[{"str", " ", ",", " ", 
+     RowBox[{"Sequence", " ", "@@", " ", 
+      RowBox[{"{", "values", "}"}]}]}], "]"}]}]}], "\[IndentingNewLine]", 
  RowBox[{"formatString", "[", 
   RowBox[{"\"\<`` ==\n ``\>\"", ",", " ", "a", ",", " ", "b"}], 
-  "]"}]}], "Input",ExpressionUUID->"27386294-4980-4369-9ecb-00ffac2cd55e"]
+  "]"}]}], "Input",ExpressionUUID->"f78fed21-bedf-4a41-bae1-4273afcf7913"]
 }, Closed]],
 
 Cell[CellGroupData[{
 
 Cell["Database", \
 "Section",ExpressionUUID->"357464a5-45ea-48a2-a12a-751cf054f7cf"],
+
+Cell[CellGroupData[{
+
+Cell["Open the Database", \
+"Subsection",ExpressionUUID->"4547b9a4-8df7-490e-800b-4a7aa3844b6b"],
 
 Cell[BoxData[
  RowBox[{
@@ -688,12 +736,19 @@ Cell[BoxData[
 Cell[BoxData[
  RowBox[{"database", " ", "=", " ", 
   RowBox[{"OpenSQLConnection", "[", 
-   RowBox[{"JDBC", "[", 
-    RowBox[{"\"\<easysoft.sql.esMdbDriver\>\"", ",", 
-     RowBox[{
-     "\"\<jdbc:easysoft:mdb?DBQ=\>\"", " ", "<>", " ", "databasePath"}]}], 
-    "]"}], "]"}]}]], \
-"Input",ExpressionUUID->"f1b950b2-748a-42df-8adc-a3aa845f9834"],
+   RowBox[{
+    RowBox[{"JDBC", "[", 
+     RowBox[{"\"\<easysoft.sql.esMdbDriver\>\"", ",", 
+      RowBox[{
+      "\"\<jdbc:easysoft:mdb?DBQ=\>\"", " ", "<>", " ", "databasePath"}]}], 
+     "]"}], ",", " ", 
+    RowBox[{"\"\<ReadOnly\>\"", " ", "\[Rule]", " ", "True"}]}], 
+   "]"}]}]], "Input",ExpressionUUID->"f1b950b2-748a-42df-8adc-a3aa845f9834"],
+
+Cell[CellGroupData[{
+
+Cell["A Couple of Examples", \
+"Subsubsection",ExpressionUUID->"cdf52dda-9f66-4a1c-9040-a32d40c7ef9f"],
 
 Cell[BoxData[
  RowBox[{"SQLExecute", "[", 
@@ -711,11 +766,27 @@ Cell[BoxData[
   RowBox[{
   "database", ",", 
    "\"\<Select * from BadWells Where [Experiment] = 'E19110401'\>\""}], 
-  "]"}]], "Input",ExpressionUUID->"d4c33b5e-ed55-495c-904f-868aa8a3d361"],
+  "]"}]], "Input",ExpressionUUID->"d4c33b5e-ed55-495c-904f-868aa8a3d361"]
+}, Open  ]]
+}, Open  ]]
+}, Open  ]],
 
-Cell[BoxData[
+Cell[CellGroupData[{
+
+Cell["Experiments", \
+"Section",ExpressionUUID->"774ea773-ed5e-41bb-9f5c-c46a9ad6e120"],
+
+Cell[CellGroupData[{
+
+Cell["Get Experimental Data", \
+"Subsection",ExpressionUUID->"71d1f0cd-217d-4511-8a1c-ccd45ef4b43e"],
+
+Cell[BoxData[{
+ RowBox[{"Clear", "[", 
+  RowBox[{"makeDataset", ",", " ", "unDataset"}], 
+  "]"}], "\[IndentingNewLine]", 
  RowBox[{
-  RowBox[{"makeDataset", "[", "table_", "]"}], " ", ":=", " ", 
+  RowBox[{"makeDataset", "[", "sqlResult_", "]"}], " ", ":=", " ", 
   RowBox[{"Module", "[", 
    RowBox[{
     RowBox[{"{", 
@@ -723,10 +794,10 @@ Cell[BoxData[
     "\[IndentingNewLine]", 
     RowBox[{
      RowBox[{"headings", " ", "=", " ", 
-      RowBox[{"table", "[", 
+      RowBox[{"sqlResult", "[", 
        RowBox[{"[", "1", "]"}], "]"}]}], ";", "\[IndentingNewLine]", 
      RowBox[{"body", " ", "=", " ", 
-      RowBox[{"table", "[", 
+      RowBox[{"sqlResult", "[", 
        RowBox[{"[", 
         RowBox[{"2", ";;"}], "]"}], "]"}]}], ";", "\[IndentingNewLine]", 
      RowBox[{"Dataset", "[", 
@@ -741,22 +812,40 @@ Cell[BoxData[
             RowBox[{"{", 
              RowBox[{"headings", ",", " ", "row"}], "}"}], "]"}]}], " ", "//",
            " ", "Association"}]}], "]"}], "/@", " ", "body"}], "]"}]}]}], 
-   "\[IndentingNewLine]", 
-   "]"}]}]], "Input",ExpressionUUID->"36e3099d-fd11-4d05-ad1d-a5ea0d2c475f"],
+   "\[IndentingNewLine]", "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"unDataset", "[", "dataset_Dataset", "]"}], "/;", " ", 
+   RowBox[{
+    RowBox[{"Length", "[", 
+     RowBox[{"Dimensions", "[", "dataset", "]"}], "]"}], "\[Equal]", "2"}]}], 
+  " ", ":=", " ", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"Values", "[", "#", "]"}], " ", "&"}], " ", "/@", " ", 
+   RowBox[{"Normal", "[", "dataset", "]"}]}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"unDataset", "[", "dataset_Dataset", "]"}], "/;", " ", 
+   RowBox[{
+    RowBox[{"Length", "[", 
+     RowBox[{"Dimensions", "[", "dataset", "]"}], "]"}], "\[Equal]", "1"}]}], 
+  " ", ":=", " ", 
+  RowBox[{
+  "Normal", "[", "dataset", 
+   "]"}]}]}], "Input",ExpressionUUID->"36e3099d-fd11-4d05-ad1d-a5ea0d2c475f"],
 
 Cell[BoxData[{
  RowBox[{
   RowBox[{
   "dataColumns", " ", "=", " ", 
-   "\"\<Experiments.Experiment, FluorescenceByIndex.Temperature, \
-FluorescenceByIndex.Name, FluorescenceByIndex.Value, Experiments.StrandA, \
-Experiments.StrandB, Experiments.StrandAName, Experiments.StrandBName, \
-Experiments.StrandAConcentration, Experiments.StrandBConcentration, \
-Experiments.Index, Experiments.Row, Experiments.Column, \
-Experiments.StrandAVolume, Experiments.StrandBVolume, \
-Experiments.TotalVolume, Experiments.StrandALength, \
-Experiments.StrandBLength, Experiments.Overlap \>\""}], 
-  ";"}], "\[IndentingNewLine]", 
+   "\"\<FluorescenceByIndex.Temperature, FluorescenceByIndex.Value, \
+FluorescenceByIndex.Name, \n\t[StrandAMols] * [StrandALength] * 1e9 AS \
+nmolNtA, \n\t[StrandBMols] * [StrandBLength] * 1e9 AS nmolNtB,\n\t\
+IIf(StrandAMols<StrandBMols, StrandAMols, StrandBMols) * [Overlap] * 1e9 as \
+nmolNtOverlap,\n\t[nmolNtOverlap] as nmolDsNt,\n\t[nmolNtA] - [nmolNtOverlap] \
+as nmolSsNtA,\n\t[nmolNtB] - [nmolNtOverlap] as nmolSsNtB,\n\tExperiments.*\n\
+\>\""}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{
   "dataTable", " ", "=", " ", 
@@ -765,36 +854,18 @@ Experiments.StrandBLength, Experiments.Overlap \>\""}],
 FluorescenceByIndex.Index)\>\""}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{
-   RowBox[{
-   "dataOrder", " ", "=", " ", 
-    "\"\<Experiments.Experiment, FluorescenceByIndex.Temperature, \
-Experiments.Index\>\""}], ";"}], 
-  "\[IndentingNewLine]"}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{"experimentAtTemp", "[", 
-   RowBox[{"experiment_", ",", " ", "temp_"}], "]"}], " ", ":=", " ", 
-  RowBox[{"Module", "[", 
-   RowBox[{
-    RowBox[{"{", 
-     RowBox[{"raw", ",", " ", "query"}], "}"}], ",", "\[IndentingNewLine]", 
-    RowBox[{
-     RowBox[{"raw", " ", "=", " ", 
-      RowBox[{
-      "\"\<SELECT \>\"", " ", "<>", " ", "dataColumns", " ", "<>", " ", 
-       "\"\< FROM \>\"", " ", "<>", " ", "dataTable", " ", "<>", 
-       "\"\<WHERE (((Experiments.Experiment)='`1`') AND \
-((FluorescenceByIndex.Temperature)=`2`)) ORDER BY \>\"", " ", "<>", " ", 
-       "dataOrder"}]}], ";", "\[IndentingNewLine]", 
-     RowBox[{"query", " ", "=", " ", 
-      RowBox[{"formatString", "[", 
-       RowBox[{"raw", " ", ",", " ", "experiment", ",", " ", "temp"}], 
-       "]"}]}], ";", "\[IndentingNewLine]", 
-     RowBox[{"makeDataset", "[", 
-      RowBox[{"SQLExecute", "[", 
-       RowBox[{"database", ",", " ", "query", ",", " ", 
-        RowBox[{"\"\<ShowColumnHeadings\>\"", " ", "\[Rule]", " ", "True"}]}],
-        "]"}], "]"}]}]}], "\[IndentingNewLine]", 
-   "]"}]}], "\[IndentingNewLine]", 
+  "dataOrder", " ", "=", " ", 
+   "\"\<Experiments.Experiment, FluorescenceByIndex.Temperature, \
+Experiments.Index\>\""}], 
+  ";"}]}], "Input",ExpressionUUID->"d690b350-772b-4e1f-bed6-a70bcc7d7845"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["EvaGreen vs Temperature", \
+"Subsection",ExpressionUUID->"2374d7e8-4705-4218-986b-0ac0f79fe3c6"],
+
+Cell[BoxData[{
  RowBox[{
   RowBox[{"noStrandsControl", "[", "]"}], " ", ":=", " ", 
   RowBox[{"Module", "[", 
@@ -816,66 +887,80 @@ Experiments.Index\>\""}], ";"}],
        RowBox[{"database", ",", " ", "query", ",", " ", 
         RowBox[{"\"\<ShowColumnHeadings\>\"", " ", "\[Rule]", " ", "True"}]}],
         "]"}], "]"}]}]}], "\[IndentingNewLine]", 
-   "]"}]}]}], "Input",ExpressionUUID->"d690b350-772b-4e1f-bed6-a70bcc7d7845"]
-}, Open  ]],
-
-Cell[CellGroupData[{
-
-Cell["EvaGreen vs Temperature", \
-"Section",ExpressionUUID->"2374d7e8-4705-4218-986b-0ac0f79fe3c6"],
-
-Cell[BoxData[
+   "]"}]}], "\[IndentingNewLine]", 
  RowBox[{"control", " ", "=", " ", 
   RowBox[{
   "noStrandsControl", "[", 
-   "]"}]}]], "Input",ExpressionUUID->"7bfc77eb-d86e-4911-8d3a-15d0aed66a42"],
+   "]"}]}]}], "Input",ExpressionUUID->"7bfc77eb-d86e-4911-8d3a-15d0aed66a42"],
+
+Cell["All experiment names that have data", \
+"Text",ExpressionUUID->"eeecbe92-5c05-4f43-8f41-de995cc0a79a"],
 
 Cell[BoxData[
- RowBox[{"Union", "[", 
-  RowBox[{"Normal", "[", 
-   RowBox[{"control", "[", 
-    RowBox[{"[", 
-     RowBox[{"All", ",", " ", "\"\<Experiment\>\""}], "]"}], "]"}], "]"}], 
-  "]"}]], "Input",ExpressionUUID->"a9b99ac6-d18e-4fb7-81de-323811be8dcd"],
+ RowBox[{"experimentNames", " ", "=", " ", 
+  RowBox[{"Union", "[", 
+   RowBox[{"Normal", "[", 
+    RowBox[{"control", "[", 
+     RowBox[{"[", 
+      RowBox[{"All", ",", " ", "\"\<Experiment\>\""}], "]"}], "]"}], "]"}], 
+   "]"}]}]], "Input",ExpressionUUID->"03dae6f0-7fee-40da-aee7-83f47240ba6c"],
 
-Cell[BoxData[{
- RowBox[{
-  RowBox[{"controlsByExperiment", " ", "=", " ", 
-   RowBox[{
-    RowBox[{"Function", "[", 
-     RowBox[{"expr", ",", " ", 
-      RowBox[{"control", "[", 
-       RowBox[{
-        RowBox[{"Select", "[", 
-         RowBox[{
-          RowBox[{
-           RowBox[{"#", "[", "\"\<Experiment\>\"", "]"}], "\[Equal]", 
-           "expr"}], "&"}], "]"}], ",", " ", 
-        RowBox[{"{", 
-         RowBox[{"\"\<Temperature\>\"", ",", " ", "\"\<Value\>\""}], "}"}]}], 
-       "]"}]}], " ", "]"}], " ", "/@", " ", 
-    RowBox[{"Union", "[", 
-     RowBox[{"Normal", "[", 
-      RowBox[{"control", "[", 
-       RowBox[{"[", 
-        RowBox[{"All", ",", " ", "\"\<Experiment\>\""}], "]"}], "]"}], "]"}], 
-     "]"}]}]}], ";"}], "\[IndentingNewLine]", 
+Cell[BoxData[
  RowBox[{"ListPlot", "[", 
-  RowBox[{"controlsByExperiment", ",", " ", 
-   RowBox[{"ImageSize", "\[Rule]", "Large"}]}], 
-  "]"}]}], "Input",ExpressionUUID->"a6f5dbd2-36af-4f51-82c5-ea315881bb89"]
-}, Open  ]],
+  RowBox[{
+   RowBox[{"control", "[", 
+    RowBox[{
+     RowBox[{"GroupBy", "[", "\"\<Experiment\>\"", "]"}], ",", "All", ",", 
+     RowBox[{"{", 
+      RowBox[{"\"\<Temperature\>\"", ",", "\"\<Value\>\""}], "}"}]}], "]"}], 
+   ",", " ", 
+   RowBox[{"ImageSize", "\[Rule]", "Large"}], ",", " ", 
+   RowBox[{"AxesLabel", "\[Rule]", " ", 
+    RowBox[{"{", 
+     RowBox[{"\"\<T\>\"", ",", " ", "\"\<RFU\>\""}], "}"}]}]}], 
+  "]"}]], "Input",ExpressionUUID->"79cf074f-268c-4425-8d7a-4b902f1d4848"]
+}, Closed]],
 
 Cell[CellGroupData[{
 
 Cell["One Experiment, One Temp", \
-"Section",ExpressionUUID->"8803bca1-d677-4f9a-a93a-e880bc96b40f"],
+"Subsection",ExpressionUUID->"8803bca1-d677-4f9a-a93a-e880bc96b40f"],
 
-Cell[BoxData[
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"experimentAtTemp", "[", 
+   RowBox[{"experiment_", ",", " ", "temp_"}], "]"}], " ", ":=", " ", 
+  RowBox[{"Module", "[", 
+   RowBox[{
+    RowBox[{"{", 
+     RowBox[{"raw", ",", " ", "query"}], "}"}], ",", "\[IndentingNewLine]", 
+    RowBox[{
+     RowBox[{"raw", " ", "=", " ", 
+      RowBox[{
+      "\"\<SELECT \>\"", " ", "<>", " ", "dataColumns", " ", "<>", " ", 
+       "\"\< FROM \>\"", " ", "<>", " ", "dataTable", " ", "<>", 
+       "\"\<WHERE ([Experiments.Experiment]='`1`' AND \
+[FluorescenceByIndex.Temperature]=`2`) ORDER BY \>\"", " ", "<>", " ", 
+       "dataOrder"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"query", " ", "=", " ", 
+      RowBox[{"formatString", "[", 
+       RowBox[{"raw", " ", ",", " ", "experiment", ",", " ", "temp"}], 
+       "]"}]}], ";", "\[IndentingNewLine]", 
+     RowBox[{"makeDataset", "[", 
+      RowBox[{"SQLExecute", "[", 
+       RowBox[{"database", ",", " ", "query", ",", " ", 
+        RowBox[{"\"\<ShowColumnHeadings\>\"", " ", "\[Rule]", " ", "True"}]}],
+        "]"}], "]"}]}]}], "\[IndentingNewLine]", 
+   "]"}]}], "\[IndentingNewLine]", 
  RowBox[{"data", " ", "=", " ", 
   RowBox[{"experimentAtTemp", "[", 
-   RowBox[{"\"\<E19110401\>\"", ",", " ", "54"}], 
-   "]"}]}]], "Input",ExpressionUUID->"6fb6c0f8-9e39-44bf-b225-afbd9aa5419f"],
+   RowBox[{"\"\<E19110701\>\"", ",", " ", "54"}], 
+   "]"}]}]}], "Input",ExpressionUUID->"6fb6c0f8-9e39-44bf-b225-afbd9aa5419f"],
+
+Cell[CellGroupData[{
+
+Cell["Single Stranded Fit", \
+"Subsubsection",ExpressionUUID->"6f424fda-c084-4b30-b552-6be730df7245"],
 
 Cell[BoxData[{
  RowBox[{
@@ -888,16 +973,8 @@ Cell[BoxData[{
         RowBox[{"#", "[", "\"\<StrandBConcentration\>\"", "]"}], "\[Equal]", 
         " ", "0"}], " ", "&"}], "]"}], ",", " ", 
      RowBox[{"{", 
-      RowBox[{"\"\<StrandAConcentration\>\"", ",", " ", "\"\<Value\>\""}], 
-      "}"}]}], "]"}]}], ";"}], "\[IndentingNewLine]", 
- RowBox[{"fitStrandASingle", " ", "=", " ", 
-  RowBox[{"LinearModelFit", "[", " ", 
-   RowBox[{
-    RowBox[{
-     RowBox[{
-      RowBox[{"Values", "[", "#", "]"}], "&"}], "/@", " ", 
-     RowBox[{"Normal", "[", "strandASingleData", "]"}]}], ",", " ", 
-    "singleConc", ",", " ", "singleConc"}], "]"}]}], "\[IndentingNewLine]", 
+      RowBox[{"\"\<nmolNtA\>\"", ",", " ", "\"\<Value\>\""}], "}"}]}], 
+    "]"}]}], ";"}], "\[IndentingNewLine]", 
  RowBox[{
   RowBox[{"strandBSingleData", " ", "=", " ", 
    RowBox[{"data", "[", 
@@ -908,65 +985,284 @@ Cell[BoxData[{
         RowBox[{"#", "[", "\"\<StrandAConcentration\>\"", "]"}], "\[Equal]", 
         " ", "0"}], " ", "&"}], "]"}], ",", " ", 
      RowBox[{"{", 
-      RowBox[{"\"\<StrandBConcentration\>\"", ",", " ", "\"\<Value\>\""}], 
-      "}"}]}], "]"}]}], ";"}], "\[IndentingNewLine]", 
- RowBox[{"fitStrandBSingle", " ", "=", " ", 
-  RowBox[{"LinearModelFit", "[", " ", 
-   RowBox[{
-    RowBox[{
+      RowBox[{"\"\<nmolNtB\>\"", ",", " ", "\"\<Value\>\""}], "}"}]}], 
+    "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{"fitStrandASingle", " ", "=", " ", 
+    RowBox[{"LinearModelFit", "[", " ", 
      RowBox[{
-      RowBox[{"Values", "[", "#", "]"}], "&"}], "/@", " ", 
-     RowBox[{"Normal", "[", "strandBSingleData", "]"}]}], ",", " ", 
-    "singleConc", ",", " ", "singleConc"}], 
-   "]"}]}]}], "Input",ExpressionUUID->"007a83a4-cce3-435a-89b4-4acc60807130"],
-
-Cell[BoxData[{
- RowBox[{"fitStrandASingle", "[", "\"\<AdjustedRSquared\>\"", 
-  "]"}], "\[IndentingNewLine]", 
- RowBox[{"fitStrandBSingle", "[", "\"\<AdjustedRSquared\>\"", "]"}]}], "Input",
- NumberMarks->False,ExpressionUUID->"fe4b375b-e866-487e-991a-3ac5bd3d2f90"],
-
-Cell[BoxData[{
- RowBox[{"Show", "[", 
+      RowBox[{"unDataset", "[", "strandASingleData", "]"}], ",", " ", 
+      "nmolSsNtA", ",", " ", "nmolSsNtA"}], "]"}]}], ",", " ", 
+   "\[IndentingNewLine]", 
+   RowBox[{"fitStrandBSingle", " ", "=", " ", 
+    RowBox[{"LinearModelFit", "[", " ", 
+     RowBox[{
+      RowBox[{"unDataset", "[", "strandBSingleData", "]"}], ",", " ", 
+      "nmolSsNtB", ",", " ", "nmolSsNtB"}], "]"}]}]}], 
+  "}"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"fitStrandASingleSlope", " ", "=", " ", 
+   RowBox[{
+    RowBox[{"fitStrandASingle", "[", "\"\<BestFitParameters\>\"", "]"}], "[", 
+    RowBox[{"[", "2", "]"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"fitStrandBSingleSlope", " ", "=", " ", 
+   RowBox[{
+    RowBox[{"fitStrandBSingle", "[", "\"\<BestFitParameters\>\"", "]"}], "[", 
+    RowBox[{"[", "2", "]"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"{", 
   RowBox[{
-   RowBox[{"ListPlot", "[", 
-    RowBox[{"strandASingleData", ",", " ", 
-     RowBox[{"AxesOrigin", "\[Rule]", 
-      RowBox[{"{", 
-       RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
-     RowBox[{"AxesLabel", "\[Rule]", 
-      RowBox[{"{", 
-       RowBox[{"\"\<\[Mu]M\>\"", ",", "\"\<RFU\>\""}], "}"}]}]}], "]"}], ",", 
+   RowBox[{"fitStrandASingle", "[", "\"\<AdjustedRSquared\>\"", "]"}], ",", 
    " ", 
-   RowBox[{"Plot", "[", 
-    RowBox[{
-     RowBox[{"fitStrandASingle", "[", "conc", "]"}], ",", " ", 
-     RowBox[{"{", 
-      RowBox[{"conc", ",", " ", "0", ",", " ", "1"}], "}"}]}], "]"}]}], 
-  "]"}], "\[IndentingNewLine]", 
- RowBox[{"Show", "[", 
-  RowBox[{
-   RowBox[{"ListPlot", "[", 
-    RowBox[{"strandBSingleData", ",", " ", 
-     RowBox[{"AxesOrigin", "\[Rule]", 
-      RowBox[{"{", 
-       RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
-     RowBox[{"AxesLabel", "\[Rule]", 
-      RowBox[{"{", 
-       RowBox[{"\"\<\[Mu]M\>\"", ",", "\"\<RFU\>\""}], "}"}]}]}], "]"}], ",", 
-   " ", 
-   RowBox[{"Plot", "[", 
-    RowBox[{
-     RowBox[{"fitStrandBSingle", "[", "conc", "]"}], ",", " ", 
-     RowBox[{"{", 
-      RowBox[{"conc", ",", " ", "0", ",", " ", "1"}], "}"}]}], "]"}]}], 
-  "]"}]}], "Input",ExpressionUUID->"8199b080-1238-4b8b-81b4-2a081b25b493"]
+   RowBox[{"fitStrandBSingle", "[", "\"\<AdjustedRSquared\>\"", "]"}]}], 
+  "}"}], "\[IndentingNewLine]", 
+ RowBox[{"Row", " ", "@", 
+  RowBox[{"{", 
+   RowBox[{
+    RowBox[{"Show", "[", 
+     RowBox[{
+      RowBox[{"ListPlot", "[", 
+       RowBox[{"strandASingleData", ",", " ", 
+        RowBox[{"AxesOrigin", "\[Rule]", 
+         RowBox[{"{", 
+          RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
+        RowBox[{"AxesLabel", "\[Rule]", 
+         RowBox[{"{", 
+          RowBox[{"\"\<nmolNtA\>\"", ",", "\"\<RFU\>\""}], "}"}]}], ",", " ", 
+        RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}], ",", " ", 
+      RowBox[{"Plot", "[", 
+       RowBox[{
+        RowBox[{"fitStrandASingle", "[", "conc", "]"}], ",", " ", 
+        RowBox[{"{", 
+         RowBox[{"conc", ",", " ", "0", ",", " ", "10"}], "}"}]}], "]"}]}], 
+     "]"}], ",", "\[IndentingNewLine]", 
+    RowBox[{"Show", "[", 
+     RowBox[{
+      RowBox[{"ListPlot", "[", 
+       RowBox[{"strandBSingleData", ",", " ", 
+        RowBox[{"AxesOrigin", "\[Rule]", 
+         RowBox[{"{", 
+          RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
+        RowBox[{"AxesLabel", "\[Rule]", 
+         RowBox[{"{", 
+          RowBox[{"\"\<nmolNtB\>\"", ",", "\"\<RFU\>\""}], "}"}]}], ",", " ", 
+        RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}], ",", " ", 
+      RowBox[{"Plot", "[", 
+       RowBox[{
+        RowBox[{"fitStrandBSingle", "[", "conc", "]"}], ",", " ", 
+        RowBox[{"{", 
+         RowBox[{"conc", ",", " ", "0", ",", " ", "10"}], "}"}]}], "]"}]}], 
+     "]"}]}], "}"}]}]}], \
+"Input",ExpressionUUID->"007a83a4-cce3-435a-89b4-4acc60807130"]
 }, Open  ]],
 
 Cell[CellGroupData[{
 
-Cell["Experiments", \
-"Section",ExpressionUUID->"77386c64-cbe1-49a7-bdbf-c47696c08719"],
+Cell["Double Stranded Fit", \
+"Subsubsection",ExpressionUUID->"bd8a0273-4f19-484f-b4d1-1e2821165c9b"],
+
+Cell["\<\
+First way fits three-way fit of molarities of our ss and ds portions, first \
+with pure linear fit, then (for giggles) allowing a square term (no \
+justification, but the fit is much better).\
+\>", "Text",ExpressionUUID->"4aa3eaaf-9d65-4f50-a954-dc46622151fb"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"dsData", " ", "=", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"#", "[", "\"\<nmolDsNt\>\"", "]"}], ",", " ", 
+        RowBox[{"#", "[", "\"\<nmolSsNtA\>\"", "]"}], ",", " ", 
+        RowBox[{"#", "[", "\"\<nmolSsNtB\>\"", "]"}], ",", " ", 
+        RowBox[{"#", "[", "\"\<Value\>\"", "]"}]}], "}"}], " ", "&"}], " ", "/@",
+      " ", "data"}], " ", "//", " ", "Normal"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"dsFit0", " ", "=", " ", 
+  RowBox[{"LinearModelFit", "[", 
+   RowBox[{
+    RowBox[{"Normal", "[", "dsData", "]"}], ",", " ", 
+    RowBox[{"{", " ", 
+     RowBox[{"nmolDsNt", ",", " ", "nmolSsNtA", ",", " ", "nmolSsNtB"}], 
+     "}"}], ",", " ", 
+    RowBox[{"{", " ", 
+     RowBox[{"nmolDsNt", ",", " ", "nmolSsNtA", ",", " ", "nmolSsNtB"}], 
+     "}"}]}], "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"Transpose", "[", 
+   RowBox[{"{", " ", 
+    RowBox[{
+     RowBox[{"dsData", "[", 
+      RowBox[{"[", 
+       RowBox[{"All", ",", "1"}], "]"}], "]"}], ",", " ", 
+     RowBox[{"dsFit0", "[", "\"\<FitResiduals\>\"", "]"}]}], "}"}], "]"}], 
+  " ", "//", " ", 
+  "ListPlot"}]}], \
+"Input",ExpressionUUID->"0c17de91-4819-405c-81d7-4414a1b1bc46"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"dsData", " ", "=", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"#", "[", "\"\<nmolDsNt\>\"", "]"}], ",", " ", 
+        RowBox[{"#", "[", "\"\<nmolSsNtA\>\"", "]"}], ",", " ", 
+        RowBox[{"#", "[", "\"\<nmolSsNtB\>\"", "]"}], ",", " ", 
+        RowBox[{"#", "[", "\"\<Value\>\"", "]"}]}], "}"}], " ", "&"}], " ", "/@",
+      " ", "data"}], " ", "//", " ", "Normal"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"dsFit0", " ", "=", " ", 
+  RowBox[{"LinearModelFit", "[", 
+   RowBox[{
+    RowBox[{"Normal", "[", "dsData", "]"}], ",", " ", 
+    RowBox[{"{", " ", 
+     RowBox[{"nmolDsNt", ",", " ", 
+      RowBox[{"nmolDsNt", "^", "2"}], ",", " ", "nmolSsNtA", ",", " ", 
+      "nmolSsNtB"}], "}"}], ",", " ", 
+    RowBox[{"{", " ", 
+     RowBox[{"nmolDsNt", ",", " ", "nmolSsNtA", ",", " ", "nmolSsNtB"}], 
+     "}"}]}], "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"Transpose", "[", 
+   RowBox[{"{", " ", 
+    RowBox[{
+     RowBox[{"dsData", "[", 
+      RowBox[{"[", 
+       RowBox[{"All", ",", "1"}], "]"}], "]"}], ",", " ", 
+     RowBox[{"dsFit0", "[", "\"\<FitResiduals\>\"", "]"}]}], "}"}], "]"}], 
+  " ", "//", " ", 
+  "ListPlot"}]}], \
+"Input",ExpressionUUID->"a245b31c-13fb-48e3-afdb-063a1bf40319"],
+
+Cell["Second way subtracts off the ss fit first", \
+"Text",ExpressionUUID->"c717160d-567c-4eaf-b48e-646c8407c898"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"dsData", " ", "=", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"#", "[", "\"\<nmolDsNt\>\"", "]"}], ",", " ", 
+        RowBox[{
+         RowBox[{"#", "[", "\"\<Value\>\"", "]"}], " ", "-", " ", 
+         RowBox[{"fitStrandASingleSlope", " ", "*", " ", 
+          RowBox[{"#", "[", "\"\<nmolSsNtA\>\"", "]"}]}], " ", "-", " ", 
+         RowBox[{"fitStrandBSingleSlope", " ", "*", " ", 
+          RowBox[{"#", "[", "\"\<nmolSsNtB\>\"", "]"}]}]}]}], "}"}], " ", 
+      "&"}], " ", "/@", " ", "data"}], " ", "//", " ", "Normal"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"dsFit", " ", "=", " ", 
+  RowBox[{"LinearModelFit", "[", 
+   RowBox[{
+    RowBox[{"Normal", "[", "dsData", "]"}], ",", " ", 
+    RowBox[{"{", " ", "nmolDsNt", "}"}], ",", " ", 
+    RowBox[{"{", " ", "nmolDsNt", "}"}]}], "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"Transpose", "[", 
+   RowBox[{"{", " ", 
+    RowBox[{
+     RowBox[{"dsData", "[", 
+      RowBox[{"[", 
+       RowBox[{"All", ",", "1"}], "]"}], "]"}], ",", " ", 
+     RowBox[{"dsFit", "[", "\"\<FitResiduals\>\"", "]"}]}], "}"}], "]"}], " ",
+   "//", " ", "ListPlot"}], "\[IndentingNewLine]", 
+ RowBox[{"Show", "[", 
+  RowBox[{
+   RowBox[{"ListPlot", "[", 
+    RowBox[{"dsData", ",", " ", 
+     RowBox[{"AxesOrigin", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
+     RowBox[{"AxesLabel", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"\"\<nmolDsNt\>\"", ",", "\"\<RFU\>\""}], "}"}]}], ",", " ", 
+     RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}], ",", " ", 
+   RowBox[{"Plot", "[", 
+    RowBox[{
+     RowBox[{"dsFit", "[", "conc", "]"}], ",", " ", 
+     RowBox[{"{", 
+      RowBox[{"conc", ",", " ", "0", ",", " ", "10"}], "}"}]}], "]"}]}], 
+  "]"}]}], "Input",ExpressionUUID->"fcd178b3-36b2-418a-a554-4b6d55a2df23"],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"dsData", " ", "=", " ", 
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"#", "[", "\"\<nmolDsNt\>\"", "]"}], ",", " ", 
+        RowBox[{
+         RowBox[{"#", "[", "\"\<Value\>\"", "]"}], " ", "-", " ", 
+         RowBox[{"fitStrandASingleSlope", " ", "*", " ", 
+          RowBox[{"#", "[", "\"\<nmolSsNtA\>\"", "]"}]}], " ", "-", " ", 
+         RowBox[{"fitStrandBSingleSlope", " ", "*", " ", 
+          RowBox[{"#", "[", "\"\<nmolSsNtB\>\"", "]"}]}]}]}], "}"}], " ", 
+      "&"}], " ", "/@", " ", "data"}], " ", "//", " ", "Normal"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"dsFit", " ", "=", " ", 
+  RowBox[{"LinearModelFit", "[", 
+   RowBox[{
+    RowBox[{"Normal", "[", "dsData", "]"}], ",", " ", 
+    RowBox[{"{", " ", 
+     RowBox[{"nmolDsNt", ",", " ", 
+      RowBox[{"nmolDsNt", "^", "2"}]}], "}"}], ",", " ", 
+    RowBox[{"{", " ", "nmolDsNt", "}"}]}], "]"}]}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"Transpose", "[", 
+   RowBox[{"{", " ", 
+    RowBox[{
+     RowBox[{"dsData", "[", 
+      RowBox[{"[", 
+       RowBox[{"All", ",", "1"}], "]"}], "]"}], ",", " ", 
+     RowBox[{"dsFit", "[", "\"\<FitResiduals\>\"", "]"}]}], "}"}], "]"}], " ",
+   "//", " ", "ListPlot"}], "\[IndentingNewLine]", 
+ RowBox[{"Show", "[", 
+  RowBox[{
+   RowBox[{"ListPlot", "[", 
+    RowBox[{"dsData", ",", " ", 
+     RowBox[{"AxesOrigin", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"0", ",", "0"}], "}"}]}], ",", " ", 
+     RowBox[{"AxesLabel", "\[Rule]", 
+      RowBox[{"{", 
+       RowBox[{"\"\<nmolDsNt\>\"", ",", "\"\<RFU\>\""}], "}"}]}], ",", " ", 
+     RowBox[{"ImageSize", "\[Rule]", "Medium"}]}], "]"}], ",", " ", 
+   RowBox[{"Plot", "[", 
+    RowBox[{
+     RowBox[{"dsFit", "[", "conc", "]"}], ",", " ", 
+     RowBox[{"{", 
+      RowBox[{"conc", ",", " ", "0", ",", " ", "10"}], "}"}]}], "]"}]}], 
+  "]"}]}], "Input",ExpressionUUID->"862f2bfc-7fac-4015-a66e-4145965c841a"]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Thoughts", \
+"Subsection",ExpressionUUID->"603b21c3-d591-4fdb-96d0-61e75e9d6516"],
+
+Cell["\<\
+* How do we account for the fact that our eva molecules are beging eaten up \
+as they bind, thus reducing background fluoresence.\
+\>", "Text",ExpressionUUID->"4d37d500-1ade-4beb-9558-f13300441229"]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Misc", "Section",ExpressionUUID->"77386c64-cbe1-49a7-bdbf-c47696c08719"],
 
 Cell["\<\
 https://stackoverflow.com/questions/29855062/setting-parameter-values-in-sql-\
@@ -975,8 +1271,8 @@ for-ms-access\
 }, Open  ]]
 }, Open  ]]
 },
-WindowSize->{1642, 1548},
-WindowMargins->{{Automatic, 741}, {Automatic, 5}},
+WindowSize->{1292, 1483},
+WindowMargins->{{Automatic, 1046}, {Automatic, 29}},
 PrintingCopies->1,
 PrintingPageRange->{32000, 32000},
 PrintingOptions->{"Magnification"->1.,
