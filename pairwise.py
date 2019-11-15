@@ -21,8 +21,8 @@ from rgatkinson.pipette import verify_well_locations, instruments_manager
 ########################################################################################################################
 
 # Tip usage
-p10_start_tip = 'A1'
-p50_start_tip = 'D1'
+p10_start_tip = 'F2'
+p50_start_tip = 'F2'
 config.trash_control = True
 
 # Automation control
@@ -44,8 +44,8 @@ evagreen_volumes = [1000]      # Fresh tube of EvaGreen
 
 strand_a_conc = '9.659 uM'
 strand_b_conc = '8.897 uM'
-strand_a_min_vol = 1100
-strand_b_min_vol = 1100
+strand_a_min_vol = 650
+strand_b_min_vol = 650
 
 
 ########################################################################################################################
@@ -298,8 +298,8 @@ def plateMasterMix():
     p50.transfer(master_mix_per_well, master_mix, usedWells(),
                  new_tip='once',
                  trash=config.trash_control,
-                 full_dispense=True,
-                 aspirate_top_clearance=-5.0  # large to help avoid soap bubbles. remove when we no longer use detergent in buffer
+                 full_dispense=True #,
+                 # aspirate_top_clearance=-5.0  # large to help avoid soap bubbles. remove when we no longer use detergent in buffer
                  )
 
 def platePerWellWater():
