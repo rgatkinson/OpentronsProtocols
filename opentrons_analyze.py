@@ -143,6 +143,7 @@ class MonitorController(object):
             return self._liquids[liquid_name]
 
     def note_liquid_name(self, liquid_name, location_path, initially=None, concentration=None):
+        # Keep in sync with (global) note_liquid_name
         well_monitor = self._monitor_from_location_path(WellMonitor, location_path)
         liquid = self.get_liquid(liquid_name)
         if concentration is not None:
