@@ -42,11 +42,33 @@ else:
 buffer_volumes = [2000, 2000]  # Fresh tubes of B9022S
 evagreen_volumes = [1000]      # Fresh tube of EvaGreen
 
-strand_a_conc = '9.659 uM'
-strand_b_conc = '8.897 uM'
 strand_a_min_vol = 1100
 strand_b_min_vol = 1100
 
+########################################################################################################################
+## Protocol Design
+########################################################################################################################
+
+strand_a_conc = Concentration('9.659 uM')
+strand_b_conc = Concentration('8.897 uM')
+
+well_count = 96
+total_well_volume = 84
+max_dna_working_concentration = Concentration(1.2, "uM")
+buffer_source_concentration = Concentration(5, "x")
+evagreen_source_concentration = Concentration(20, "x")
+
+buffer_per_well = total_well_volume / buffer_source_concentration.x
+evagreen_per_well = total_well_volume / evagreen_source_concentration.x
+dna_and_water_per_well = total_well_volume - buffer_per_well - evagreen_per_well
+
+master_mix_buffer_nominal = well_count * buffer_per_well
+master_mix_evagreen_nominal = well_count * evagreen_per_well
+
+strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
+num_replicates = 3
+columns_per_plate = 12
+rows_per_plate = 8
 
 ########################################################################################################################
 ## Protocol
@@ -57,17 +79,13 @@ strand_dilution_factor = 25.0 / 9.0  # per Excel worksheet
 strand_dilution_vol = 1225
 
 # Master mix, values per Excel worksheet
-mm_overhead_factor = 1.10  # 1.0375
-master_mix_buffer_vol = 1612.8 * mm_overhead_factor
-master_mix_evagreen_vol = 403.2 * mm_overhead_factor
+mm_overhead_factor = 1.10  # 1.0375  # 1.10 is a hack attempting to allow for suds
+master_mix_buffer_vol = master_mix_buffer_nominal * mm_overhead_factor
+master_mix_evagreen_vol = master_mix_evagreen_nominal * mm_overhead_factor
 master_mix_common_water_vol = 672 * mm_overhead_factor
 master_mix_vol = master_mix_buffer_vol + master_mix_evagreen_vol + master_mix_common_water_vol
 
 # Define the volumes of diluted strands we will use
-strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
-num_replicates = 3
-columns_per_plate = 12
-rows_per_plate = 8
 per_well_water_volumes = [
     [56, 54, 51, 48],
     [54, 52, 49, 46],
@@ -118,15 +136,15 @@ if use_eppendorf_5_0_tubes:
     master_mix = eppendorf_5_0_rack['A1']
     waterA = eppendorf_5_0_rack['C4']
     waterB = eppendorf_5_0_rack['C5']
-    note_liquid(location=waterA, name='Water', initial_volume=waterA_initial_volume)
-    note_liquid(location=waterB, name='Water', initial_volume=waterB_initial_volume)
+    note_liquid(location=waterA, name='Water', initially=waterA_initial_volume)
+    note_liquid(location=waterB, name='Water', initially=waterB_initial_volume)
 else:
     trough = labware_manager.load('usascientific_12_reservoir_22ml', slot=9, label='trough')
     falcon_rack = labware_manager.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', slot=8, label='falcon_rack')
     master_mix = falcon_rack['A1']
     waterA = trough['A1']
     waterB = waterA
-    note_liquid(location=waterA, name='Water', min_volume=water_min_volume)
+    note_liquid(location=waterA, name='Water', initially_at_least=water_min_volume)
 
 # Clean up namespace
 del well
@@ -181,8 +199,8 @@ def usesP10(queriedVol, count, allow_zero):
 
 def diluteStrands():
     if manually_dilute_strands:
-        note_liquid(location=diluted_strand_a, name='Diluted StrandA', initial_volume=strand_dilution_vol)
-        note_liquid(location=diluted_strand_b, name='Diluted StrandB', initial_volume=strand_dilution_vol)
+        note_liquid(location=diluted_strand_a, name='Diluted StrandA', initially=strand_dilution_vol)
+        note_liquid(location=diluted_strand_b, name='Diluted StrandB', initially=strand_dilution_vol)
 
         log('Diluting Strands')
         info(pretty.format('Diluted Strand A recipe: water={0:n} strandA={1:n} vol={2:n}', strand_dilution_water_vol, strand_dilution_source_vol, strand_dilution_vol))
@@ -195,8 +213,8 @@ def diluteStrands():
         assert strand_a_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_a).min_aspiratable_volume
         assert strand_b_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_b).min_aspiratable_volume
 
-        note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, min_volume=strand_a_min_vol)  # i.e.: we have enough, just not specified how much
-        note_liquid(location=strand_b, name='StrandB', concentration=strand_b_conc, min_volume=strand_b_min_vol)  # ditto
+        note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, initially_at_least=strand_a_min_vol)  # i.e.: we have enough, just not specified how much
+        note_liquid(location=strand_b, name='StrandB', concentration=strand_b_conc, initially_at_least=strand_b_min_vol)  # ditto
         note_liquid(location=diluted_strand_a, name='Diluted StrandA')
         note_liquid(location=diluted_strand_b, name='Diluted StrandB')
 
@@ -220,7 +238,7 @@ def diluteStrands():
 
 def createMasterMix():
     if manually_make_master_mix:
-        note_liquid(location=master_mix, name='Master Mix', initial_volume=master_mix_vol)
+        note_liquid(location=master_mix, name='Master Mix', initially=master_mix_vol)
 
         log('Creating Master Mix')
         info(pretty.format('Master Mix recipe: water={0:n} buffer={1:n} EvaGreen={2:n}', master_mix_common_water_vol, master_mix_buffer_vol, master_mix_evagreen_vol))
@@ -236,9 +254,9 @@ def createMasterMix():
         evagreens = list(zip(screwcap_rack.rows(1), evagreen_volumes))
 
         for buffer in buffers:
-            note_liquid(location=buffer[0], name='Buffer', initial_volume=buffer[1], concentration='5x')
+            note_liquid(location=buffer[0], name='Buffer', initially=buffer[1], concentration='5x')
         for evagreen in evagreens:
-            note_liquid(location=evagreen[0], name='Evagreen', initial_volume=evagreen[1], concentration='20x')
+            note_liquid(location=evagreen[0], name='Evagreen', initially=evagreen[1], concentration='20x')
         note_liquid(location=master_mix, name='Master Mix')
 
         # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix

@@ -58,7 +58,7 @@ for well in mass_wells:
     Eppendorf1point5mlTubeGeometry(well)
 
 log('Liquid Names')
-note_liquid(location=water, name='Water', min_volume=15000)  # volume is rough guess
+note_liquid(location=water, name='Water', initially_at_least=15000)  # volume is rough guess
 for well in mass_wells:
     note_liquid(location=well, name=pretty.format('mass_vol={0:n}', well.mass_vol))
 

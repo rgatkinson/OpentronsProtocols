@@ -57,8 +57,8 @@ dilutions = eppendorf_1_5_rack.rows(1) + eppendorf_1_5_rack.rows(2)  # 12 in all
 
 # Remember initial liquid names and volumes
 log('Liquid Names')
-note_liquid(location=water, name='Water', min_volume=7000)  # volume is rough guess
-note_liquid(location=initial_stock, name='AlluraRed', concentration="20.1442 mM", initial_volume=stock_volume)
+note_liquid(location=water, name='Water', initially_at_least=7000)  # volume is rough guess
+note_liquid(location=initial_stock, name='AlluraRed', concentration="20.1442 mM", initially=stock_volume)
 
 ########################################################################################################################
 # Dilutions

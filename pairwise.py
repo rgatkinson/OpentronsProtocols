@@ -118,15 +118,15 @@ if use_eppendorf_5_0_tubes:
     master_mix = eppendorf_5_0_rack['A1']
     waterA = eppendorf_5_0_rack['C4']
     waterB = eppendorf_5_0_rack['C5']
-    note_liquid(location=waterA, name='Water', initial_volume=waterA_initial_volume)
-    note_liquid(location=waterB, name='Water', initial_volume=waterB_initial_volume)
+    note_liquid(location=waterA, name='Water', initially=waterA_initial_volume)
+    note_liquid(location=waterB, name='Water', initially=waterB_initial_volume)
 else:
     trough = labware_manager.load('usascientific_12_reservoir_22ml', slot=9, label='trough')
     falcon_rack = labware_manager.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', slot=8, label='falcon_rack')
     master_mix = falcon_rack['A1']
     waterA = trough['A1']
     waterB = waterA
-    note_liquid(location=waterA, name='Water', min_volume=water_min_volume)
+    note_liquid(location=waterA, name='Water', initially_at_least=water_min_volume)
 
 # Clean up namespace
 del well
@@ -181,8 +181,8 @@ def usesP10(queriedVol, count, allow_zero):
 
 def diluteStrands():
     if manually_dilute_strands:
-        note_liquid(location=diluted_strand_a, name='Diluted StrandA', initial_volume=strand_dilution_vol)
-        note_liquid(location=diluted_strand_b, name='Diluted StrandB', initial_volume=strand_dilution_vol)
+        note_liquid(location=diluted_strand_a, name='Diluted StrandA', initially=strand_dilution_vol)
+        note_liquid(location=diluted_strand_b, name='Diluted StrandB', initially=strand_dilution_vol)
 
         log('Diluting Strands')
         info(pretty.format('Diluted Strand A recipe: water={0:n} strandA={1:n} vol={2:n}', strand_dilution_water_vol, strand_dilution_source_vol, strand_dilution_vol))
@@ -195,8 +195,8 @@ def diluteStrands():
         assert strand_a_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_a).min_aspiratable_volume
         assert strand_b_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_b).min_aspiratable_volume
 
-        note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, min_volume=strand_a_min_vol)  # i.e.: we have enough, just not specified how much
-        note_liquid(location=strand_b, name='StrandB', concentration=strand_b_conc, min_volume=strand_b_min_vol)  # ditto
+        note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, initially_at_least=strand_a_min_vol)  # i.e.: we have enough, just not specified how much
+        note_liquid(location=strand_b, name='StrandB', concentration=strand_b_conc, initially_at_least=strand_b_min_vol)  # ditto
         note_liquid(location=diluted_strand_a, name='Diluted StrandA')
         note_liquid(location=diluted_strand_b, name='Diluted StrandB')
 
@@ -220,7 +220,7 @@ def diluteStrands():
 
 def createMasterMix():
     if manually_make_master_mix:
-        note_liquid(location=master_mix, name='Master Mix', initial_volume=master_mix_vol)
+        note_liquid(location=master_mix, name='Master Mix', initially=master_mix_vol)
 
         log('Creating Master Mix')
         info(pretty.format('Master Mix recipe: water={0:n} buffer={1:n} EvaGreen={2:n}', master_mix_common_water_vol, master_mix_buffer_vol, master_mix_evagreen_vol))
@@ -236,9 +236,9 @@ def createMasterMix():
         evagreens = list(zip(screwcap_rack.rows(1), evagreen_volumes))
 
         for buffer in buffers:
-            note_liquid(location=buffer[0], name='Buffer', initial_volume=buffer[1], concentration='5x')
+            note_liquid(location=buffer[0], name='Buffer', initially=buffer[1], concentration='5x')
         for evagreen in evagreens:
-            note_liquid(location=evagreen[0], name='Evagreen', initial_volume=evagreen[1], concentration='20x')
+            note_liquid(location=evagreen[0], name='Evagreen', initially=evagreen[1], concentration='20x')
         note_liquid(location=master_mix, name='Master Mix')
 
         # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix

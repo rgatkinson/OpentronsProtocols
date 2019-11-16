@@ -142,17 +142,17 @@ class MonitorController(object):
             self._liquids[liquid_name] = Liquid(liquid_name)
             return self._liquids[liquid_name]
 
-    def note_liquid_name(self, liquid_name, location_path, initial_volume=None, concentration=None):
+    def note_liquid_name(self, liquid_name, location_path, initially=None, concentration=None):
         well_monitor = self._monitor_from_location_path(WellMonitor, location_path)
         liquid = self.get_liquid(liquid_name)
         if concentration is not None:
             concentration = Concentration(concentration)
             liquid.concentration = concentration
         well_monitor.set_liquid(liquid)
-        if initial_volume is not None:
-            if isinstance(initial_volume, list):  # work around json parsing deficiency
-                initial_volume = Interval(*initial_volume)
-            well_monitor.set_initial_volume(initial_volume)
+        if initially is not None:
+            if isinstance(initially, list):  # work around json parsing deficiency
+                initially = Interval(*initially)
+            well_monitor.set_initial_volume(initially)
 
     def well_monitor(self, well):
         well_monitor = self._monitor_from_location_path(WellMonitor, get_location_path(well))
@@ -334,7 +334,7 @@ def analyzeRunLog(run_log):
                 serialized = text[len(selector):]  # will include initial white space, but that's ok
                 serialized = serialized.replace("}}", "}").replace("{{", "{")
                 d = json.loads(serialized)
-                controller.note_liquid_name(d['name'], d['location'], initial_volume=d.get('initial_volume', None), concentration=d.get('concentration', None))
+                controller.note_liquid_name(d['name'], d['location'], initially=d.get('initial_volume', None), concentration=d.get('concentration', None))
             elif selector == 'air' \
                     or selector == 'returning' \
                     or selector == 'engaging' \

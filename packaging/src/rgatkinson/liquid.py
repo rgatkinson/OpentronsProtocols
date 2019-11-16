@@ -319,7 +319,7 @@ class LiquidVolume(object):
         self.max_delta = max(self.max_delta, self.cum_delta)
 
 
-def note_liquid(location, name=None, initial_volume=None, min_volume=None, concentration=None, local_config=None):
+def note_liquid(location, name=None, initially=None, initially_at_least=None, concentration=None, local_config=None):
     # Must keep in sync with Opentrons-Analyze controller.note_liquid_name
     if local_config is None:
         local_config = rgatkinson.configuration.config
@@ -330,11 +330,13 @@ def note_liquid(location, name=None, initial_volume=None, min_volume=None, conce
     else:
         well.label = name
     d = {'name': name, 'location': get_location_path(well)}
-    if initial_volume is None and min_volume is not None:
-        initial_volume = Interval([min_volume, local_config.well_geometry(well).well_capacity])
-    if initial_volume is not None:
-        d['initial_volume'] = initial_volume
-        local_config.liquid_volume(well).set_initial_volume(initial_volume)
+    if initially is not None and initially_at_least is not None:
+        raise ValueError  # can use both at once
+    if initially is None and initially_at_least is not None:
+        initially = Interval([initially_at_least, local_config.well_geometry(well).well_capacity])
+    if initially is not None:
+        d['initial_volume'] = initially
+        local_config.liquid_volume(well).set_initial_volume(initially)
     if concentration is not None:
         d['concentration'] = str(Concentration(concentration))
     serialized = json.dumps(d).replace("{", "{{").replace("}", "}}")  # runtime calls comment.format(...) on our comment; avoid issues therewith

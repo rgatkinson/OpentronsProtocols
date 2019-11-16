@@ -57,8 +57,8 @@ dilutions = eppendorf_5_0_rack.rows['A']['1':2]
 
 # Remember initial liquid names and volumes
 log('Liquid Names')
-note_liquid(location=water, name='Water', initial_volume=water_volume)
-note_liquid(location=initial_stock, name='AlluraRed', concentration="20.1442 mM", initial_volume=stock_volume)
+note_liquid(location=water, name='Water', initially=water_volume)
+note_liquid(location=initial_stock, name='AlluraRed', concentration="20.1442 mM", initially=stock_volume)
 
 ########################################################################################################################
 # Dilutions
@@ -67,7 +67,7 @@ note_liquid(location=initial_stock, name='AlluraRed', concentration="20.1442 mM"
 def make_dilution(water, source, dilution, dilution_volume, dilution_factor, manual):
     if manual:
         name = f'Dilution of {source.get_name()} by {dilution_factor}x'
-        note_liquid(dilution, name, initial_volume=dilution_volume)
+        note_liquid(dilution, name, initially=dilution_volume)
     log(f'diluting from {source.get_name()} to {dilution.get_name()}')
     dilution_source_volume = dilution_volume / dilution_factor
     dilution_water_volume = dilution_volume - dilution_source_volume
