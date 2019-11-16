@@ -34,6 +34,11 @@ class Concentration(object):
         DontCare = 2
 
     def __init__(self, value, unit=None, flavor=None):
+        if isinstance(value, Concentration):
+            self.value = value.value
+            self.flavor = value.flavor
+            return
+
         if flavor is not None:
             if flavor == Concentration.Flavor.Molar:
                 unit = 'M'
@@ -46,12 +51,13 @@ class Concentration(object):
         else:
             value = str(value)
         self.flavor = Concentration.Flavor.Molar
-        units = [('mM', 0.001), ('uM', 0.000001), ('nM', 1e-9), ('M', 1)]
+        units = [('mM', 0.001), ('uM', 0.000001), ('nM', 1e-9), ('pM', 1e-12), ('fM', 1e-15), ('M', 1)]
         for unit, factor in units:
             if value.endswith(unit):
                 quantity = value[0:-len(unit)]
                 self.value = float(quantity) * factor
                 return
+
         if value.lower().endswith('x'):
             quantity = value[0:-1]
             try:
@@ -60,13 +66,35 @@ class Concentration(object):
                 self.value = 0
             self.flavor = Concentration.Flavor.X
             return
+
         if value.lower().endswith('dc'):
             self.value = 0
             self.flavor = Concentration.Flavor.DontCare
             return
+
         # default is micro-molar
         factor = 1e-6
         self.value = float(value) * factor
+
+    @property
+    def x(self):
+        assert self.flavor == Concentration.Flavor.X
+        return self.value
+
+    @property
+    def uM(self):
+        assert self.flavor == Concentration.Flavor.Molar
+        return self.value * 1e6
+
+    @property
+    def nM(self):
+        assert self.flavor == Concentration.Flavor.Molar
+        return self.value * 1e9
+
+    @property
+    def M(self):
+        assert self.flavor == Concentration.Flavor.Molar
+        return self.value
 
     def __mul__(self, scale):
         return Concentration(self.value * scale, flavor=self.flavor)
@@ -97,8 +125,12 @@ class Concentration(object):
                 return emit(1e3, 'mM')
             elif test(self.value, 1e6):
                 return emit(1e6, 'uM')
-            else:
+            elif test(self.value, 1e9):
                 return emit(1e9, 'nM')
+            elif test(self.value, 1e12):
+                return emit(1e12, 'pM')
+            else:
+                return emit(1e15, 'fM')
         elif self.flavor == Concentration.Flavor.X:
             return pretty.format('{0:.3n}x', self.value)
         else:
