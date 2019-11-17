@@ -27,7 +27,7 @@ from rgatkinson.logging import Pretty, get_location_path, format_log_msg
 class PlaceableAnalyzer(object):
 
     def __init__(self, config, manager, location_path):
-        self.config = config;
+        self.config = config
         self.manager = manager
         self.location_path = location_path
         self.target = None
