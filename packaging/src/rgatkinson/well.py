@@ -13,6 +13,7 @@ from opentrons.util.vector import Vector
 
 from rgatkinson.configuration import WellGeometryConfigurationContext
 from rgatkinson.interval import fpu, is_interval, Interval
+from rgatkinson.liquid import LiquidVolume
 from rgatkinson.util import sqrt, square, cube, cubeRoot, instance_count, thread_local_storage
 
 
@@ -510,6 +511,8 @@ class EnhancedWell(Well):
         self.config = thread_local_storage.config.wells
         self.__geometry = None
         self.geometry = UnknownWellGeometry(well=self)
+        self.__liquid_volume = None
+        self.liquid_volume = LiquidVolume(well=self)
 
     # endregion
 
@@ -533,6 +536,23 @@ class EnhancedWell(Well):
             self.__geometry = value
             if self.__geometry is not None:
                 self.__geometry.well = self
+
+    @property
+    def liquid_volume(self):
+        return self.__liquid_volume
+
+    @liquid_volume.setter
+    def liquid_volume(self, value):
+        if self.__liquid_volume is not value:
+            #
+            old_liquid_volume = self.__liquid_volume
+            self.__liquid_volume = None
+            if old_liquid_volume is not None:
+                old_liquid_volume.well = None
+            #
+            self.__liquid_volume = value
+            if self.__liquid_volume is not None:
+                self.__liquid_volume.well = self
 
     def top_coords_absolute(self):
         xyz = pose_tracker.absolute(robot.poses, self)

@@ -454,7 +454,7 @@ class EnhancedPipette(Pipette):
     # Aspirate and dispense
     #-------------------------------------------------------------------------------------------------------------------
 
-    def _pre_wet(self, well, volume, location: Placeable, rate, pre_wet: bool):
+    def _pre_wet(self, well: EnhancedWell, volume, location: Placeable, rate, pre_wet: bool):
         if pre_wet is None:
             pre_wet = self.aspirate_params_hack.pre_wet_transfer
         if pre_wet is None:
@@ -463,7 +463,7 @@ class EnhancedPipette(Pipette):
             if self.tip_wetness is TipWetness.DRY:
                 pre_wet_volume = min(
                     self.max_volume * self.config.aspirate.pre_wet.max_volume_fraction,
-                    max(volume, self.liquid_volume(well).available_volume_min))
+                    max(volume, well.liquid_volume.available_volume_min))
                 pre_wet_rate = self.config.aspirate.pre_wet.rate_func(rate)
                 self.tip_wetness = TipWetness.WETTING
                 def do_pre_wet():
@@ -490,8 +490,8 @@ class EnhancedPipette(Pipette):
             if bottom_clearance is None:
                 bottom_clearance = self.config.dispense.bottom_clearance
 
-        current_liquid_volume = self.liquid_volume(well).current_volume_min
-        needed_liquid_volume = self.well_geometry(well).min_aspiratable_volume + volume;
+        current_liquid_volume = well.liquid_volume.current_volume_min
+        needed_liquid_volume = well.geometry.min_aspiratable_volume + volume;
         if current_liquid_volume < needed_liquid_volume:
             msg = pretty.format('aspirating too much from well={0} have={1:n} need={2:n}', well.get_name(), current_liquid_volume, needed_liquid_volume)
             warn(msg)
@@ -510,7 +510,7 @@ class EnhancedPipette(Pipette):
 
         # track volume todo: what if we're doing an air gap
         well, __ = unpack_location(location)
-        self.liquid_volume(well).aspirate(volume)
+        well.liquid_volume.aspirate(volume)
         if volume != 0:
             self.prev_aspirated_location = well
 
@@ -551,7 +551,7 @@ class EnhancedPipette(Pipette):
             self.dispense_params_hack.fully_dispensed = False
         # track volume
         well, __ = unpack_location(location)
-        self.liquid_volume(well).dispense(volume)
+        well.liquid_volume.dispense(volume)
 
     def _dispense_during_transfer(self, vol, loc, **kwargs):
         self.dispense_params_hack.unsequester_transfer(kwargs)
@@ -570,10 +570,10 @@ class EnhancedPipette(Pipette):
             return mm_from_vol
 
     def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, top_clearance=None, bottom_clearance=None, allow_above=False):
-        if isinstance(location, Placeable):
+        if isinstance(location, EnhancedWell):
             well = location; assert is_well(well)
-            current_liquid_volume = self.liquid_volume(well).current_volume_min
-            liquid_depth = self.well_geometry(well).depth_from_volume_min(current_liquid_volume if aspirate_volume is None else current_liquid_volume - aspirate_volume)
+            current_liquid_volume = well.liquid_volume.current_volume_min
+            liquid_depth = well.geometry.depth_from_volume_min(current_liquid_volume if aspirate_volume is None else current_liquid_volume - aspirate_volume)
             z = self._top_clearance(liquid_depth=liquid_depth, clearance=(0 if top_clearance is None else top_clearance))
             if bottom_clearance is not None:
                 z = max(z, bottom_clearance)
@@ -581,15 +581,10 @@ class EnhancedPipette(Pipette):
                 z = min(z, well.z_size())
             result = well.bottom(z)
         else:
+            assert not isinstance(location, Placeable)
             result = location  # we already had a displacement baked in to the location, don't adjust (when does this happen?)
         assert isinstance(result, tuple)
         return result
-
-    def liquid_volume(self, well):
-        return self.config.liquid_volume(well)
-
-    def well_geometry(self, well):
-        return well.geometry
 
     #-------------------------------------------------------------------------------------------------------------------
     # Tip Management
@@ -784,7 +779,7 @@ class EnhancedPipette(Pipette):
         else:
             return liquid_depth + clearance  # going down. we used to clamp to at least a fraction of the current liquid depth, but not worthwhile as tube modelling accuracy has improved
 
-    def _layered_mix_one(self, well, msg, **kwargs):
+    def _layered_mix_one(self, well: EnhancedWell, msg, **kwargs):
         def fetch(name, default=None):
             if default is None:
                 default = getattr(self.config.layered_mix, name, None)
@@ -808,9 +803,9 @@ class EnhancedPipette(Pipette):
         top_clearance = fetch('top_clearance')
         bottom_clearance = fetch('bottom_clearance')
 
-        current_liquid_volume = self.liquid_volume(well).current_volume_min
-        liquid_depth = self.well_geometry(well).depth_from_volume(current_liquid_volume)
-        liquid_depth_after_asp = self.well_geometry(well).depth_from_volume(current_liquid_volume - volume)
+        current_liquid_volume = well.liquid_volume.current_volume_min
+        liquid_depth = well.geometry.depth_from_volume(current_liquid_volume)
+        liquid_depth_after_asp = well.geometry.depth_from_volume(current_liquid_volume - volume)
         msg = pretty.format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_aspirate={4:n}", msg, well.get_name(), current_liquid_volume, liquid_depth, liquid_depth_after_asp)
 
         def do_one():
@@ -848,7 +843,7 @@ class EnhancedPipette(Pipette):
 
                 radial_clearance_func = self.radial_clearance_manager.get_clearance_function(self, well)
                 radial_clearance = 0 if radial_clearance_func is None or not self.config.layered_mix.enable_radial_randomness else radial_clearance_func(y_max)
-                radial_clearance = max(0, radial_clearance - max(self.well_geometry(well).radial_clearance_tolerance, self.config.layered_mix.radial_clearance_tolerance))
+                radial_clearance = max(0, radial_clearance - max(well.geometry.radial_clearance_tolerance, self.config.layered_mix.radial_clearance_tolerance))
 
                 for i in range(count_):
                     tip_cycles += 1

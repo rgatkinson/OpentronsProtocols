@@ -255,14 +255,30 @@ class LiquidVolume(object):
     # Construction
     #-------------------------------------------------------------------------------------------------------------------
 
-    def __init__(self, well, config):
+    def __init__(self, well):
+        self.__well = None
         self.well = well
-        self.config = config
         self.initial_volume_known = False
         self.initial_volume = Interval([0, fpu.infinity])
         self.cum_delta = 0
         self.min_delta = 0
         self.max_delta = 0
+
+    @property
+    def well(self):
+        return self.__well
+
+    @well.setter
+    def well(self, value):
+        if self.__well is not value:
+            old_well = self.__well
+            self.__well = None
+            if old_well is not None:
+                old_well.liquid_volume = None
+
+            self.__well = value
+            if self.__well is not None:
+                self.__well.liquid_volume = self
 
     def set_initial_volume(self, initial_volume):  # idempotent
         if self.initial_volume_known:
@@ -358,7 +374,7 @@ def note_liquid(location, name=None, initially=None, initially_at_least=None, co
 
     if initially is not None:
         d['initial_volume'] = initially
-        local_config.liquid_volume(well).set_initial_volume(initially)
+        well.liquid_volume.set_initial_volume(initially)
 
     if concentration is not None:
         concentration = Concentration(concentration)

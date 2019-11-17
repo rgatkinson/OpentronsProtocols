@@ -89,15 +89,6 @@ class TopConfigurationContext(AbstractConfigurationContext):
         self.layered_mix: LayeredMixConfigurationContext = LayeredMixConfigurationContext(execution_context)
         self.wells = WellGeometryConfigurationContext(execution_context)
 
-    def liquid_volume(self, well):
-        try:
-            result = well.liquid_volume
-            assert result.config is self
-            return result
-        except AttributeError:
-            well.liquid_volume = LiquidVolume(well, self)
-            return well.liquid_volume
-
 config = TopConfigurationContext(ProtocolExecutionContext())
 
 # ambiently remember the default top configuration context

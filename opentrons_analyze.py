@@ -13,11 +13,10 @@ from opentrons import robot
 from opentrons.legacy_api.containers import Slot
 from opentrons.legacy_api.containers.placeable import Placeable
 
-from rgatkinson import config, format_log_msg
-from rgatkinson.configuration import AbstractConfigurationContext
+from rgatkinson.configuration import config, AbstractConfigurationContext
 from rgatkinson.interval import Interval
 from rgatkinson.liquid import Liquid, Concentration, Mixture, PipetteContents, LiquidVolume
-from rgatkinson.logging import Pretty, get_location_path
+from rgatkinson.logging import Pretty, get_location_path, format_log_msg
 
 
 ########################################################################################################################
@@ -48,7 +47,7 @@ class PlaceableMonitor(object):
 class WellMonitor(PlaceableMonitor):
     def __init__(self, config, controller, location_path):
         super(WellMonitor, self).__init__(config, controller, location_path)
-        self.volume = LiquidVolume(None, self.config)
+        self.volume = LiquidVolume(None)
         self.liquid = Liquid(location_path)  # unique to this well unless we're told a better name later
         self.liquid_known = False
         self.mixture = Mixture()
