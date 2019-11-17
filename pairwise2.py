@@ -210,8 +210,8 @@ def diluteStrands():
     else:
         strand_a = eppendorf_1_5_rack['A1']
         strand_b = eppendorf_1_5_rack['B1']
-        assert strand_a_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_a).min_aspiratable_volume
-        assert strand_b_min_vol >= strand_dilution_source_vol + config.well_geometry(strand_b).min_aspiratable_volume
+        assert strand_a_min_vol >= strand_dilution_source_vol + strand_a.geometry.min_aspiratable_volume
+        assert strand_b_min_vol >= strand_dilution_source_vol + strand_b.geometry.min_aspiratable_volume
 
         note_liquid(location=strand_a, name='StrandA', concentration=strand_a_conc, initially_at_least=strand_a_min_vol)  # i.e.: we have enough, just not specified how much
         note_liquid(location=strand_b, name='StrandB', concentration=strand_b_conc, initially_at_least=strand_b_min_vol)  # ditto
@@ -280,7 +280,7 @@ def createMasterMix():
                     cur_vol = tubes[tube_index][1]
                     min_vol = max(p50_min_vol,
                                   cur_vol / config.min_aspirate_factor_hack,  # tolerance is proportional to specification of volume. can probably make better guess
-                                  config.well_geometry(cur_well).min_aspiratable_volume)
+                                  cur_well.geometry.min_aspiratable_volume)
                     tube_index = tube_index + 1
                 this_vol = min(xfer_vol_remaining, cur_vol - min_vol)
                 assert this_vol >= p50_min_vol  # TODO: is this always the case?

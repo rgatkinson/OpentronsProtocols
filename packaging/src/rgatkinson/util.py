@@ -2,6 +2,7 @@
 # util.py
 #
 import math
+import threading
 
 def is_indexable(value):
     return hasattr(type(value), '__getitem__')
@@ -40,3 +41,6 @@ def instance_count(predicate):
         if predicate(obj):
             count += 1
     return count
+
+# make thread local storage
+thread_local_storage = threading.local()

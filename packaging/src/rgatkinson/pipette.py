@@ -42,7 +42,7 @@ class RadialClearanceManager(object):
         }
 
     def get_clearance_function(self, pipette, well):
-        key = (pipette.model, pipette.current_tip_tiprack.uri, self.config.well_geometry(well).__class__)
+        key = (pipette.model, pipette.current_tip_tiprack.uri, well.geometry.__class__)
         return self._functions.get(key, None)
 
     def _free_sailing(self):
@@ -589,7 +589,7 @@ class EnhancedPipette(Pipette):
         return self.config.liquid_volume(well)
 
     def well_geometry(self, well):
-        return self.config.well_geometry(well)
+        return well.geometry
 
     #-------------------------------------------------------------------------------------------------------------------
     # Tip Management

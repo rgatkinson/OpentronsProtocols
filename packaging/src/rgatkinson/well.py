@@ -11,8 +11,9 @@ from opentrons.legacy_api.containers.placeable import Placeable
 from opentrons.trackers import pose_tracker
 from opentrons.util.vector import Vector
 
+from rgatkinson.configuration import WellGeometryConfigurationContext
 from rgatkinson.interval import fpu, is_interval, Interval
-from rgatkinson.util import sqrt, square, cube, cubeRoot, instance_count
+from rgatkinson.util import sqrt, square, cube, cubeRoot, instance_count, thread_local_storage
 
 
 def is_well(location):
@@ -29,10 +30,9 @@ class WellGeometry(object):
     # Construction
     #-------------------------------------------------------------------------------------------------------------------
 
-    def __init__(self, well, config):
+    def __init__(self, well=None):
         self.__well = None
         self.well = well
-        self.config = config
 
     @property
     def well(self):
@@ -40,11 +40,21 @@ class WellGeometry(object):
 
     @well.setter
     def well(self, value):
-        if self.__well is not None:
-            self.__well.geometry = None
-        self.__well = value
-        if self.__well is not None:
-            self.__well.geometry = self
+        if self.__well is not value:
+            old_well = self.__well
+            self.__well = None
+            if old_well is not None:
+                old_well.geometry = None
+
+            self.__well = value
+            if self.__well is not None:
+                self.__well.geometry = self
+
+    @property
+    def config(self) -> WellGeometryConfigurationContext:
+        if self.well is not None:
+            return self.well.config
+        return thread_local_storage.config.wells
 
     #-------------------------------------------------------------------------------------------------------------------
     # Accessing
@@ -128,7 +138,7 @@ class WellGeometry(object):
 
     @property
     def radial_clearance_tolerance(self):
-        return self.config.wells.radial_clearance_tolerance
+        return self.config.radial_clearance_tolerance
 
     @abstractmethod
     def depth_from_volume(self, volume):
@@ -158,8 +168,8 @@ class WellGeometry(object):
 
 
 class UnknownWellGeometry(WellGeometry):
-    def __init__(self, well, config):
-        super().__init__(well, config)
+    def __init__(self, well=None):
+        super().__init__(well)
 
     def depth_from_volume(self, vol):
         return Interval([0, self.well_depth])
@@ -173,8 +183,8 @@ class UnknownWellGeometry(WellGeometry):
 
 class IdtTubeWellGeometry(WellGeometry):
     # parts[tube] -> <|cylindrical->cylinder[38.3037,4.16389],conical->invertedCone[3.69629,4.16389],cap->cylinder[0,0]|>
-    def __init__(self, well, config):
-        super().__init__(well, config)
+    def __init__(self, well=None):
+        super().__init__(well)
 
     @property
     def radial_clearance_tolerance(self):
@@ -228,8 +238,8 @@ class IdtTubeWellGeometry(WellGeometry):
 
 class Biorad96WellPlateWellGeometry(WellGeometry):
     # parts[tube]-><|cylindrical->cylinder[6.69498,2.61859],conical->invertedFrustum[8.11502,2.61859,1.16608],cap->cylinder[0,0]|>
-    def __init__(self, well, config):
-        super().__init__(well, config)
+    def __init__(self, well=None):
+        super().__init__(well)
 
     def depth_from_volume(self, vol):
         if vol <= 0.0:
@@ -267,8 +277,8 @@ class Biorad96WellPlateWellGeometry(WellGeometry):
 
 class Eppendorf1point5mlTubeGeometry(WellGeometry):
     # parts[tube] -> <|cylindrical->invertedFrustum[21.1258,4.66267,4.272],conical->invertedFrustum[16.4801,4.272,1.48612],cap->invertedSphericalCap[0.194089,1.48612,rCap]|>
-    def __init__(self, well, config):
-        super().__init__(well, config)
+    def __init__(self, well=None):
+        super().__init__(well)
 
     def depth_from_volume(self, vol):
         if vol <= 0:
@@ -320,8 +330,8 @@ class Eppendorf1point5mlTubeGeometry(WellGeometry):
 
 class Eppendorf5point0mlTubeGeometry(WellGeometry):
     # parts[tube] -> <|cylindrical->invertedFrustum[35.8967,7.08628,6.37479],conical->invertedFrustum[18.3424,6.37479,1.50899],cap->invertedSphericalCap[1.16088,1.50899,rCap]|>
-    def __init__(self, well, config):
-        super().__init__(well, config)
+    def __init__(self, well=None):
+        super().__init__(well)
 
     def depth_from_volume(self, vol):
         if vol <= 0:
@@ -373,8 +383,8 @@ class Eppendorf5point0mlTubeGeometry(WellGeometry):
 
 class FalconTube15mlGeometry(WellGeometry):
     # parts[tube] -> <|cylindrical->invertedFrustum[95.7737,7.47822,6.70634],conical->invertedFrustum[22.2963,6.70634,1.14806],cap->cylinder[0,0]|>
-    def __init__(self, well, config):
-        super().__init__(well, config)
+    def __init__(self, well=None):
+        super().__init__(well)
 
     def depth_from_volume(self, vol):
         if vol <= 0.0:
@@ -426,8 +436,8 @@ class FalconTube15mlGeometry(WellGeometry):
 
 class FalconTube50mlGeometry(WellGeometry):
     # parts[tube] -> <|cylindrical->invertedFrustum[99.4458,13.6982,13.1264],conical->invertedFrustum[13.2242,13.1264,3.86673],cap->cylinder[0,0]|>
-    def __init__(self, well, config):
-        super().__init__(well, config)
+    def __init__(self, well=None):
+        super().__init__(well)
 
     def depth_from_volume(self, vol):
         if vol <= 0.0:
@@ -489,13 +499,50 @@ class EnhancedWell(Well):
     #-------------------------------------------------------------------------------------------------------------------
 
     # region Construction
+
     def __init__(self, parent=None, properties=None):
         super().__init__(parent=parent, properties=properties)
         self._initialize()
 
     def _initialize(self):
         self.label = None
+        from rgatkinson.util import thread_local_storage
+        self.config = thread_local_storage.config.wells
+        self.__geometry = None
+        self.geometry = UnknownWellGeometry(well=self)
 
+    # endregion
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Accessing
+    #-------------------------------------------------------------------------------------------------------------------
+
+    @property
+    def geometry(self):
+        return self.__geometry
+
+    @geometry.setter
+    def geometry(self, value):
+        if self.__geometry is not value:
+            #
+            old_geometry = self.__geometry
+            self.__geometry = None
+            if old_geometry is not None:
+                old_geometry.well = None
+            #
+            self.__geometry = value
+            if self.__geometry is not None:
+                self.__geometry.well = self
+
+    def top_coords_absolute(self):
+        xyz = pose_tracker.absolute(robot.poses, self)
+        return Vector(xyz)
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Hooking
+    #-------------------------------------------------------------------------------------------------------------------
+
+    # region Hooking
     _is_hooked = False
 
     @classmethod
@@ -573,6 +620,7 @@ class EnhancedWell(Well):
     # Pretty printing
     #-------------------------------------------------------------------------------------------------------------------
 
+    # region Pretty Printing
     @property
     def _display_class_name(self):
         return Well.__name__
@@ -594,12 +642,6 @@ class EnhancedWell(Well):
     @property
     def has_labelled_well_name(self):
         return True
+    # endregion
 
-    #-------------------------------------------------------------------------------------------------------------------
-    # Accessing
-    #-------------------------------------------------------------------------------------------------------------------
-
-    def top_coords_absolute(self):
-        xyz = pose_tracker.absolute(robot.poses, self)
-        return Vector(xyz)
 

@@ -2,7 +2,7 @@
 # configuration.py
 #
 from rgatkinson.liquid import LiquidVolume
-from rgatkinson.well import is_well, UnknownWellGeometry
+from rgatkinson.util import thread_local_storage
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -69,7 +69,7 @@ class LayeredMixConfigurationContext(ClearanceConfigurationContext):
         self.enable_radial_randomness = True
         self.radial_clearance_tolerance = 0.5
 
-class WellsMixConfigurationContext(AbstractConfigurationContext):
+class WellGeometryConfigurationContext(AbstractConfigurationContext):
     def __init__(self, execution_context: ProtocolExecutionContext):
         super().__init__(execution_context)
         self.radial_clearance_tolerance = 0.5
@@ -87,24 +87,9 @@ class TopConfigurationContext(AbstractConfigurationContext):
         self.aspirate: AspirateConfigurationContext = AspirateConfigurationContext(execution_context)
         self.dispense: DispenseConfigurationContext = DispenseConfigurationContext(execution_context)
         self.layered_mix: LayeredMixConfigurationContext = LayeredMixConfigurationContext(execution_context)
-        self.wells = WellsMixConfigurationContext(execution_context)
-
-    def well_geometry(self, well):
-        assert is_well(well)
-        try:
-            result = well.geometry
-            assert result.config is self
-            return result
-        except AttributeError:
-            return self.set_well_geometry(well, UnknownWellGeometry)
-
-    def set_well_geometry(self, well, geometry_class):
-        result = geometry_class(well, self)
-        assert well.geometry is result
-        return result
+        self.wells = WellGeometryConfigurationContext(execution_context)
 
     def liquid_volume(self, well):
-        assert is_well(well)
         try:
             result = well.liquid_volume
             assert result.config is self
@@ -114,3 +99,6 @@ class TopConfigurationContext(AbstractConfigurationContext):
             return well.liquid_volume
 
 config = TopConfigurationContext(ProtocolExecutionContext())
+
+# ambiently remember the default top configuration context
+thread_local_storage.config = config

@@ -12,7 +12,6 @@ import rgatkinson
 from rgatkinson.interval import is_scalar, supremum, Interval, fpu, is_interval
 from rgatkinson.logging import pretty, get_location_path
 from rgatkinson.util import first
-from rgatkinson.well import is_well
 
 class Liquid:
     def __init__(self, name):
@@ -307,7 +306,7 @@ class LiquidVolume(object):
         if self.well is None:
             return 0
         else:
-            return self.config.well_geometry(self.well).min_aspiratable_volume
+            return self.well.geometry.min_aspiratable_volume
 
     #-------------------------------------------------------------------------------------------------------------------
     # Actions
@@ -316,7 +315,7 @@ class LiquidVolume(object):
     def aspirate(self, volume):
         assert volume >= 0
         if not self.initial_volume_known:
-            self.set_initial_volume(Interval([volume, fpu.infinity if self.well is None else self.config.well_geometry(self.well).well_capacity]))
+            self.set_initial_volume(Interval([volume, fpu.infinity if self.well is None else self.well.geometry.well_capacity]))
         self._track_volume(-volume)
 
     def dispense(self, volume):
@@ -338,7 +337,6 @@ def note_liquid(location, name=None, initially=None, initially_at_least=None, co
         local_config = rgatkinson.configuration.config
 
     well, __ = unpack_location(location)
-    assert is_well(well)
     if name is None:
         name = well.label
     else:
@@ -356,7 +354,7 @@ def note_liquid(location, name=None, initially=None, initially_at_least=None, co
             initially = Interval(*initially)
 
     if initially is None and initially_at_least is not None:
-        initially = Interval([initially_at_least, local_config.well_geometry(well).well_capacity])
+        initially = Interval([initially_at_least, well.geometry.well_capacity])
 
     if initially is not None:
         d['initial_volume'] = initially

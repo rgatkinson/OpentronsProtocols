@@ -9,10 +9,10 @@ from opentrons import robot, labware
 from opentrons.legacy_api.containers import Container
 from opentrons.util.vector import Vector
 
-import rgatkinson
+from rgatkinson.configuration import TopConfigurationContext
 from rgatkinson.interval import fpu
-from rgatkinson.util import is_indexable
-from rgatkinson.well import WellGeometry, Eppendorf5point0mlTubeGeometry, Biorad96WellPlateWellGeometry, Eppendorf1point5mlTubeGeometry, FalconTube15mlGeometry, FalconTube50mlGeometry, EnhancedWell
+from rgatkinson.util import is_indexable, thread_local_storage
+from rgatkinson.well import WellGeometry, Eppendorf5point0mlTubeGeometry, Biorad96WellPlateWellGeometry, Eppendorf1point5mlTubeGeometry, FalconTube15mlGeometry, FalconTube50mlGeometry, EnhancedWell, UnknownWellGeometry
 
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -139,7 +139,7 @@ class WellGrid(object):
                     'geometry': None
                 }
                 if well_geometry is not None:
-                    d['geometry'] = well_geometry(config=self.config, well=None)
+                    d['geometry'] = well_geometry(well=None)
                 result[row][col] = d
         return result
 
@@ -160,7 +160,7 @@ class CustomTubeRack(object):
         self.reference_dimensions = dimensions if dimensions is not None else Vector(x=0, y=0, z=0)
         if dimensions_measurement_geometry is not None:
             # find the z height of the reference plane of the labware
-            self.reference_dimensions = self.reference_dimensions - (0, 0, dimensions_measurement_geometry(well=None, config=self.config).rim_lip_height)
+            self.reference_dimensions = self.reference_dimensions - (0, 0, dimensions_measurement_geometry(well=None).rim_lip_height)
         self.space_below_reference_plane = space_below_reference_plane if space_below_reference_plane is not None else fpu.infinity
         self.brand = {
             'brand': brand if brand is not None else 'Atkinson Labs'
@@ -262,7 +262,7 @@ class CustomTubeRack(object):
                 geometry = self[well_name].get('geometry', None)
                 if geometry is not None:
                     assert geometry.well is None or geometry.well is well
-                    assert getattr(well, 'geometry', None) is None or well.geometry is geometry
+                    assert isinstance(well.geometry, UnknownWellGeometry) or well.geometry is geometry
                     geometry.well = well
         return self.load_result
 
@@ -337,24 +337,24 @@ class LabwareManager(object):
     def __init__(self):
         EnhancedWell.hook_well()
 
-    def load(self, name, slot, label=None, share=False, version=None, config=None, well_geometry=None, second_well_geometry=None, well_geometries: dict = None):
+    def load(self, name, slot, label=None, share=False, version=None, config: TopConfigurationContext = None, well_geometry=None, second_well_geometry=None, well_geometries: dict = None):
         if config is None:
-            config = rgatkinson.configuration.config
+            config = thread_local_storage.config
 
         def set_custom_well_geometries(custom_tube_rack: CustomTubeRack):
             if well_geometries is not None:
                 for well_name, geometry_class in well_geometries.items():
                     well_dict = custom_tube_rack[well_name]
-                    well_dict['geometry'] = geometry_class(config=config, well=None)
+                    well_dict['geometry'] = geometry_class()
 
         def set_well_geometries(container: Container, use_well_geometry=True):
             if use_well_geometry and well_geometry is not None:
                 for well in container.wells():
-                    config.set_well_geometry(well, well_geometry)
+                    well.geometry = well_geometry()
             if well_geometries is not None:
                 for well_name, geometry_class in well_geometries.items():
                     well = container.well(well_name)
-                    config.set_well_geometry(well, geometry_class)
+                    well.geometry = geometry_class()
 
         #---------------------------------------------------------------------------------------------------------------
 
@@ -385,11 +385,11 @@ class LabwareManager(object):
             result: Container = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
             for well_name in ['A1', 'B1', 'C1', 'A2', 'B2', 'C2']:
                 well = result.wells(well_name)
-                config.set_well_geometry(well, well_geometry)
+                well.geometry = well_geometry()
             if second_well_geometry is not None:
                 for well_name in ['A3', 'B3', 'A4', 'B4']:
                     well = result.wells(well_name)
-                    config.set_well_geometry(well, second_well_geometry)
+                    well.geometry = second_well_geometry()
             set_well_geometries(result, False)
             return result
 
