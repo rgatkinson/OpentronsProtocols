@@ -149,15 +149,15 @@ class Concentration(object):
 
 
 class Mixture(object):
-    def __init__(self, liquid=None, volume=0):
+    def __init__(self, liquid=None, initially=0):
         self.liquids = dict()  # map from liquid to volume
         if liquid is not None:
-            self.set_initial_liquid(liquid=liquid, volume=volume)
+            self.set_initial_liquid(liquid=liquid, initially=initially)
 
-    def set_initial_liquid(self, liquid, volume):
+    def set_initial_liquid(self, liquid, initially):
         assert len(self.liquids) == 0
         if liquid is not None:
-            self._adjust_liquid(liquid, volume)
+            self._adjust_liquid(liquid, LiquidVolume.fix_initially(initially))
 
     def __str__(self) -> str:
         if self.is_empty:
@@ -287,7 +287,13 @@ class LiquidVolume(object):
             assert not self.initially_known
             assert self.cum_delta == 0
             self.initially_known = True
-            self.initially = initially
+            self.initially = self.fix_initially(initially)
+
+    @classmethod
+    def fix_initially(cls, initially):
+        if isinstance(initially, list):  # work around json inability to parse serialized Intervals
+            initially = Interval(*initially)
+        return initially
 
     #-------------------------------------------------------------------------------------------------------------------
     # Accessing
@@ -365,9 +371,7 @@ def note_liquid(location, name=None, initially=None, initially_at_least=None, co
     if initially is not None and initially_at_least is not None:
         raise ValueError  # can't use both at once
 
-    if initially is not None:
-        if isinstance(initially, list):  # work around json inability to parse serialized intervals
-            initially = Interval(*initially)
+    initially = LiquidVolume.fix_initially(initially)
 
     if initially is None and initially_at_least is not None:
         initially = Interval([initially_at_least, well.geometry.well_capacity])

@@ -69,9 +69,9 @@ class WellAnalyzer(PlaceableAnalyzer):
         self.liquid = liquid
         self.liquid_known = True
 
-    def set_initially(self, initial_volume):
-        self.liquid_volume.set_initially(initial_volume)
-        self.mixture.set_initial_liquid(self.liquid, initial_volume)
+    def set_initially(self, initially):
+        self.liquid_volume.set_initially(initially)
+        self.mixture.set_initial_liquid(self.liquid, initially)
 
     def formatted(self):
         result = 'well "{0:s}"'.format(self.target.get_name())
@@ -150,8 +150,6 @@ class AnalyzerManager(object):
             liquid.concentration = concentration
         well_analyzer.set_liquid(liquid)
         if initially is not None:
-            if isinstance(initially, list):  # work around json parsing deficiency
-                initially = Interval(*initially)
             well_analyzer.set_initially(initially)
 
     def well_analyzer(self, well):
