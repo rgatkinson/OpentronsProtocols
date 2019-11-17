@@ -594,7 +594,7 @@ class EnhancedPipette(Pipette):
             # if the well isn't machine made, don't go so close to the top
             if not well.liquid_volume.made_by_machine:
                 current_liquid_volume = current_liquid_volume * (1 - manual_manufacture_tolerance)
-            liquid_depth = well.geometry.depth_from_volume_min(current_liquid_volume if aspirate_volume is None else current_liquid_volume - aspirate_volume)
+            liquid_depth = well.geometry.liquid_depth_from_volume_min(current_liquid_volume if aspirate_volume is None else current_liquid_volume - aspirate_volume)
             z = self._top_clearance(liquid_depth=liquid_depth, clearance=(0 if top_clearance is None else top_clearance))
             if bottom_clearance is not None:
                 z = max(z, bottom_clearance)
@@ -825,8 +825,8 @@ class EnhancedPipette(Pipette):
         bottom_clearance = fetch('bottom_clearance')
 
         current_liquid_volume = well.liquid_volume.current_volume_min
-        liquid_depth = well.geometry.depth_from_volume(current_liquid_volume)
-        liquid_depth_after_asp = well.geometry.depth_from_volume(current_liquid_volume - volume)
+        liquid_depth = well.geometry.liquid_depth_from_volume(current_liquid_volume)
+        liquid_depth_after_asp = well.geometry.liquid_depth_from_volume(current_liquid_volume - volume)
         msg = pretty.format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_aspirate={4:n}", msg, well.get_name(), current_liquid_volume, liquid_depth, liquid_depth_after_asp)
 
         def do_one():
