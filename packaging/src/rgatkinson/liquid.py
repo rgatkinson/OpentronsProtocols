@@ -1,7 +1,6 @@
 #
 # Liquid.py
 #
-
 import json
 from enum import Enum
 
@@ -9,7 +8,7 @@ from opentrons import robot
 from opentrons.legacy_api.containers import unpack_location
 
 import rgatkinson
-from rgatkinson.interval import is_scalar, supremum, Interval, fpu, is_interval
+from rgatkinson.interval import is_scalar, supremum, Interval, fpu, is_interval, infimum
 from rgatkinson.logging import pretty, get_location_path
 from rgatkinson.util import first
 
@@ -258,7 +257,7 @@ class LiquidVolume(object):
     def __init__(self, well):
         self.__well = None
         self.well = well
-        self.initially_known = False
+        self.initially_set = False
         self.initially = Interval([0, fpu.infinity])
         self.cum_delta = 0
         self.min_delta = 0
@@ -281,12 +280,12 @@ class LiquidVolume(object):
                 self.__well.liquid_volume = self
 
     def set_initially(self, initially):  # idempotent
-        if self.initially_known:
+        if self.initially_set:
             assert self.initially == initially
         else:
-            assert not self.initially_known
+            assert not self.initially_set
             assert self.cum_delta == 0
-            self.initially_known = True
+            self.initially_set = True
             self.initially = self.fix_initially(initially)
 
     @classmethod
@@ -298,6 +297,11 @@ class LiquidVolume(object):
     #-------------------------------------------------------------------------------------------------------------------
     # Accessing
     #-------------------------------------------------------------------------------------------------------------------
+
+    @property
+    def made_by_machine(self):
+        """Is (at least the current min of) this volume of liquid created by machine, as opposed to a human"""
+        return not self.initially_set or infimum(self.initially) == 0
 
     @property
     def current_volume(self):  # may be interval
@@ -325,10 +329,7 @@ class LiquidVolume(object):
 
     @property
     def _min_aspiratable_volume(self):
-        if self.well is None:
-            return 0
-        else:
-            return self.well.geometry.min_aspiratable_volume
+        return 0 if self.well is None else self.well.geometry.min_aspiratable_volume
 
     #-------------------------------------------------------------------------------------------------------------------
     # Actions
@@ -336,13 +337,13 @@ class LiquidVolume(object):
 
     def aspirate(self, volume):
         assert volume >= 0
-        if not self.initially_known:
+        if not self.initially_set:
             self.set_initially(Interval([volume, fpu.infinity if self.well is None else self.well.geometry.well_capacity]))
         self._track_volume(-volume)
 
     def dispense(self, volume):
         assert volume >= 0
-        if not self.initially_known:
+        if not self.initially_set:
             self.set_initially(0)
         self._track_volume(volume)
 

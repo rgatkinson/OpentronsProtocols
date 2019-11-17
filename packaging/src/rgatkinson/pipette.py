@@ -149,28 +149,33 @@ class EnhancedPipette(Pipette):
             self.ms_pause_during_transfer_kw = '_ms_pause_transfer'
             self.top_clearance_transfer_kw = '_top_clearance_transfer'
             self.bottom_clearance_transfer_kw = '_bottom_clearance_transfer'
+            self.manual_manufacture_tolerance_transfer_kw = '_manual_manufacture_tolerance_transfer'
             self.pre_wet_transfer = None
             self.ms_pause_transfer = None
             self.top_clearance_transfer = None
             self.bottom_clearance_transfer = None
+            self.manual_manufacture_tolerance_transfer = None
 
         def clear_transfer(self):
             self.pre_wet_transfer = None
             self.ms_pause_transfer = None
             self.top_clearance_transfer = None
             self.bottom_clearance_transfer = None
+            self.manual_manufacture_tolerance_transfer = None
 
         def sequester_transfer(self, kwargs):
             kwargs[self.pre_wet_during_transfer_kw] = not not kwargs.get('pre_wet', self.config.pre_wet.default)
             kwargs[self.ms_pause_during_transfer_kw] = kwargs.get('ms_pause', self.config.pause.ms_default)
             kwargs[self.top_clearance_transfer_kw] = kwargs.get('aspirate_top_clearance', None)
             kwargs[self.bottom_clearance_transfer_kw] = kwargs.get('aspirate_bottom_clearance', None)
+            kwargs[self.manual_manufacture_tolerance_transfer_kw] = kwargs.get('manual_manufacture_tolerance', None)
 
         def unsequester_transfer(self, kwargs):
             self.pre_wet_transfer = kwargs.get(self.pre_wet_during_transfer_kw)
             self.ms_pause_transfer = kwargs.get(self.ms_pause_during_transfer_kw)
             self.top_clearance_transfer = kwargs.get(self.top_clearance_transfer_kw)
             self.bottom_clearance_transfer = kwargs.get(self.bottom_clearance_transfer_kw)
+            self.manual_manufacture_tolerance_transfer = kwargs.get(self.manual_manufacture_tolerance_transfer_kw)
 
     class DispenseParamsHack(object):
         def __init__(self, config: DispenseConfigurationContext) -> None:
@@ -181,24 +186,29 @@ class EnhancedPipette(Pipette):
             self.fully_dispensed = False
             self.top_clearance_transfer_kw = '_top_clearance_transfer'
             self.bottom_clearance_transfer_kw = '_bottom_clearance_transfer'
+            self.manual_manufacture_tolerance_transfer_kw = '_manual_manufacture_tolerance_transfer'
             self.top_clearance_transfer = None
             self.bottom_clearance_transfer = None
+            self.manual_manufacture_tolerance_transfer = None
 
         def clear_transfer(self):
             self.full_dispense_transfer = False
             self.top_clearance_transfer = None
             self.bottom_clearance_transfer = None
+            self.manual_manufacture_tolerance_transfer = None
 
         def sequester_transfer(self, kwargs, can_full_dispense):
             kwargs[self.full_dispense_transfer_kw] = not not (kwargs.get('full_dispense', self.config.full_dispense.default) and can_full_dispense)
             kwargs[self.top_clearance_transfer_kw] = kwargs.get('dispense_top_clearance', None)
             kwargs[self.bottom_clearance_transfer_kw] = kwargs.get('dispense_bottom_clearance', None)
+            kwargs[self.manual_manufacture_tolerance_transfer_kw] = kwargs.get('manual_manufacture_tolerance', None)
 
         def unsequester_transfer(self, kwargs):
             assert kwargs.get(self.full_dispense_transfer_kw, None) is not None
             self.full_dispense_transfer = kwargs.get(self.full_dispense_transfer_kw)
             self.top_clearance_transfer = kwargs.get(self.top_clearance_transfer_kw)
             self.bottom_clearance_transfer = kwargs.get(self.bottom_clearance_transfer_kw)
+            self.manual_manufacture_tolerance_transfer = kwargs.get(self.manual_manufacture_tolerance_transfer_kw)
 
     #-------------------------------------------------------------------------------------------------------------------
     # Construction
@@ -473,7 +483,7 @@ class EnhancedPipette(Pipette):
                 info_while(pretty.format('prewetting tip in well {0} vol={1:n}', well.get_name(), pre_wet_volume), do_pre_wet)
                 self.tip_wetness = TipWetness.WET
 
-    def aspirate(self, volume=None, location=None, rate: Real = 1.0, pre_wet: bool = None, ms_pause: Real = None, top_clearance=None, bottom_clearance=None):
+    def aspirate(self, volume=None, location=None, rate: Real = 1.0, pre_wet: bool = None, ms_pause: Real = None, top_clearance=None, bottom_clearance=None, manual_manufacture_tolerance=None):
         if not helpers.is_number(volume):  # recapitulate super
             if volume and not location:
                 location = volume
@@ -484,11 +494,15 @@ class EnhancedPipette(Pipette):
         if top_clearance is None:
             top_clearance = self.aspirate_params_hack.top_clearance_transfer
             if top_clearance is None:
-                top_clearance = self.config.dispense.top_clearance
+                top_clearance = self.config.aspirate.top_clearance
         if bottom_clearance is None:
             bottom_clearance = self.aspirate_params_hack.bottom_clearance_transfer
             if bottom_clearance is None:
-                bottom_clearance = self.config.dispense.bottom_clearance
+                bottom_clearance = self.config.aspirate.bottom_clearance
+        if manual_manufacture_tolerance is None:
+            manual_manufacture_tolerance = self.aspirate_params_hack.manual_manufacture_tolerance_transfer
+            if manual_manufacture_tolerance is None:
+                manual_manufacture_tolerance = self.config.aspirate.manual_manufacture_tolerance
 
         current_liquid_volume = well.liquid_volume.current_volume_min
         needed_liquid_volume = well.geometry.min_aspiratable_volume + volume;
@@ -497,7 +511,7 @@ class EnhancedPipette(Pipette):
             warn(msg)
 
         self._pre_wet(well, volume, location, rate, pre_wet)
-        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume, top_clearance=top_clearance, bottom_clearance=bottom_clearance)
+        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume, top_clearance=top_clearance, bottom_clearance=bottom_clearance, manual_manufacture_tolerance=manual_manufacture_tolerance)
         super().aspirate(volume=volume, location=location, rate=rate)
 
         # if we're asked to, pause after aspiration to let liquid rise
@@ -519,7 +533,7 @@ class EnhancedPipette(Pipette):
         super()._aspirate_during_transfer(vol, loc, **kwargs)  # might 'mix_before' todo: is that ok? seems like it is...
         self.aspirate_params_hack.clear_transfer()
 
-    def dispense(self, volume=None, location=None, rate=1.0, full_dispense: bool = False, top_clearance=None, bottom_clearance=None):
+    def dispense(self, volume=None, location=None, rate=1.0, full_dispense: bool = False, top_clearance=None, bottom_clearance=None, manual_manufacture_tolerance=None):
         if not helpers.is_number(volume):  # recapitulate super
             if volume and not location:
                 location = volume
@@ -535,10 +549,14 @@ class EnhancedPipette(Pipette):
             bottom_clearance = self.dispense_params_hack.bottom_clearance_transfer
             if bottom_clearance is None:
                 bottom_clearance = self.config.dispense.bottom_clearance
+        if manual_manufacture_tolerance is None:
+            manual_manufacture_tolerance = self.aspirate_params_hack.manual_manufacture_tolerance_transfer
+            if manual_manufacture_tolerance is None:
+                manual_manufacture_tolerance = self.config.dispense.manual_manufacture_tolerance
 
         if is_close(volume, self.current_volume):  # avoid finicky floating-point precision issues
             volume = self.current_volume
-        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None, top_clearance=top_clearance, bottom_clearance=bottom_clearance)
+        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None, top_clearance=top_clearance, bottom_clearance=bottom_clearance, manual_manufacture_tolerance=manual_manufacture_tolerance)
         self.dispense_params_hack.full_dispense_from_dispense = full_dispense
         super().dispense(volume=volume, location=location, rate=rate)
         self.dispense_params_hack.full_dispense_from_dispense = False
@@ -569,10 +587,13 @@ class EnhancedPipette(Pipette):
             self.dispense_params_hack.fully_dispensed = False
             return mm_from_vol
 
-    def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, top_clearance=None, bottom_clearance=None, allow_above=False):
+    def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, top_clearance=None, bottom_clearance=None, allow_above=False, manual_manufacture_tolerance=0):
         if isinstance(location, EnhancedWell):
             well = location; assert is_well(well)
             current_liquid_volume = well.liquid_volume.current_volume_min
+            # if the well isn't machine made, don't go so close to the top
+            if not well.liquid_volume.made_by_machine:
+                current_liquid_volume = current_liquid_volume * (1 - manual_manufacture_tolerance)
             liquid_depth = well.geometry.depth_from_volume_min(current_liquid_volume if aspirate_volume is None else current_liquid_volume - aspirate_volume)
             z = self._top_clearance(liquid_depth=liquid_depth, clearance=(0 if top_clearance is None else top_clearance))
             if bottom_clearance is not None:

@@ -12,7 +12,7 @@ from opentrons.trackers import pose_tracker
 from opentrons.util.vector import Vector
 
 from rgatkinson.configuration import WellGeometryConfigurationContext
-from rgatkinson.interval import fpu, is_interval, Interval
+from rgatkinson.interval import fpu, is_interval, Interval, infimum
 from rgatkinson.liquid import LiquidVolume
 from rgatkinson.util import sqrt, square, cube, cubeRoot, instance_count, thread_local_storage
 
@@ -162,10 +162,7 @@ class WellGeometry(object):
 
     def depth_from_volume_min(self, volume):  # lowest possible depth for the given volume
         vol = self.depth_from_volume(volume)
-        if is_interval(vol):
-            return vol.infimum
-        else:
-            return vol
+        return infimum(vol)
 
 
 class UnknownWellGeometry(WellGeometry):
@@ -578,9 +575,9 @@ class EnhancedWell(Well):
         # Upgrade any existing well instances: usually (always?) only the two possible trash instances
         import gc
         for obj in gc.get_objects():
-            if isinstance(obj, Well):
+            if obj.__class__ is Well:
+                obj.__class__ = cls
                 well: EnhancedWell = obj
-                well.__class__ = cls
                 well._initialize()
         assert instance_count(lambda obj: obj.__class__ is Well) == 0
 

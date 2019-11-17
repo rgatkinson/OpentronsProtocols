@@ -30,14 +30,15 @@ class PauseConfigurationContext(AbstractConfigurationContext):
         self.ms_default = ms_default
 
 class ClearanceConfigurationContext(AbstractConfigurationContext):
-    def __init__(self, execution_context: ProtocolExecutionContext, top, bottom):
+    def __init__(self, execution_context: ProtocolExecutionContext, top, bottom, manual_manufacture_tolerance):
         super().__init__(execution_context)
         self.top_clearance = top
         self.bottom_clearance = bottom
+        self.manual_manufacture_tolerance = manual_manufacture_tolerance
 
 class AspirateConfigurationContext(ClearanceConfigurationContext):
     def __init__(self, execution_context: ProtocolExecutionContext):
-        super().__init__(execution_context, -3.5, 1.0)
+        super().__init__(execution_context, -3.5, 1.0, 0.05)  # ie: allow for 5% slop in volume of manual pipetting when p
         self.pre_wet = SimpleConfigurationContext(execution_context)
         self.pre_wet.default = True
         self.pre_wet.count = 2  # save some time vs 3
@@ -47,13 +48,13 @@ class AspirateConfigurationContext(ClearanceConfigurationContext):
 
 class DispenseConfigurationContext(ClearanceConfigurationContext):
     def __init__(self, execution_context: ProtocolExecutionContext):
-        super().__init__(execution_context, -2.0, 0.5)
+        super().__init__(execution_context, -2.0, 0.5, 0)  # dispensing at top is less critical than aspirating
         self.full_dispense = SimpleConfigurationContext(execution_context)
         self.full_dispense.default = True
 
 class LayeredMixConfigurationContext(ClearanceConfigurationContext):
     def __init__(self, execution_context: ProtocolExecutionContext):
-        super().__init__(execution_context, -1.5, 1.0)  # close, so we mix top layers too
+        super().__init__(execution_context, -1.5, 1.0, 0)  # close, so we mix top layers too
         self.aspirate_rate_factor = 4.0
         self.dispense_rate_factor = 4.0
         self.incr = 1.0
