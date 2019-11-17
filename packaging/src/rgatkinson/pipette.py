@@ -25,7 +25,7 @@ from rgatkinson.configuration import TopConfigurationContext, AspirateConfigurat
 from rgatkinson.interval import is_close, fpu
 from rgatkinson.logging import pretty, warn, log_while, info, info_while
 from rgatkinson.util import zeroify, sqrt
-from rgatkinson.well import FalconTube15mlGeometry, FalconTube50mlGeometry, Eppendorf5point0mlTubeGeometry, Eppendorf1point5mlTubeGeometry, IdtTubeWellGeometry, Biorad96WellPlateWellGeometry, is_well
+from rgatkinson.well import FalconTube15mlGeometry, FalconTube50mlGeometry, Eppendorf5point0mlTubeGeometry, Eppendorf1point5mlTubeGeometry, IdtTubeWellGeometry, Biorad96WellPlateWellGeometry, is_well, EnhancedWell
 
 
 class RadialClearanceManager(object):
@@ -949,7 +949,7 @@ class InstrumentsManager(object):
 instruments_manager = InstrumentsManager()
 
 
-def verify_well_locations(well_list: List[Well], pipette: EnhancedPipette):
+def verify_well_locations(well_list: List[EnhancedWell], pipette: EnhancedPipette):
     picked_tip = False
     if not pipette.tip_attached:
         pipette.pick_up_tip()

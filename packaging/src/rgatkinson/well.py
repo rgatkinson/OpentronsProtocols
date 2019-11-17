@@ -3,20 +3,26 @@
 #
 
 from abc import abstractmethod
+from typing import Union
 
 from opentrons import robot
-from opentrons.legacy_api.containers import Well, Container
+from opentrons.legacy_api.containers import Well, Container, Slot, location_to_list
+from opentrons.legacy_api.containers.placeable import Placeable
 from opentrons.trackers import pose_tracker
 from opentrons.util.vector import Vector
 
 from rgatkinson.interval import fpu, is_interval, Interval
-from rgatkinson.util import sqrt, square, cube, cubeRoot
+from rgatkinson.util import sqrt, square, cube, cubeRoot, instance_count
 
 
 def is_well(location):
     return isinstance(location, Well)
 
+#-----------------------------------------------------------------------------------------------------------------------
+# Geometries
+#-----------------------------------------------------------------------------------------------------------------------
 
+# region Well Geometries
 class WellGeometry(object):
 
     #-------------------------------------------------------------------------------------------------------------------
@@ -470,20 +476,130 @@ class FalconTube50mlGeometry(WellGeometry):
             return 42.04  # a measured value that accounts for the portion of the tube lying in the dimple at the bottom
         return super().height_above_reference_plane(space_below_reference_plane, rack)
 
+# endregion
 
-def Well_get_name(self):
-    result = super(Well, self).get_name()
-    label = getattr(self, 'label', None)
-    if label is not None:
-        result += ' (' + label + ')'
-    return result
+#-----------------------------------------------------------------------------------------------------------------------
+# Enhanced Well
+#-----------------------------------------------------------------------------------------------------------------------
 
+class EnhancedWell(Well):
 
-def Well_top_coords_absolute(self):
-    xyz = pose_tracker.absolute(robot.poses, self)
-    return Vector(xyz)
+    #-------------------------------------------------------------------------------------------------------------------
+    # Construction
+    #-------------------------------------------------------------------------------------------------------------------
 
-# Enhance well name to include any label that might be present
-Well.has_labelled_well_name = True
-Well.get_name = Well_get_name
-Well.top_coords_absolute = Well_top_coords_absolute
+    # region Construction
+    def __init__(self, parent=None, properties=None):
+        super().__init__(parent=parent, properties=properties)
+        self._initialize()
+
+    def _initialize(self):
+        self.label = None
+
+    _is_hooked = False
+
+    @classmethod
+    def hook_well(cls):
+        if not cls._is_hooked:  # make idempotent
+            cls._hook_well_instances()
+            cls._hook_well_instance_creation()
+            cls._hook_other()
+            cls._is_hooked = True
+
+    @classmethod
+    def _hook_well_instances(cls):
+        # Upgrade any existing well instances: usually (always?) only the two possible trash instances
+        import gc
+        for obj in gc.get_objects():
+            if isinstance(obj, Well):
+                well: EnhancedWell = obj
+                well.__class__ = cls
+                well._initialize()
+        assert instance_count(lambda obj: obj.__class__ is Well) == 0
+
+    @classmethod
+    def _hook_well_instance_creation(cls):
+        # Make sure that any new attempts at instantiating Well in fact create an EnhancedWell instead
+        Well.__new__ = cls._well_new
+
+    @staticmethod
+    def _well_new(cls, parent=None, properties=None):
+        super_class = Placeable
+        result = super_class.__new__(EnhancedWell)
+        assert result.__class__ is EnhancedWell
+        return result
+
+    @classmethod
+    def _hook_other(cls):
+        # from opentrons.commands.commands import _stringify_legacy_loc
+        import opentrons.commands.commands as commands
+        commands._stringify_legacy_loc = cls._stringify_legacy_loc
+
+    @staticmethod
+    def _stringify_legacy_loc(loc: Union[Well, Container, Slot, None]) -> str:
+        # reworking of that found in commands.py in order to allow for subclasses
+        def get_slot(location):
+            trace = location.get_trace()
+            for item in trace:
+                if isinstance(item, Slot):
+                    return item
+
+        type_to_text = {Slot: 'slot', Container: 'container', Well: 'well'}
+
+        # Coordinates only
+        if loc is None:
+            return '?'
+
+        location = location_to_list(loc)
+        multiple = len(location) > 1
+
+        for cls, name in type_to_text.items():
+            if isinstance(location[0], cls):
+                text = name
+                break
+        else:
+            text = 'unknown'
+
+        return '{object_text}{suffix} {first}{last} in "{slot_text}"'.format(
+                object_text=text,
+                suffix='s' if multiple else '',
+                first=location[0].get_name(),
+                last='...'+location[-1].get_name() if multiple else '',
+                slot_text=get_slot(location[0]).get_name())
+
+    # endregion
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Pretty printing
+    #-------------------------------------------------------------------------------------------------------------------
+
+    @property
+    def _display_class_name(self):
+        return Well.__name__
+
+    def get_type(self):
+        return self.properties.get('type', self._display_class_name)
+
+    def __str__(self):
+        if not self.parent:
+            return '<{}>'.format(self._display_class_name)
+        return '<{} {}>'.format(self._display_class_name, self.get_name())
+
+    def get_name(self):
+        result = super().get_name()
+        if self.label is not None:
+            result += ' (' + self.label + ')'
+        return result
+
+    @property
+    def has_labelled_well_name(self):
+        return True
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Accessing
+    #-------------------------------------------------------------------------------------------------------------------
+
+    def top_coords_absolute(self):
+        xyz = pose_tracker.absolute(robot.poses, self)
+        return Vector(xyz)
+

@@ -26,6 +26,18 @@ class Liquid:
             return f'Liquid([{self.name}]={self.concentration})'
 
 
+class Liquids(object):
+    def __init__(self):
+        self._liquids = dict()
+
+    def get_liquid(self, liquid_name):
+        try:
+            return self._liquids[liquid_name]
+        except KeyError:
+            self._liquids[liquid_name] = Liquid(liquid_name)
+            return self._liquids[liquid_name]
+
+
 class Concentration(object):
 
     class Flavor(Enum):
@@ -320,24 +332,40 @@ class LiquidVolume(object):
 
 
 def note_liquid(location, name=None, initially=None, initially_at_least=None, concentration=None, local_config=None):
-    # Must keep in sync with Opentrons-Analyze controller.note_liquid_name
+    # Must keep in sync with Opentrons-Analyze analyze_liquid_name
+
     if local_config is None:
         local_config = rgatkinson.configuration.config
+
     well, __ = unpack_location(location)
     assert is_well(well)
     if name is None:
         name = well.label
     else:
         well.label = name
+
+    liquid = local_config.execution_context.liquids.get_liquid(name)
+
     d = {'name': name, 'location': get_location_path(well)}
+
     if initially is not None and initially_at_least is not None:
         raise ValueError  # can use both at once
+
+    if initially is not None:
+        if isinstance(initially, list):  # work around json inability to parse serialized intervals
+            initially = Interval(*initially)
+
     if initially is None and initially_at_least is not None:
         initially = Interval([initially_at_least, local_config.well_geometry(well).well_capacity])
+
     if initially is not None:
         d['initial_volume'] = initially
         local_config.liquid_volume(well).set_initial_volume(initially)
+
     if concentration is not None:
-        d['concentration'] = str(Concentration(concentration))
+        concentration = Concentration(concentration)
+        liquid.concentration = concentration
+        d['concentration'] = str(concentration)
+
     serialized = json.dumps(d).replace("{", "{{").replace("}", "}}")  # runtime calls comment.format(...) on our comment; avoid issues therewith
     robot.comment('Liquid: %s' % serialized)

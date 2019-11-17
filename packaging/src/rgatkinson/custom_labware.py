@@ -12,7 +12,8 @@ from opentrons.util.vector import Vector
 import rgatkinson
 from rgatkinson.interval import fpu
 from rgatkinson.util import is_indexable
-from rgatkinson.well import WellGeometry, Eppendorf5point0mlTubeGeometry, Biorad96WellPlateWellGeometry, Eppendorf1point5mlTubeGeometry, FalconTube15mlGeometry, FalconTube50mlGeometry
+from rgatkinson.well import WellGeometry, Eppendorf5point0mlTubeGeometry, Biorad96WellPlateWellGeometry, Eppendorf1point5mlTubeGeometry, FalconTube15mlGeometry, FalconTube50mlGeometry, EnhancedWell
+
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -334,7 +335,7 @@ class Opentrons15Rack(CustomTubeRack):
 
 class LabwareManager(object):
     def __init__(self):
-        pass
+        EnhancedWell.hook_well()
 
     def load(self, name, slot, label=None, share=False, version=None, config=None, well_geometry=None, second_well_geometry=None, well_geometries: dict = None):
         if config is None:

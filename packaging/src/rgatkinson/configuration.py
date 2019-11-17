@@ -10,7 +10,9 @@ class ProtocolExecutionContext(object):
     """
     One instance of this across all configuration contexts
     """
-    pass
+    def __init__(self):
+        from rgatkinson.liquid import Liquids
+        self.liquids = Liquids()
 
 #-----------------------------------------------------------------------------------------------------------------------
 

@@ -14,6 +14,7 @@ from opentrons.legacy_api.containers import Slot
 from opentrons.legacy_api.containers.placeable import Placeable
 
 from rgatkinson import config, format_log_msg
+from rgatkinson.configuration import AbstractConfigurationContext
 from rgatkinson.interval import Interval
 from rgatkinson.liquid import Liquid, Concentration, Mixture, PipetteContents, LiquidVolume
 from rgatkinson.logging import Pretty, get_location_path
@@ -130,19 +131,14 @@ class TipRackMonitor(AbstractContainerMonitor):
 
 
 class MonitorController(object):
-    def __init__(self, config):
+    def __init__(self, config: AbstractConfigurationContext):
         self.config = config
         self._monitors = dict()  # maps location path to monitor
-        self._liquids = dict()
 
     def get_liquid(self, liquid_name):
-        try:
-            return self._liquids[liquid_name]
-        except KeyError:
-            self._liquids[liquid_name] = Liquid(liquid_name)
-            return self._liquids[liquid_name]
+        return self.config.execution_context.liquids.get_liquid(liquid_name)
 
-    def note_liquid_name(self, liquid_name, location_path, initially=None, concentration=None):
+    def analyze_liquid_name(self, liquid_name, location_path, initially=None, concentration=None):
         # Keep in sync with (global) note_liquid_name
         well_monitor = self._monitor_from_location_path(WellMonitor, location_path)
         liquid = self.get_liquid(liquid_name)
@@ -335,7 +331,7 @@ def analyzeRunLog(run_log):
                 serialized = text[len(selector):]  # will include initial white space, but that's ok
                 serialized = serialized.replace("}}", "}").replace("{{", "{")
                 d = json.loads(serialized)
-                controller.note_liquid_name(d['name'], d['location'], initially=d.get('initial_volume', None), concentration=d.get('concentration', None))
+                controller.analyze_liquid_name(d['name'], d['location'], initially=d.get('initial_volume', None), concentration=d.get('concentration', None))
             elif selector == 'air' \
                     or selector == 'returning' \
                     or selector == 'engaging' \
