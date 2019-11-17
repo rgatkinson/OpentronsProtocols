@@ -258,8 +258,8 @@ class LiquidVolume(object):
     def __init__(self, well):
         self.__well = None
         self.well = well
-        self.initial_volume_known = False
-        self.initial_volume = Interval([0, fpu.infinity])
+        self.initially_known = False
+        self.initially = Interval([0, fpu.infinity])
         self.cum_delta = 0
         self.min_delta = 0
         self.max_delta = 0
@@ -280,14 +280,14 @@ class LiquidVolume(object):
             if self.__well is not None:
                 self.__well.liquid_volume = self
 
-    def set_initial_volume(self, initial_volume):  # idempotent
-        if self.initial_volume_known:
-            assert self.initial_volume == initial_volume
+    def set_initially(self, initially):  # idempotent
+        if self.initially_known:
+            assert self.initially == initially
         else:
-            assert not self.initial_volume_known
+            assert not self.initially_known
             assert self.cum_delta == 0
-            self.initial_volume_known = True
-            self.initial_volume = initial_volume
+            self.initially_known = True
+            self.initially = initially
 
     #-------------------------------------------------------------------------------------------------------------------
     # Accessing
@@ -295,7 +295,7 @@ class LiquidVolume(object):
 
     @property
     def current_volume(self):  # may be interval
-        return self.initial_volume + self.cum_delta
+        return self.initially + self.cum_delta
 
     @property
     def current_volume_min(self):  # (scalar) minimum known to be currently occupied
@@ -311,11 +311,11 @@ class LiquidVolume(object):
 
     @property
     def min_volume(self):  # minimum historically seen
-        return self.initial_volume + self.min_delta
+        return self.initially + self.min_delta
 
     @property
     def max_volume(self):  # maximum historically seen
-        return self.initial_volume + self.max_delta
+        return self.initially + self.max_delta
 
     @property
     def _min_aspiratable_volume(self):
@@ -330,14 +330,14 @@ class LiquidVolume(object):
 
     def aspirate(self, volume):
         assert volume >= 0
-        if not self.initial_volume_known:
-            self.set_initial_volume(Interval([volume, fpu.infinity if self.well is None else self.well.geometry.well_capacity]))
+        if not self.initially_known:
+            self.set_initially(Interval([volume, fpu.infinity if self.well is None else self.well.geometry.well_capacity]))
         self._track_volume(-volume)
 
     def dispense(self, volume):
         assert volume >= 0
-        if not self.initial_volume_known:
-            self.set_initial_volume(0)
+        if not self.initially_known:
+            self.set_initially(0)
         self._track_volume(volume)
 
     def _track_volume(self, delta):
@@ -363,7 +363,7 @@ def note_liquid(location, name=None, initially=None, initially_at_least=None, co
     d = {'name': name, 'location': get_location_path(well)}
 
     if initially is not None and initially_at_least is not None:
-        raise ValueError  # can use both at once
+        raise ValueError  # can't use both at once
 
     if initially is not None:
         if isinstance(initially, list):  # work around json inability to parse serialized intervals
@@ -373,8 +373,8 @@ def note_liquid(location, name=None, initially=None, initially_at_least=None, co
         initially = Interval([initially_at_least, well.geometry.well_capacity])
 
     if initially is not None:
-        d['initial_volume'] = initially
-        well.liquid_volume.set_initial_volume(initially)
+        d['initially'] = initially
+        well.liquid_volume.set_initially(initially)
 
     if concentration is not None:
         concentration = Concentration(concentration)

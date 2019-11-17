@@ -20,15 +20,15 @@ from rgatkinson.logging import Pretty, get_location_path, format_log_msg
 
 
 ########################################################################################################################
-# Monitors
+# Analyzers
 ########################################################################################################################
 
 
-class PlaceableMonitor(object):
+class PlaceableAnalyzer(object):
 
-    def __init__(self, config, controller, location_path):
+    def __init__(self, config, manager, location_path):
         self.config = config;
-        self.controller = controller
+        self.manager = manager
         self.location_path = location_path
         self.target = None
 
@@ -44,20 +44,24 @@ class PlaceableMonitor(object):
         return placeable
 
 
-class WellMonitor(PlaceableMonitor):
-    def __init__(self, config, controller, location_path):
-        super(WellMonitor, self).__init__(config, controller, location_path)
-        self.volume = LiquidVolume(None)
+class WellAnalyzer(PlaceableAnalyzer):
+    def __init__(self, config, manager, location_path):
+        super(WellAnalyzer, self).__init__(config, manager, location_path)
+        self.liquid_volume = LiquidVolume(None)
         self.liquid = Liquid(location_path)  # unique to this well unless we're told a better name later
         self.liquid_known = False
         self.mixture = Mixture()
 
+    def set_target(self, target):
+        super().set_target(target)
+        # Note: we *don't* want to set target.liquid_volume, as *our* liquid_volume is a post-run analyzer, not a real-time tracker
+
     def aspirate(self, volume, pipette_contents: PipetteContents):
-        self.volume.aspirate(volume)
+        self.liquid_volume.aspirate(volume)
         self.mixture.to_pipette(volume, pipette_contents)
 
     def dispense(self, volume, pipette_contents: PipetteContents):
-        self.volume.dispense(volume)
+        self.liquid_volume.dispense(volume)
         self.mixture.from_pipette(volume, pipette_contents)
 
     def set_liquid(self, liquid):  # idempotent
@@ -65,8 +69,8 @@ class WellMonitor(PlaceableMonitor):
         self.liquid = liquid
         self.liquid_known = True
 
-    def set_initial_volume(self, initial_volume):
-        self.volume.set_initial_volume(initial_volume)
+    def set_initially(self, initial_volume):
+        self.liquid_volume.set_initially(initial_volume)
         self.mixture.set_initial_liquid(self.liquid, initial_volume)
 
     def formatted(self):
@@ -76,43 +80,43 @@ class WellMonitor(PlaceableMonitor):
                 result += ' ("{0:s}")'.format(self.liquid)
         result += ':'
         result += Pretty().format(' lo={0:n} hi={1:n} cur={2:n} mix={3:s}\n',
-            self.volume.min_volume,
-            self.volume.max_volume,
-            self.volume.current_volume,
-            self.mixture.__str__())
+                                  self.liquid_volume.min_volume,
+                                  self.liquid_volume.max_volume,
+                                  self.liquid_volume.current_volume,
+                                  self.mixture.__str__())
         return result
 
 # region Containers
-class AbstractContainerMonitor(PlaceableMonitor):
-    def __init__(self, config, controller, location_path):
-        super(AbstractContainerMonitor, self).__init__(config, controller, location_path)
+class AbstractContainerAnalyzer(PlaceableAnalyzer):
+    def __init__(self, config, manager, location_path):
+        super(AbstractContainerAnalyzer, self).__init__(config, manager, location_path)
 
 
-class WellContainerMonitor(AbstractContainerMonitor):
-    def __init__(self, config, controller, location_path):
-        super(WellContainerMonitor, self).__init__(config, controller, location_path)
+class WellContainerAnalyzer(AbstractContainerAnalyzer):
+    def __init__(self, config, manager, location_path):
+        super(WellContainerAnalyzer, self).__init__(config, manager, location_path)
         self.wells = dict()
 
-    def add_well(self, well_monitor):  # idempotent
-        name = well_monitor.target.get_name()
+    def add_well(self, well_analyzer):  # idempotent
+        name = well_analyzer.target.get_name()
         if name in self.wells:  # avoid change on idempotency (might be iterating over self.wells)
-            assert self.wells[name] is well_monitor
+            assert self.wells[name] is well_analyzer
         else:
-            self.wells[name] = well_monitor
+            self.wells[name] = well_analyzer
 
     def formatted(self):
         result = ''
         result += 'container "%s" in "%s"\n' % (self.target.get_name(), self.get_slot().get_name())
         for well in self.target.wells():
-            if self.controller.has_well(well):
+            if self.manager.has_well(well):
                 result += '   '
-                result += self.controller.well_monitor(well).formatted()
+                result += self.manager.well_analyzer(well).formatted()
         return result
 
 
-class TipRackMonitor(AbstractContainerMonitor):
-    def __init__(self, config, controller, location_path):
-        super(TipRackMonitor, self).__init__(config, controller, location_path)
+class TipRackAnalyzer(AbstractContainerAnalyzer):
+    def __init__(self, config, manager, location_path):
+        super(TipRackAnalyzer, self).__init__(config, manager, location_path)
         self.tips_picked = dict()
         self.tips_dropped = dict()
 
@@ -129,79 +133,79 @@ class TipRackMonitor(AbstractContainerMonitor):
 # endregion
 
 
-class MonitorController(object):
+class AnalyzerManager(object):
     def __init__(self, config: AbstractConfigurationContext):
         self.config = config
-        self._monitors = dict()  # maps location path to monitor
+        self._analyzers = dict()  # maps location path to analyzer
 
     def get_liquid(self, liquid_name):
         return self.config.execution_context.liquids.get_liquid(liquid_name)
 
     def analyze_liquid_name(self, liquid_name, location_path, initially=None, concentration=None):
         # Keep in sync with (global) note_liquid_name
-        well_monitor = self._monitor_from_location_path(WellMonitor, location_path)
+        well_analyzer: WellAnalyzer = self._analyzer_from_location_path(WellAnalyzer, location_path)
         liquid = self.get_liquid(liquid_name)
         if concentration is not None:
             concentration = Concentration(concentration)
             liquid.concentration = concentration
-        well_monitor.set_liquid(liquid)
+        well_analyzer.set_liquid(liquid)
         if initially is not None:
             if isinstance(initially, list):  # work around json parsing deficiency
                 initially = Interval(*initially)
-            well_monitor.set_initial_volume(initially)
+            well_analyzer.set_initially(initially)
 
-    def well_monitor(self, well):
-        well_monitor = self._monitor_from_location_path(WellMonitor, get_location_path(well))
-        well_monitor.set_target(well)
+    def well_analyzer(self, well):
+        well_analzyer = self._analyzer_from_location_path(WellAnalyzer, get_location_path(well))
+        well_analzyer.set_target(well)
 
-        well_container_monitor = self._monitor_from_location_path(WellContainerMonitor, get_location_path(well.parent))
-        well_container_monitor.set_target(well.parent)
-        well_container_monitor.add_well(well_monitor)
+        well_container_analyzer = self._analyzer_from_location_path(WellContainerAnalyzer, get_location_path(well.parent))
+        well_container_analyzer.set_target(well.parent)
+        well_container_analyzer.add_well(well_analzyer)
 
-        return well_monitor
+        return well_analzyer
 
     def has_well(self, well):
-        well_monitor = self._monitors.get(get_location_path(well), None)
-        return well_monitor is not None and well_monitor.target is not None
+        well_anzlyzer = self._analyzers.get(get_location_path(well), None)
+        return well_anzlyzer is not None and well_anzlyzer.target is not None
 
-    def tip_rack_monitor(self, tip_rack):
-        tip_rack_monitor = self._monitor_from_location_path(TipRackMonitor, get_location_path(tip_rack))
-        tip_rack_monitor.set_target(tip_rack)
-        return tip_rack_monitor
+    def tip_rack_analyzer(self, tip_rack):
+        tip_rack_analyzer = self._analyzer_from_location_path(TipRackAnalyzer, get_location_path(tip_rack))
+        tip_rack_analyzer.set_target(tip_rack)
+        return tip_rack_analyzer
 
     def formatted(self):
         result = ''
 
-        monitors = self._all_monitors(TipRackMonitor)
-        slot_numbers = list(monitors.keys())
+        analyzers = self._all_analyzers(TipRackAnalyzer)
+        slot_numbers = list(analyzers.keys())
         slot_numbers.sort()
         for slot_num in slot_numbers:
             if slot_num == 12: continue  # ignore trash
-            for monitor in monitors[slot_num]:
-                result += monitor.formatted()
+            for analyzer in analyzers[slot_num]:
+                result += analyzer.formatted()
 
-        monitors = self._all_monitors(WellContainerMonitor)
-        slot_numbers = list(monitors.keys())
+        analyzers = self._all_analyzers(WellContainerAnalyzer)
+        slot_numbers = list(analyzers.keys())
         slot_numbers.sort()
         for slot_num in slot_numbers:
-            for monitor in monitors[slot_num]:
-                result += monitor.formatted()
+            for analyzer in analyzers[slot_num]:
+                result += analyzer.formatted()
 
         return result
 
-    def _all_monitors(self, monitor_type):  # -> map from slot number to list of monitor
+    def _all_analyzers(self, analyzer_type):  # -> map from slot number to list of analyzer
         result = dict()
-        for monitor in set(monitor for monitor in self._monitors.values() if monitor.target is not None):
-            if isinstance(monitor, monitor_type):
-                slot_num = int(monitor.get_slot().get_name())
-                result[slot_num] = result.get(slot_num, list()) + [monitor]
+        for analyzer in set(analyzer for analyzer in self._analyzers.values() if analyzer.target is not None):
+            if isinstance(analyzer, analyzer_type):
+                slot_num = int(analyzer.get_slot().get_name())
+                result[slot_num] = result.get(slot_num, list()) + [analyzer]
         return result
 
-    def _monitor_from_location_path(self, monitor_type, location_path):
-        if location_path not in self._monitors:
-            monitor = monitor_type(self.config, self, location_path)
-            self._monitors[location_path] = monitor
-        return self._monitors[location_path]
+    def _analyzer_from_location_path(self, analyzer_type, location_path):
+        if location_path not in self._analyzers:
+            analyzer = analyzer_type(self.config, self, location_path)
+            self._analyzers[location_path] = analyzer
+        return self._analyzers[location_path]
 
 
 ########################################################################################################################
@@ -262,7 +266,7 @@ robot._driver = EnhancedSimulatingSmoothieDriver(robot._driver)
 
 def analyzeRunLog(run_log):
 
-    controller = MonitorController(config)
+    manager = AnalyzerManager(config)
     pipette_contents = PipetteContents()
 
     # locations are either placeables or (placable, vector) pairs
@@ -295,20 +299,20 @@ def analyzeRunLog(run_log):
             if selector == 'aspirating' or selector == 'dispensing':
                 well = placeable_from_location(payload['location'])
                 volume = payload['volume']
-                well_monitor = controller.well_monitor(well)
+                well_analyzer = manager.well_analyzer(well)
                 if selector == 'aspirating':
-                    well_monitor.aspirate(volume, pipette_contents)
+                    well_analyzer.aspirate(volume, pipette_contents)
                 else:
-                    well_monitor.dispense(volume, pipette_contents)
+                    well_analyzer.dispense(volume, pipette_contents)
             elif selector == 'picking' or selector == 'dropping':
                 well = placeable_from_location(payload['location'])
                 rack = well.parent
-                tip_rack_monitor = controller.tip_rack_monitor(rack)
+                tip_rack_analyzer = manager.tip_rack_analyzer(rack)
                 if selector == 'picking':
-                    tip_rack_monitor.pick_up_tip(well)
+                    tip_rack_analyzer.pick_up_tip(well)
                     pipette_contents.pick_up_tip()
                 else:
-                    tip_rack_monitor.drop_tip(well)
+                    tip_rack_analyzer.drop_tip(well)
                     pipette_contents.drop_tip()
             elif selector == 'mixing' \
                     or selector == 'transferring' \
@@ -330,7 +334,7 @@ def analyzeRunLog(run_log):
                 serialized = text[len(selector):]  # will include initial white space, but that's ok
                 serialized = serialized.replace("}}", "}").replace("{{", "{")
                 d = json.loads(serialized)
-                controller.analyze_liquid_name(d['name'], d['location'], initially=d.get('initial_volume', None), concentration=d.get('concentration', None))
+                manager.analyze_liquid_name(d['name'], d['location'], initially=d.get('initially', None), concentration=d.get('concentration', None))
             elif selector == 'air' \
                     or selector == 'returning' \
                     or selector == 'engaging' \
@@ -347,7 +351,7 @@ def analyzeRunLog(run_log):
             else:
                 pass  # nothing to process
 
-    return controller
+    return manager
 
 
 def main() -> int:
