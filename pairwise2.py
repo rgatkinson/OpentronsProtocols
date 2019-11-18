@@ -36,7 +36,7 @@ if use_eppendorf_5_0_tubes:
     waterA_initial_volume = 5000
     waterB_initial_volume = 5000
 else:
-    water_min_volume = 7000  # rough guess
+    water_min_volume = 7000  # rough guess, using trough
 
 # Volumes of master mix ingredients, used when automatically making master mix. These are minimums in each tube.
 buffer_volumes = [2000, 2000]  # Fresh tubes of B9022S
@@ -124,31 +124,15 @@ for row in range(num_rows):
 ## Protocol
 ########################################################################################################################
 
-# Diluting each strand
-strand_dilution_factor = 25.0 / 9.0  # per Excel worksheet
-strand_dilution_vol = 1225
-
-# Master mix, values per Excel worksheet
-mm_overhead_factor = 1.10  # 1.0375  # 1.10 is a hack attempting to allow for suds
+mm_overhead_factor = 1.05
 master_mix_buffer_vol = master_mix_buffer_nominal * mm_overhead_factor
 master_mix_evagreen_vol = master_mix_evagreen_nominal * mm_overhead_factor
-master_mix_common_water_vol = 672 * mm_overhead_factor
+master_mix_common_water_vol = num_wells * common_water_per_well * mm_overhead_factor
 master_mix_vol = master_mix_buffer_vol + master_mix_evagreen_vol + master_mix_common_water_vol
 
-# Define the volumes of diluted strands we will use
-per_well_water_volumes_old = [
-    [56, 54, 51, 48],
-    [54, 52, 49, 46],
-    [51, 49, 46, 43],
-    [48, 46, 43, 40],
-    [32, 28, 24, 16],
-    [28, 24, 20, 12],
-    [24, 20, 16, 8],
-    [16, 12, 8, 0]]
-assert len(per_well_water_volumes_old) == num_rows
-assert len(per_well_water_volumes_old[0]) * num_replicates == num_columns
-
-# compute derived constants
+# Diluting each strand
+strand_dilution_factor = 25.0 / 9.0  # per manual estimation of reasonable working concentrations
+strand_dilution_vol = 1225
 strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
 strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
 
