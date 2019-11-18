@@ -405,20 +405,15 @@ def plateStrandBAndMix():
     # Mixing always needs the p50, but plating may need either; optimize tip usage
     log('Plating Strand B')
     mixed_wells = set()
-    for iVolume in range(0, len(strand_volumes)):
-        dest_wells = calculateStrandBWells(iVolume)
-        volume = strand_volumes[iVolume]
-        if usesP10(volume, len(dest_wells), allow_zero=True):
-            p = p10
-        else:
-            p = p50
-
-        # We can't use distribute here as we need to avoid cross contamination from plate well to plate well
-        for well in dest_wells:
-            if volume != 0:
-                log("Plating Strand B: well='%s' vol=%d pipette=%s" % (well.get_name(), volume, p.name))
-                p.pick_up_tip()
-                p.transfer(volume, diluted_strand_b, well, new_tip='never', full_dispense=True)
+    for row in range(num_rows):
+        for col in range(num_columns):
+            volume = strand_b_plate[row][col]
+            if volume == 0: continue
+            p: EnhancedPipette = p10 if usesP10(volume) else p50
+            well = plate.rows(row).wells(col)
+            log("Plating Strand B: well='%s' vol=%d pipette=%s" % (well.get_name(), volume, p.name))
+            if not p.tip_attached: p.pick_up_tip()
+            p.transfer(volume, diluted_strand_b, well, new_tip='never', trash=config.trash_control, full_dispense=True)
             if p is p50:
                 mix_plate_well(well, keep_last_tip=True)
                 mixed_wells.add(well)
