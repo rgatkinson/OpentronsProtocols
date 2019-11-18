@@ -52,23 +52,69 @@ strand_b_min_vol = 1100
 strand_a_conc = Concentration('9.659 uM')
 strand_b_conc = Concentration('8.897 uM')
 
-well_count = 96
-total_well_volume = 84
+num_columns = 12
+num_rows = 8
+num_wells = num_rows * num_columns
+num_replicates = 3
+num_replica_groups = num_wells // num_replicates
+num_replica_groups_per_row = num_columns // num_replicates
+
 max_dna_working_concentration = Concentration(1.2, "uM")
 buffer_source_concentration = Concentration(5, "x")
 evagreen_source_concentration = Concentration(20, "x")
 
+total_well_volume = 84
 buffer_per_well = total_well_volume / buffer_source_concentration.x
 evagreen_per_well = total_well_volume / evagreen_source_concentration.x
 dna_and_water_per_well = total_well_volume - buffer_per_well - evagreen_per_well
 
-master_mix_buffer_nominal = well_count * buffer_per_well
-master_mix_evagreen_nominal = well_count * evagreen_per_well
+master_mix_buffer_nominal = num_wells * buffer_per_well
+master_mix_evagreen_nominal = num_wells * evagreen_per_well
 
 strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
-num_replicates = 3
-columns_per_plate = 12
-rows_per_plate = 8
+low_strand_volumes = strand_volumes[0:4]
+high_strand_volumes = strand_volumes[4:8]
+
+# Figure out what each of the replica groups looks like
+def pair_up(strand_a_vols, strand_b_vols):
+    for b in strand_b_vols:
+        for a in strand_a_vols:
+            yield {'StrandA': a, 'StrandB': b}
+
+replica_groups = list(pair_up(low_strand_volumes, low_strand_volumes))
+replica_groups.extend(pair_up(high_strand_volumes, high_strand_volumes))
+
+# Figure out the strand a, strand b, and per-well-water volumes
+def make_empty_plate():
+    row = [0] * num_columns
+    result = []
+    for i in range(num_rows):
+        result.append(row.copy())
+    return result
+
+strand_a_plate = make_empty_plate()
+strand_b_plate = make_empty_plate()
+
+for i, replica_group in enumerate(replica_groups):
+    row = i // num_replica_groups_per_row
+    col_first = (i % num_replica_groups_per_row) * num_replicates
+    for j in range(num_replicates):
+        col = col_first + j
+        strand_a_plate[row][col] = replica_group['StrandA']
+        strand_b_plate[row][col] = replica_group['StrandB']
+
+total_water_plate = make_empty_plate()
+common_water_per_well = fpu.infinity
+for row in range(num_rows):
+    for col in range(num_columns):
+        total_water_plate[row][col] = total_well_volume - buffer_per_well - evagreen_per_well - strand_a_plate[row][col] - strand_b_plate[row][col]
+        common_water_per_well = min(common_water_per_well, total_water_plate[row][col])
+master_mix_per_well = buffer_per_well + evagreen_per_well + common_water_per_well
+
+per_well_water_plate = make_empty_plate()
+for row in range(num_rows):
+    for col in range(num_columns):
+        per_well_water_plate[row][col] = dna_and_water_per_well - common_water_per_well - strand_a_plate[row][col] - strand_b_plate[row][col]
 
 ########################################################################################################################
 ## Protocol
@@ -86,7 +132,7 @@ master_mix_common_water_vol = 672 * mm_overhead_factor
 master_mix_vol = master_mix_buffer_vol + master_mix_evagreen_vol + master_mix_common_water_vol
 
 # Define the volumes of diluted strands we will use
-per_well_water_volumes = [
+per_well_water_volumes_old = [
     [56, 54, 51, 48],
     [54, 52, 49, 46],
     [51, 49, 46, 43],
@@ -95,8 +141,8 @@ per_well_water_volumes = [
     [28, 24, 20, 12],
     [24, 20, 16, 8],
     [16, 12, 8, 0]]
-assert len(per_well_water_volumes) == rows_per_plate
-assert len(per_well_water_volumes[0]) * num_replicates == columns_per_plate
+assert len(per_well_water_volumes_old) == num_rows
+assert len(per_well_water_volumes_old[0]) * num_replicates == num_columns
 
 # compute derived constants
 strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
@@ -153,14 +199,12 @@ del well
 # Well & Pipettes
 ########################################################################################################################
 
-num_samples_per_row = columns_per_plate // num_replicates
-
 # Into which wells should we place the n'th sample size of strand A
 def calculateStrandAWells(iSample: int) -> List[types.Location]:
-    row_first = 0 if iSample < num_samples_per_row else num_samples_per_row
-    col_first = (num_replicates * iSample) % columns_per_plate
+    row_first = 0 if iSample < num_replica_groups_per_row else num_replica_groups_per_row
+    col_first = (num_replicates * iSample) % num_columns
     result = []
-    for row in range(row_first, row_first + min(num_samples_per_row, len(strand_volumes))):
+    for row in range(row_first, row_first + min(num_replica_groups_per_row, len(strand_volumes))):
         for col in range(col_first, col_first + num_replicates):
             result.append(plate.rows(row).wells(col))
     return result
@@ -168,10 +212,10 @@ def calculateStrandAWells(iSample: int) -> List[types.Location]:
 
 # Into which wells should we place the n'th sample size of strand B
 def calculateStrandBWells(iSample: int) -> List[types.Location]:
-    if iSample < num_samples_per_row:
-        col_max = num_replicates * (len(strand_volumes) if len(strand_volumes) < num_samples_per_row else num_samples_per_row)
+    if iSample < num_replica_groups_per_row:
+        col_max = num_replicates * (len(strand_volumes) if len(strand_volumes) < num_replica_groups_per_row else num_replica_groups_per_row)
     else:
-        col_max = num_replicates * (0 if len(strand_volumes) < num_samples_per_row else len(strand_volumes) - num_samples_per_row)
+        col_max = num_replicates * (0 if len(strand_volumes) < num_replica_groups_per_row else len(strand_volumes) - num_replica_groups_per_row)
     result = []
     for col in range(0, col_max):
         result.append(plate.rows(iSample).wells(col))
@@ -189,8 +233,8 @@ def usedWells() -> List[types.Location]:
 # Figuring out what pipettes should pipette what volumes
 p10_max_vol = 10
 p50_min_vol = 5
-def usesP10(queriedVol, count, allow_zero):
-    return (allow_zero or 0 < queriedVol) and (queriedVol < p50_min_vol or queriedVol * count <= p10_max_vol)
+def usesP10(volume, well_count=1, allow_zero=False):
+    return (allow_zero or 0 < volume) and (volume < p50_min_vol or volume * well_count <= p10_max_vol)
 
 
 ########################################################################################################################
@@ -312,30 +356,26 @@ def createMasterMix():
 
 def plateMasterMix():
     log('Plating Master Mix')
-    master_mix_per_well = 28
     p50.transfer(master_mix_per_well, master_mix, usedWells(),
                  new_tip='once',
                  trash=config.trash_control,
-                 full_dispense=True,
-                 aspirate_top_clearance=-5.0  # large to help avoid soap bubbles. remove when we no longer use detergent in buffer
+                 full_dispense=True
                  )
 
 def platePerWellWater():
     log('Plating per-well water')
     # Plate per-well water. We save tips by being happy to pollute our water trough with a bit of master mix.
-    # We begin by flattening per_well_water_volumes into a column-major array
-    water_volumes = [0] * (columns_per_plate * rows_per_plate)
-    for iRow in range(rows_per_plate):
-        for iCol in range(len(per_well_water_volumes[iRow])):
-            volume = per_well_water_volumes[iRow][iCol]
-            for iReplicate in range(num_replicates):
-                index = (iCol * num_replicates + iReplicate) * rows_per_plate + iRow
-                water_volumes[index] = volume
-
-    p50.transfer(water_volumes, waterB, plate.wells(),
-                 new_tip='once',
-                 trash=config.trash_control,
-                 full_dispense=True)
+    for row in range(num_rows):
+        for col in range(num_columns):
+            volume = per_well_water_plate[row][col]
+            if volume == 0: continue
+            p: EnhancedPipette = p10 if usesP10(volume) else p50
+            if not p.tip_attached:
+                p.pick_up_tip()
+            well = plate.rows(row).wells(col)
+            p.transfer(volume, waterB, well, new_tip='never', trash=config.trash_control, full_dispense=True)
+    p10.done_tip()
+    p50.done_tip()
 
 def plateStrandA():
     # Plate strand A
@@ -344,22 +384,16 @@ def plateStrandA():
     # by using new_tip='always'. Update: we don't worry about that pollution, that source is disposable.
     # So we can minimize tip usage.
     log('Plating Strand A')
-    p10.pick_up_tip()
-    p50.pick_up_tip()
-    for iVolume in range(0, len(strand_volumes)):
-        dest_wells = calculateStrandAWells(iVolume)
-        volume = strand_volumes[iVolume]
-        if volume == 0: continue
-        if usesP10(volume, len(dest_wells), allow_zero=False):
-            p = p10
-        else:
-            p = p50
-        log('Plating Strand A: volume %d with %s' % (volume, p.name))
-        volumes = [volume] * len(dest_wells)
-        p.transfer(volumes, diluted_strand_a, dest_wells,
-                   new_tip='never',
-                   trash=config.trash_control,
-                   full_dispense=True)
+    for row in range(num_rows):
+        for col in range(num_columns):
+            volume = strand_a_plate[row][col]
+            if volume == 0: continue
+            p: EnhancedPipette = p10 if usesP10(volume) else p50
+            if not p.tip_attached:
+                p.pick_up_tip()
+            well = plate.rows(row).wells(col)
+            log('Plating Strand A: volume %d with %s' % (volume, p.name))
+            p.transfer(volume, diluted_strand_a, well, new_tip='never', trash=config.trash_control, full_dispense=True)
     p10.done_tip()
     p50.done_tip()
 
