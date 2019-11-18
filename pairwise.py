@@ -21,8 +21,8 @@ from rgatkinson.pipette import verify_well_locations, instruments_manager
 ########################################################################################################################
 
 # Tip usage
-p10_start_tip = 'F2'
-p50_start_tip = 'F2'
+p50_start_tip = 'F3'
+p10_start_tip = 'C4'
 config.trash_control = True
 
 # Automation control
@@ -42,10 +42,10 @@ else:
 buffer_volumes = [2000, 2000]  # Fresh tubes of B9022S
 evagreen_volumes = [1000]      # Fresh tube of EvaGreen
 
-strand_a_conc = '9.659 uM'
-strand_b_conc = '8.897 uM'
-strand_a_min_vol = 650
-strand_b_min_vol = 650
+strand_a_conc = '8.820 uM'  # R19090901
+strand_b_conc = '8.547 uM'  # R19090903
+strand_a_min_vol = 700  # conservative
+strand_b_min_vol = 700  # conservative
 
 
 ########################################################################################################################
