@@ -83,6 +83,7 @@ def pair_up(strand_a_vols, strand_b_vols):
 
 replica_groups = list(pair_up(low_strand_volumes, low_strand_volumes))
 replica_groups.extend(pair_up(high_strand_volumes, high_strand_volumes))
+assert len(replica_groups) == num_replica_groups
 
 # Figure out the strand a, strand b, and per-well-water volumes
 def make_empty_plate():
