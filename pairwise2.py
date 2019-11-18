@@ -110,6 +110,10 @@ for row in range(num_rows):
         total_water_plate[row][col] = total_well_volume - buffer_per_well - evagreen_per_well - strand_a_plate[row][col] - strand_b_plate[row][col]
         common_water_per_well = min(common_water_per_well, total_water_plate[row][col])
 master_mix_per_well = buffer_per_well + evagreen_per_well + common_water_per_well
+master_mix_plate = make_empty_plate()
+for row in range(num_rows):
+    for col in range(num_columns):
+        master_mix_plate[row][col] = master_mix_per_well
 
 per_well_water_plate = make_empty_plate()
 for row in range(num_rows):
@@ -199,43 +203,11 @@ del well
 # Well & Pipettes
 ########################################################################################################################
 
-# Into which wells should we place the n'th sample size of strand A
-def calculateStrandAWells(iSample: int) -> List[types.Location]:
-    row_first = 0 if iSample < num_replica_groups_per_row else num_replica_groups_per_row
-    col_first = (num_replicates * iSample) % num_columns
-    result = []
-    for row in range(row_first, row_first + min(num_replica_groups_per_row, len(strand_volumes))):
-        for col in range(col_first, col_first + num_replicates):
-            result.append(plate.rows(row).wells(col))
-    return result
-
-
-# Into which wells should we place the n'th sample size of strand B
-def calculateStrandBWells(iSample: int) -> List[types.Location]:
-    if iSample < num_replica_groups_per_row:
-        col_max = num_replicates * (len(strand_volumes) if len(strand_volumes) < num_replica_groups_per_row else num_replica_groups_per_row)
-    else:
-        col_max = num_replicates * (0 if len(strand_volumes) < num_replica_groups_per_row else len(strand_volumes) - num_replica_groups_per_row)
-    result = []
-    for col in range(0, col_max):
-        result.append(plate.rows(iSample).wells(col))
-    return result
-
-
-# What wells are at all used here?
-def usedWells() -> List[types.Location]:
-    result = []
-    for n in range(0, len(strand_volumes)):
-        result.extend(calculateStrandAWells(n))
-    return result
-
-
 # Figuring out what pipettes should pipette what volumes
 p10_max_vol = 10
 p50_min_vol = 5
 def usesP10(volume, well_count=1, allow_zero=False):
     return (allow_zero or 0 < volume) and (volume < p50_min_vol or volume * well_count <= p10_max_vol)
-
 
 ########################################################################################################################
 # Making master mix and diluting strands
@@ -356,11 +328,17 @@ def createMasterMix():
 
 def plateMasterMix():
     log('Plating Master Mix')
-    p50.transfer(master_mix_per_well, master_mix, usedWells(),
-                 new_tip='once',
-                 trash=config.trash_control,
-                 full_dispense=True
-                 )
+    for row in range(num_rows):
+        for col in range(num_columns):
+            volume = master_mix_plate[row][col]
+            if volume == 0: continue
+            p: EnhancedPipette = p10 if usesP10(volume) else p50
+            if not p.tip_attached:
+                p.pick_up_tip()
+            well = plate.rows(row).wells(col)
+            p.transfer(volume, master_mix, well, new_tip='never', trash=config.trash_control, full_dispense=True)
+    p10.done_tip()
+    p50.done_tip()
 
 def platePerWellWater():
     log('Plating per-well water')
