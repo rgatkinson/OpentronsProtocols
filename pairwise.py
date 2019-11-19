@@ -356,7 +356,7 @@ def plateStrandBAndMix():
     for iVolume in range(0, len(strand_volumes)):
         dest_wells = calculateStrandBWells(iVolume)
         volume = strand_volumes[iVolume]
-        if usesP10(volume, len(dest_wells), allow_zero=True):
+        if usesP10(volume, len(dest_wells), allow_zero=True):  # nb: len(dest_wells) is technically incorrect, since we pipette each individually. but we leave for historical reasons
             p = p10
         else:
             p = p50
