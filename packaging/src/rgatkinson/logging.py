@@ -33,9 +33,6 @@ class Pretty(string.Formatter):
                     factor *= 10
                 fmt = f'{{:.{ precision }f}}'
                 result = fmt.format(value)
-                trailing_zeros = "." + ("0" * precision)
-                if result.endswith(trailing_zeros):
-                    pass  # is actually a problem todo: fix!
                 return result
             elif hasattr(value, 'format'):
                 return value.format(format_spec="{0:%s}" % spec, formatter=self)
