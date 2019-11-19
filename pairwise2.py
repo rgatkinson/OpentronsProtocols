@@ -21,8 +21,8 @@ from rgatkinson.pipette import verify_well_locations, instruments_manager
 ########################################################################################################################
 
 # Tip usage
-p10_start_tip = 'A1'
-p50_start_tip = 'D1'
+p50_start_tip = 'F3'
+p10_start_tip = 'C4'
 config.trash_control = True
 
 # Automation control
@@ -42,15 +42,14 @@ else:
 buffer_volumes = [2000, 2000]  # Fresh tubes of B9022S
 evagreen_volumes = [1000]      # Fresh tube of EvaGreen
 
-strand_a_min_vol = 1100
-strand_b_min_vol = 1100
+strand_a_conc = Concentration('8.820 uM')  # R19090901
+strand_b_conc = Concentration('8.547 uM')  # R19090903
+strand_a_min_vol = 700  # conservative
+strand_b_min_vol = 700  # conservative
 
 ########################################################################################################################
 ## Protocol Design
 ########################################################################################################################
-
-strand_a_conc = Concentration('9.659 uM')
-strand_b_conc = Concentration('8.897 uM')
 
 num_columns = 12
 num_rows = 8
@@ -125,7 +124,7 @@ for row in range(num_rows):
 ## Protocol
 ########################################################################################################################
 
-mm_overhead_factor = 1.05
+mm_overhead_factor = 1.10  # 1.05 would probably do
 master_mix_buffer_vol = master_mix_buffer_nominal * mm_overhead_factor
 master_mix_evagreen_vol = master_mix_evagreen_nominal * mm_overhead_factor
 master_mix_common_water_vol = num_wells * common_water_per_well * mm_overhead_factor
@@ -191,8 +190,8 @@ del well
 # Figuring out what pipettes should pipette what volumes
 p10_max_vol = 10
 p50_min_vol = 5
-def usesP10(volume, well_count=1, allow_zero=False):
-    return (allow_zero or 0 < volume) and (volume < p50_min_vol or volume * well_count <= p10_max_vol)
+def usesP10(volume, allow_zero=False):
+    return (allow_zero or 0 < volume) and (volume < p50_min_vol and volume <= p10_max_vol)
 
 ########################################################################################################################
 # Making master mix and diluting strands
@@ -321,7 +320,11 @@ def plateMasterMix():
             if not p.tip_attached:
                 p.pick_up_tip()
             well = plate.rows(row).wells(col)
-            p.transfer(volume, master_mix, well, new_tip='never', trash=config.trash_control, full_dispense=True)
+            p.transfer(volume, master_mix, well,
+                       new_tip='never',
+                       trash=config.trash_control,
+                       full_dispense=True
+                       )
     p10.done_tip()
     p50.done_tip()
 
@@ -372,7 +375,7 @@ def plateStrandBAndMix():
         for col in range(num_columns):
             volume = strand_b_plate[row][col]
             if volume == 0: continue
-            p: EnhancedPipette = p10 if usesP10(volume) else p50
+            p: EnhancedPipette = p10 if usesP10(volume, allow_zero=True) else p50
             well = plate.rows(row).wells(col)
             log("Plating Strand B: well='%s' vol=%d pipette=%s" % (well.get_name(), volume, p.name))
             if not p.tip_attached: p.pick_up_tip()
