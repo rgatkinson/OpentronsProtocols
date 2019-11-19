@@ -23,12 +23,16 @@ class Pretty(string.Formatter):
                 precision = int(spec[1:-1])
             if is_finite_scalar(value):
                 factor = 1
+                abs_val = abs(value)
                 for i in range(precision):
-                    if is_close(value * factor, int(value * factor)):
+                    no_decimals = int(abs_val * factor + 0.5)
+                    if is_close(abs_val * factor, no_decimals):
                         precision = i
                         break
                     factor *= 10
-                return "{:.{}f}".format(value, precision)
+                fmt = f'{{:.{ precision }f}}'
+                result = fmt.format(value)
+                return result
             elif hasattr(value, 'format'):
                 return value.format(format_spec="{0:%s}" % spec, formatter=self)
             else:
