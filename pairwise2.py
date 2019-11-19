@@ -124,7 +124,7 @@ for row in range(num_rows):
 ## Protocol
 ########################################################################################################################
 
-mm_overhead_factor = 1.10  # 1.05 would probably do
+mm_overhead_factor = 1.05
 master_mix_buffer_vol = master_mix_buffer_nominal * mm_overhead_factor
 master_mix_evagreen_vol = master_mix_evagreen_nominal * mm_overhead_factor
 master_mix_common_water_vol = num_wells * common_water_per_well * mm_overhead_factor
