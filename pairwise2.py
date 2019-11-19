@@ -21,8 +21,8 @@ from rgatkinson.pipette import verify_well_locations, instruments_manager
 ########################################################################################################################
 
 # Tip usage
-p50_start_tip = 'F3'
-p10_start_tip = 'C4'
+p50_start_tip = 'A1'
+p10_start_tip = 'H5'
 config.trash_control = True
 
 # Automation control
@@ -42,8 +42,8 @@ else:
 buffer_volumes = [2000, 2000]  # Fresh tubes of B9022S
 evagreen_volumes = [1000]      # Fresh tube of EvaGreen
 
-strand_a_conc = Concentration('8.820 uM')  # R19090901
-strand_b_conc = Concentration('8.547 uM')  # R19090903
+strand_a_conc = Concentration('9.197 uM')  # R19090902
+strand_b_conc = Concentration('8.886 uM')  # R19090904
 strand_a_min_vol = 700  # conservative
 strand_b_min_vol = 700  # conservative
 
@@ -124,7 +124,7 @@ for row in range(num_rows):
 ## Protocol
 ########################################################################################################################
 
-mm_overhead_factor = 1.05
+mm_overhead_factor = 1.075
 master_mix_buffer_vol = master_mix_buffer_nominal * mm_overhead_factor
 master_mix_evagreen_vol = master_mix_evagreen_nominal * mm_overhead_factor
 master_mix_common_water_vol = num_wells * common_water_per_well * mm_overhead_factor
@@ -132,7 +132,7 @@ master_mix_vol = master_mix_buffer_vol + master_mix_evagreen_vol + master_mix_co
 
 # Diluting each strand
 strand_dilution_factor = 25.0 / 9.0  # per manual estimation of reasonable working concentrations
-strand_dilution_vol = 1225
+strand_dilution_vol = 1200
 strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
 strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
 
@@ -241,7 +241,7 @@ def createMasterMix():
         note_liquid(location=master_mix, name='Master Mix', initially=master_mix_vol)
 
         log('Creating Master Mix')
-        info(pretty.format('Master Mix recipe: water={0:n} buffer={1:n} EvaGreen={2:n}', master_mix_common_water_vol, master_mix_buffer_vol, master_mix_evagreen_vol))
+        info(pretty.format('Master Mix recipe: water={0:n} buffer={1:n} EvaGreen={2:n} total={3:n} (extra={4})', master_mix_common_water_vol, master_mix_buffer_vol, master_mix_evagreen_vol, master_mix_vol, mm_overhead_factor))
         user_prompt('Ensure master mix manually present and mixed')
 
     else:
