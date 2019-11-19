@@ -26,12 +26,16 @@ class Pretty(string.Formatter):
                 abs_val = abs(value)
                 for i in range(precision):
                     no_decimals = int(abs_val * factor + 0.5)
-                    if is_close(abs_val * factor, no_decimals):
+                    scaled = abs_val * factor
+                    if is_close(scaled, no_decimals):
                         precision = i
                         break
                     factor *= 10
                 fmt = f'{{:.{ precision }f}}'
                 result = fmt.format(value)
+                trailing_zeros = "." + ("0" * precision)
+                if result.endswith(trailing_zeros):
+                    pass  # is actually a problem todo: fix!
                 return result
             elif hasattr(value, 'format'):
                 return value.format(format_spec="{0:%s}" % spec, formatter=self)
