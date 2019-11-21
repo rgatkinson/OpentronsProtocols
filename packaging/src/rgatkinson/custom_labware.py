@@ -64,10 +64,10 @@ class PointF(XY):
 #-----------------------------------------------------------------------------------------------------------------------
 
 class WellGrid(object):
-    def __init__(self, config, grid_size: PointZ, incr: PointF, offset=PointF(), origin_name='A1', origin=None, well_geometry=None):
+    def __init__(self, config, grid_size: PointZ, incr: PointF, offset=PointF(), origin='A1', well_geometry=None):
         self.config = config
         self.grid_size = grid_size
-        self.origin = self.well_name_to_indices(origin_name) if origin is None else origin
+        self.origin = self.well_name_to_indices(origin) if isinstance(origin, str) else origin
         self.max = self.origin + self.grid_size
         self.incr = incr
         self.offset = offset
@@ -135,7 +135,7 @@ class WellGrid(object):
                 d = {  # coordinate system origin is in lower left
                     'x': self.offset.x + self.incr.x * col,
                     'y': self.offset.y + self.incr.y * (self.grid_size.y - 1 - row),
-                    'name': chr(ord('A')+row+self.origin.x) + chr(ord('1')+col+self.origin.y),
+                    'name': chr(ord('A')+row+self.origin.y) + chr(ord('1')+col+self.origin.x),
                     'geometry': None
                 }
                 if well_geometry is not None:
@@ -311,7 +311,8 @@ class Opentrons10Rack(CustomTubeRack):
                          grid_size=PointZ(2, 2),
                          incr=PointF(35.0, 25.0),
                          offset=PointF(71.38, 25.25),
-                         well_geometry=second_well_geometry)
+                         well_geometry=second_well_geometry,
+                         origin='A3')
             ])
 
 
