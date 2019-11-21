@@ -17,7 +17,7 @@ from rgatkinson.logging import log, fatal, user_prompt
 from rgatkinson.pipette import verify_well_locations, instruments_manager
 
 ########################################################################################################################
-# Tweakable protocol parameters
+# Parameters we tend to adjust for different runs depending on exact ingredient mix
 ########################################################################################################################
 
 # Tip usage
@@ -27,16 +27,7 @@ config.trash_control = True
 
 # Automation control
 manually_dilute_strands = False
-manually_make_master_mix = True
-
-# Labware alternatives
-use_eppendorf_5_0_tubes = True
-waterA_initial_volume = waterB_initial_volume = water_min_volume = 0  # define all variables
-if use_eppendorf_5_0_tubes:
-    waterA_initial_volume = 5000
-    waterB_initial_volume = 5000
-else:
-    water_min_volume = 7000  # rough guess, using trough
+manually_make_master_mix = False
 
 # Volumes of master mix ingredients, used when automatically making master mix. These are minimums in each tube.
 buffer_volumes = [2000, 2000]  # Fresh tubes of B9022S
@@ -44,8 +35,11 @@ evagreen_volumes = [1000]      # Fresh tube of EvaGreen
 
 strand_a_conc = Concentration('9.197 uM')  # R19090902
 strand_b_conc = Concentration('8.886 uM')  # R19090904
-strand_a_min_vol = 700  # conservative
-strand_b_min_vol = 700  # conservative
+strand_a_min_vol = 700  # be conservative
+strand_b_min_vol = 700  # be conservative
+
+waterA_initial_volume = 5000
+waterB_initial_volume = 5000
 
 ########################################################################################################################
 ## Protocol Design
@@ -58,21 +52,34 @@ num_replicates = 3
 num_replica_groups = num_wells // num_replicates
 num_replica_groups_per_row = num_columns // num_replicates
 
-max_dna_working_concentration = Concentration(1.2, "uM")
+max_dna_working_concentration = Concentration(0.5, "uM")
+nominal_source_strand_concentration = Concentration(10, "uM")
 buffer_source_concentration = Concentration(5, "x")
-evagreen_source_concentration = Concentration(20, "x")
+evagreen_source_concentration = Concentration(25, "uM")  # per https://biotium.com/product/evagreen-dye-20x-in-water/
+evagreen_target_concentration = max_dna_working_concentration * 2  # we figure we should always have more evagreen than reagents
 
 total_well_volume = 84
 buffer_per_well = total_well_volume / buffer_source_concentration.x
-evagreen_per_well = total_well_volume / evagreen_source_concentration.x
+evagreen_per_well = total_well_volume / evagreen_source_concentration.molar * evagreen_target_concentration.molar
 dna_and_water_per_well = total_well_volume - buffer_per_well - evagreen_per_well
-
-master_mix_buffer_nominal = num_wells * buffer_per_well
-master_mix_evagreen_nominal = num_wells * evagreen_per_well
 
 strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
 low_strand_volumes = strand_volumes[0:4]
 high_strand_volumes = strand_volumes[4:8]
+
+########################################################################################################################
+## Strand Dilution
+########################################################################################################################
+
+# Diluting each strand
+strand_dilution_vol = 1200
+strand_dilution_factor = max(strand_volumes) / total_well_volume * nominal_source_strand_concentration.molar / max_dna_working_concentration.molar
+strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
+strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
+
+########################################################################################################################
+## Plating Volumes
+########################################################################################################################
 
 # Figure out what each of the replica groups looks like
 def pair_up(strand_a_vols, strand_b_vols):
@@ -121,20 +128,17 @@ for row in range(num_rows):
         per_well_water_plate[row][col] = dna_and_water_per_well - common_water_per_well - strand_a_plate[row][col] - strand_b_plate[row][col]
 
 ########################################################################################################################
-## Protocol
+## Master Mix
 ########################################################################################################################
 
-mm_overhead_factor = 1.075
-master_mix_buffer_vol = master_mix_buffer_nominal * mm_overhead_factor
-master_mix_evagreen_vol = master_mix_evagreen_nominal * mm_overhead_factor
+master_mix_buffer_nominal_vol = num_wells * buffer_per_well
+master_mix_evagreen_nominal_vol = num_wells * evagreen_per_well
+
+mm_overhead_factor = 1.1
+master_mix_buffer_vol = master_mix_buffer_nominal_vol * mm_overhead_factor
+master_mix_evagreen_vol = master_mix_evagreen_nominal_vol * mm_overhead_factor
 master_mix_common_water_vol = num_wells * common_water_per_well * mm_overhead_factor
 master_mix_vol = master_mix_buffer_vol + master_mix_evagreen_vol + master_mix_common_water_vol
-
-# Diluting each strand
-strand_dilution_factor = 25.0 / 9.0  # per manual estimation of reasonable working concentrations
-strand_dilution_vol = 1200
-strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
-strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
 
 ########################################################################################################################
 # Labware
@@ -165,20 +169,12 @@ plate = labware_manager.load('biorad_96_wellplate_200ul_pcr', slot=6, label='pla
 diluted_strand_a = eppendorf_1_5_rack['A6']
 diluted_strand_b = eppendorf_1_5_rack['B6']
 
-if use_eppendorf_5_0_tubes:
-    eppendorf_5_0_rack = labware_manager.load('Atkinson_15_tuberack_5ml_eppendorf', slot=8, label='eppendorf_5_0_rack')
-    master_mix = eppendorf_5_0_rack['A1']
-    waterA = eppendorf_5_0_rack['C4']
-    waterB = eppendorf_5_0_rack['C5']
-    note_liquid(location=waterA, name='Water', initially=waterA_initial_volume)
-    note_liquid(location=waterB, name='Water', initially=waterB_initial_volume)
-else:
-    trough = labware_manager.load('usascientific_12_reservoir_22ml', slot=9, label='trough')
-    falcon_rack = labware_manager.load('opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', slot=8, label='falcon_rack')
-    master_mix = falcon_rack['A1']
-    waterA = trough['A1']
-    waterB = waterA
-    note_liquid(location=waterA, name='Water', initially_at_least=water_min_volume)
+eppendorf_5_0_rack = labware_manager.load('Atkinson_15_tuberack_5ml_eppendorf', slot=8, label='eppendorf_5_0_rack')
+master_mix = eppendorf_5_0_rack['A1']
+waterA = eppendorf_5_0_rack['C4']
+waterB = eppendorf_5_0_rack['C5']
+note_liquid(location=waterA, name='Water', initially=waterA_initial_volume)
+note_liquid(location=waterB, name='Water', initially=waterB_initial_volume)
 
 # Clean up namespace
 del well
@@ -254,9 +250,9 @@ def createMasterMix():
         evagreens = list(zip(screwcap_rack.rows(1), evagreen_volumes))
 
         for buffer in buffers:
-            note_liquid(location=buffer[0], name='Buffer', initially=buffer[1], concentration='5x')
+            note_liquid(location=buffer[0], name='Buffer', initially=buffer[1], concentration=buffer_source_concentration)
         for evagreen in evagreens:
-            note_liquid(location=evagreen[0], name='Evagreen', initially=evagreen[1], concentration='20x')
+            note_liquid(location=evagreen[0], name='Evagreen', initially=evagreen[1], concentration=evagreen_source_concentration)
         note_liquid(location=master_mix, name='Master Mix')
 
         # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
