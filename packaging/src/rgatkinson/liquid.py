@@ -8,7 +8,7 @@ from opentrons import robot
 from opentrons.legacy_api.containers import unpack_location
 
 import rgatkinson
-from rgatkinson.interval import is_scalar, supremum, Interval, fpu, is_interval, infimum
+from rgatkinson.interval import is_scalar, supremum, Interval, fpu, is_interval, infimum, is_close
 from rgatkinson.logging import pretty, get_location_path
 from rgatkinson.util import first
 
@@ -106,6 +106,11 @@ class Concentration(object):
         assert self.flavor == Concentration.Flavor.Molar
         return self.value
 
+    @property
+    def molar(self):
+        assert self.flavor == Concentration.Flavor.Molar
+        return self.value
+
     def __mul__(self, scale):
         return Concentration(self.value * scale, flavor=self.flavor)
 
@@ -114,7 +119,7 @@ class Concentration(object):
 
     def __str__(self) -> str:
         def test(v, scale):
-            return int(v * scale) != 0
+            return not is_close(int(v * scale + 0.5), 0)
 
         def emit(scale, unit):
             v = self.value * scale
