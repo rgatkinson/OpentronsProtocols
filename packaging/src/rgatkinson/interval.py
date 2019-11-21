@@ -439,7 +439,7 @@ def is_infinite_scalar(x):
 def is_finite_scalar(x):
     return is_scalar(x) and not is_nan(x) and not is_infinite_scalar(x)
 
-def is_close(x, y, atol=1e-08, rtol=1e-05):  # after numpy.isclose, but faster, and only for scalars
+def is_close(x, y, atol=1e-08, rtol=1e-05):  # after numeric.isclose, but faster, and only for scalars
     if x == y:
         return True
     return abs(x-y) <= atol + rtol * abs(y)
