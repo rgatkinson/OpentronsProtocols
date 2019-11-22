@@ -3,6 +3,7 @@
 #
 import math
 import threading
+from numbers import Number
 
 def is_indexable(value):
     return hasattr(type(value), '__getitem__')
@@ -41,6 +42,35 @@ def instance_count(predicate):
         if predicate(obj):
             count += 1
     return count
+
+
+def is_integer(n):
+    return n.__class__ is int
+
+
+def is_scalar(x):
+    return float is x.__class__ or int is x.__class__ or isinstance(x, Number)
+
+
+def is_nan(x):
+    return x != x
+
+
+def is_infinite_scalar(x):
+    return is_scalar(x) and (x == infinity or x == -infinity)
+
+
+def is_finite_scalar(x):
+    return is_scalar(x) and not is_nan(x) and not is_infinite_scalar(x)
+
+
+def is_close(x, y, atol=1e-08, rtol=1e-05):  # after numpy.isclose, but faster, and only for scalars
+    if x == y:
+        return True
+    return abs(x-y) <= atol + rtol * abs(y)
+
+
+infinity = float('inf')
 
 # make thread local storage
 thread_local_storage = threading.local()

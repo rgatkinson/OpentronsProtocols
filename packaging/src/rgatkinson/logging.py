@@ -11,7 +11,7 @@ from opentrons.commands import stringify_location, make_command, command_types
 from opentrons.legacy_api.containers.placeable import Placeable
 
 import rgatkinson
-from rgatkinson.interval import is_finite_scalar, is_close
+from rgatkinson.util import is_finite_scalar, is_close
 
 #-----------------------------------------------------------------------------------------------------------------------
 

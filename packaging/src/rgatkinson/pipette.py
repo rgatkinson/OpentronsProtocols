@@ -22,9 +22,8 @@ from opentrons.util.vector import Vector
 
 import rgatkinson
 from rgatkinson.configuration import TopConfigurationContext, AspirateConfigurationContext, DispenseConfigurationContext
-from rgatkinson.interval import is_close, fpu
 from rgatkinson.logging import pretty, warn, log_while, info, info_while
-from rgatkinson.util import zeroify, sqrt
+from rgatkinson.util import zeroify, sqrt, is_close, infinity
 from rgatkinson.well import FalconTube15mlGeometry, FalconTube50mlGeometry, Eppendorf5point0mlTubeGeometry, Eppendorf1point5mlTubeGeometry, IdtTubeWellGeometry, Biorad96WellPlateWellGeometry, is_well, EnhancedWell
 
 
@@ -46,7 +45,7 @@ class RadialClearanceManager(object):
         return self._functions.get(key, None)
 
     def _free_sailing(self):
-        return fpu.infinity
+        return infinity
 
     def p50_single_v1_4_opentrons_96_tiprack_300ul_falcon15ml(self, depth):
         if depth < 0:
@@ -819,7 +818,7 @@ class EnhancedPipette(Pipette):
         aspirate_rate = fetch('aspirate_rate', self.config.layered_mix.aspirate_rate_factor)
         dispense_rate = fetch('dispense_rate', self.config.layered_mix.dispense_rate_factor)
         initial_turnover = fetch('initial_turnover')
-        max_tip_cycles = fetch('max_tip_cycles', fpu.infinity)
+        max_tip_cycles = fetch('max_tip_cycles', infinity)
         pre_wet = fetch('pre_wet', False)  # not much point in pre-wetting during mixing; save some time, simpler. but we do so if asked
         top_clearance = fetch('top_clearance')
         bottom_clearance = fetch('bottom_clearance')
@@ -896,6 +895,8 @@ class EnhancedPipette(Pipette):
 class InstrumentsManager(object):
     def __init__(self):
         self._instruments = set()
+        from rgatkinson.perf import perf_hack_manager
+        perf_hack_manager.install()
 
     def _add_instrument(self, instrument):
         self._instruments.add(instrument)

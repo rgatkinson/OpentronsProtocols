@@ -5,7 +5,7 @@
 import string
 import warnings
 from functools import wraps
-from numbers import Number
+from rgatkinson.util import is_integer, is_nan
 
 ########################################################################################################################
 # Fpu: numeric floating point helper
@@ -421,28 +421,8 @@ class Interval(tuple, metaclass=IntervalMetaclass):
             return (c.supremum_inv, c.infimum_inv),
 
 
-def is_integer(n):
-    return n.__class__ is int
-
-def is_scalar(x):
-    return float is x.__class__ or int is x.__class__ or isinstance(x, Number)
-
 def is_interval(x):
     return x.__class__ is Interval
-
-def is_nan(x):
-    return x != x
-
-def is_infinite_scalar(x):
-    return is_scalar(x) and (x == fpu.infinity or x == -fpu.infinity)
-
-def is_finite_scalar(x):
-    return is_scalar(x) and not is_nan(x) and not is_infinite_scalar(x)
-
-def is_close(x, y, atol=1e-08, rtol=1e-05):  # after numeric.isclose, but faster, and only for scalars
-    if x == y:
-        return True
-    return abs(x-y) <= atol + rtol * abs(y)
 
 def supremum(x):
     if is_interval(x):

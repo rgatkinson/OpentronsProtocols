@@ -8,9 +8,9 @@ from opentrons import robot
 from opentrons.legacy_api.containers import unpack_location
 
 import rgatkinson
-from rgatkinson.interval import is_scalar, supremum, Interval, fpu, is_interval, infimum, is_close
+from rgatkinson.interval import supremum, Interval, fpu, is_interval, infimum
 from rgatkinson.logging import pretty, get_location_path
-from rgatkinson.util import first
+from rgatkinson.util import first, is_scalar, is_close
 
 class Liquid:
     def __init__(self, name):
