@@ -34,10 +34,11 @@ trough = labware_manager.load('usascientific_12_reservoir_22ml', slot=6, label='
 p50 = instruments_manager.P50_Single(mount='right', tip_racks=[tips300a])
 p50.start_at_tip(tips300a[p50_start_tip])
 
-waters = [trough['A1'], trough['A2'], trough['A3']]
-water_initial_volume = 7000
+waters = [trough['A1'], trough['A2']]
+vol_use_per_water_well = 7000
+water_initially_at_least = 7500
 for well in waters:
-    note_liquid(location=well, name='Water', initially=water_initial_volume)
+    note_liquid(location=well, name='Water', initially_at_least=water_initially_at_least)
 
 wells = [
     rack1['A1'], rack1['A2'], rack1['A3'], rack1['A4'], rack1['A5'],
@@ -50,10 +51,10 @@ wells = [
 ########################################################################################################################
 
 water_well = 0
-water_volume = water_initial_volume
+water_volume = vol_use_per_water_well
 for i, vol in enumerate(range(100, (len(wells)+1)*100, 100)):
     if water_volume < vol:
         water_well += 1
-        water_volume = water_initial_volume
+        water_volume = vol_use_per_water_well
     p50.transfer(vol, waters[water_well], wells[i], new_tip='once', full_dispense=True, trash=config.trash_control)
     water_volume -= vol
