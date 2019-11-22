@@ -370,7 +370,7 @@ def main() -> int:
             EnhancedSimulatingSmoothieDriver.mount(args.mount_left, 'left')
         if args.mount_right:
             EnhancedSimulatingSmoothieDriver.mount(args.mount_right, 'right')
-        robot.reset()
+        robot.reset()  # pick up the new definitions
 
     run_log_and_bundle = opentrons.simulate.simulate(args.protocol, args.protocol.name, log_level=args.log_level)
     run_log = run_log_and_bundle[0]
