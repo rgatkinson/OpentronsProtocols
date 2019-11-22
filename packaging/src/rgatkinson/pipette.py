@@ -943,7 +943,7 @@ class EnhancedPipette(Pipette):
 class InstrumentsManager(object):
     def __init__(self):
         self._instruments = set()
-        from rgatkinson.perf import perf_hack_manager
+        from rgatkinson.perf_hacks import perf_hack_manager
         perf_hack_manager.install()
 
     def _add_instrument(self, instrument):

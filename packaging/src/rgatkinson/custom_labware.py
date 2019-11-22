@@ -337,7 +337,7 @@ class Opentrons15Rack(CustomTubeRack):
 class LabwareManager(object):
     def __init__(self):
         EnhancedWell.hook_well()
-        from rgatkinson.perf import perf_hack_manager
+        from rgatkinson.perf_hacks import perf_hack_manager
         perf_hack_manager.install()
 
     def load(self, name, slot, label=None, share=False, version=None, config: TopConfigurationContext = None, well_geometry=None, second_well_geometry=None, well_geometries: dict = None):
