@@ -14,9 +14,9 @@ from opentrons.legacy_api.containers import Slot
 from opentrons.legacy_api.containers.placeable import Placeable
 
 from rgatkinson.configuration import config, AbstractConfigurationContext
-from rgatkinson.interval import Interval
+from rgatkinson.interval import Interval, infimum
 from rgatkinson.liquid import Liquid, Concentration, Mixture, PipetteContents, LiquidVolume
-from rgatkinson.logging import Pretty, get_location_path, format_log_msg
+from rgatkinson.logging import Pretty, get_location_path, format_log_msg, pretty
 
 
 ########################################################################################################################
@@ -79,10 +79,11 @@ class WellAnalyzer(PlaceableAnalyzer):
             if self.liquid is not None:
                 result += ' ("{0:s}")'.format(self.liquid)
         result += ':'
-        result += Pretty().format(' lo={0:n} hi={1:n} cur={2:n} mix={3:s}\n',
-                                  self.liquid_volume.min_volume,
-                                  self.liquid_volume.max_volume,
+        result += pretty.format(' lo={0:n} hi={1:n} cur={2:n} taken={3:n} mix={4:s}\n',
+                                  self.liquid_volume.lo_volume,
+                                  self.liquid_volume.hi_volume,
                                   self.liquid_volume.current_volume,
+                                  infimum(self.liquid_volume.hi_volume) - infimum(self.liquid_volume.current_volume),
                                   self.mixture.__str__())
         return result
 

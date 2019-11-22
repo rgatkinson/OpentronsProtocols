@@ -70,7 +70,7 @@ class WellGeometry(object):
         """
         How much can the well hold, in microliters? Default here to what Opentrons provides.
         """
-        result = self.well.max_volume() if self.well is not None else None
+        result = self.well.hi_volume() if self.well is not None else None
         if result is None:
             result = fpu.infinity
         return result

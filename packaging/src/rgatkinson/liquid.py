@@ -325,11 +325,11 @@ class LiquidVolume(object):
         return max(0, self.current_volume_min - self._min_aspiratable_volume)
 
     @property
-    def min_volume(self):  # minimum historically seen
+    def lo_volume(self):  # minimum historically seen
         return self.initially + self.min_delta
 
     @property
-    def max_volume(self):  # maximum historically seen
+    def hi_volume(self):  # maximum historically seen
         return self.initially + self.max_delta
 
     @property
