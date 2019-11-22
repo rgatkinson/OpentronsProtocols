@@ -523,7 +523,11 @@ class EnhancedPipette(Pipette):
 
         self._pre_wet(well, volume, location, rate, pre_wet)
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume, top_clearance=top_clearance, bottom_clearance=bottom_clearance, manual_manufacture_tolerance=manual_manufacture_tolerance)
-        super().aspirate(volume=volume, location=location, rate=rate)
+
+        def func():
+            # calls to mover.move() in super() used stylized pose-tree management
+            super(EnhancedPipette, self).aspirate(volume=volume, location=location, rate=rate)
+        self._update_pose_tree_in_place(func)
 
         # if we're asked to, pause after aspiration to let liquid rise
         if ms_pause is None:
@@ -569,7 +573,12 @@ class EnhancedPipette(Pipette):
             volume = self.current_volume
         location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None, top_clearance=top_clearance, bottom_clearance=bottom_clearance, manual_manufacture_tolerance=manual_manufacture_tolerance)
         self.dispense_params_hack.full_dispense_from_dispense = full_dispense
-        super().dispense(volume=volume, location=location, rate=rate)
+
+        def func():
+            # calls to mover.move() in super() used stylized pose-tree management
+            super(EnhancedPipette, self).dispense(volume=volume, location=location, rate=rate)
+        self._update_pose_tree_in_place(func)
+
         self.dispense_params_hack.full_dispense_from_dispense = False
         if self.dispense_params_hack.fully_dispensed:
             assert self.current_volume == 0
@@ -622,16 +631,21 @@ class EnhancedPipette(Pipette):
     # Movement
     #-------------------------------------------------------------------------------------------------------------------
 
-    def _move(self, pose_tree, x=None, y=None, z=None):
+    def _update_pose_tree_in_place(self, func):
         if not self.use_perf_hacked_move:
-            return super()._move(pose_tree, x=x, y=y, z=z)
+            return func()
         else:
-            # In this hacked version, we make the assumption that copying of the pose_tree isn't necessary; we can instead update in place.
-            # This is reasonable because all extant callers of _move() are of the form: obj.pose_tree = pip._move(obj.pose_tree, ...)
             thread_local_storage.update_pose_tree_in_place = True
-            result = super()._move(pose_tree, x=x, y=y, z=z)
+            result = func()
             thread_local_storage.update_pose_tree_in_place = False
             return result
+
+    def _move(self, pose_tree, x=None, y=None, z=None):
+        # In this hacked version, we make the assumption that copying of the pose_tree isn't necessary; we can instead update in place.
+        # This is reasonable because all extant callers of _move() are of the stylized form: obj.pose_tree = pip._move(obj.pose_tree, ...)
+        def func():
+            return super(EnhancedPipette, self)._move(pose_tree, x=x, y=y, z=z)
+        return self._update_pose_tree_in_place(func)
 
     #-------------------------------------------------------------------------------------------------------------------
     # Tip Management
@@ -701,7 +715,10 @@ class EnhancedPipette(Pipette):
     #-------------------------------------------------------------------------------------------------------------------
 
     def blow_out(self, location=None):
-        super().blow_out(location)
+        def func():
+            # calls to mover.move() in super() used stylized pose-tree management
+            super().blow_out(location)
+        self._update_pose_tree_in_place(func)
         self._shake_tip(location)  # try to get rid of pesky retentive drops
 
     def _shake_tip(self, location):
