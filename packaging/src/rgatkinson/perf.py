@@ -8,7 +8,8 @@ from numpy.linalg import inv
 from opentrons.drivers.smoothie_drivers.driver_3_0 import DISABLE_AXES, GCODE_ROUNDING_PRECISION, PLUNGER_BACKLASH_MM, GCODES, DEFAULT_MOVEMENT_TIMEOUT, AXES, SmoothieDriver_3_0_0
 from opentrons.trackers.pose_tracker import Point, translate, change_base, ascend, ROOT
 
-from rgatkinson.util import is_close
+from rgatkinson.util import is_close, thread_local_storage
+
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Pose tracking
@@ -36,7 +37,8 @@ def transform_dot_inv_translate(point: Point, transform=None):
     return result
 
 def pose_tracker_update(state, obj, point: Point, transform=None):
-    state = state.copy()
+    if not thread_local_storage.update_pose_tree_in_place:
+        state = state.copy()
     state[obj] = state[obj].update(transform_dot_inv_translate(point, transform))
     return state
 
@@ -95,8 +97,11 @@ def pose_tracker_change_base(state, point=Point(0, 0, 0), src=ROOT, dst=ROOT):
     down = list(itertools.dropwhile(lambda node: node is not root, down))[1:]
 
     # Point in root's coordinate system
-    folded = fold(up)
-    inv_folded = inv4x4(folded)
+    if src is ROOT:
+        # folded = fold(up)  # will be identity matrix; thus so will inverse
+        inv_folded = np.identity(4)
+    else:
+        inv_folded = inv4x4(fold(up))
     point_in_root = inv_folded.dot((*point, 1))
 
     # Return point in destination's coordinate system
@@ -265,6 +270,10 @@ class PerfHackManager(object):
             from opentrons.legacy_api.robot import mover
             mover.Mover.move = mover_move
             mover.Mover.update_pose_from_driver = mover_update_pose_from_driver
+            #
+            from rgatkinson.pipette import EnhancedPipette
+            thread_local_storage.update_pose_tree_in_place = False
+            EnhancedPipette.install_perf_hacks()
             #
             self.installed = True
 

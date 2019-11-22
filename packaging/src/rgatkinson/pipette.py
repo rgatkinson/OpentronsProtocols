@@ -23,7 +23,7 @@ from opentrons.util.vector import Vector
 import rgatkinson
 from rgatkinson.configuration import TopConfigurationContext, AspirateConfigurationContext, DispenseConfigurationContext
 from rgatkinson.logging import pretty, warn, log_while, info, info_while
-from rgatkinson.util import zeroify, sqrt, is_close, infinity
+from rgatkinson.util import zeroify, sqrt, is_close, infinity, thread_local_storage
 from rgatkinson.well import FalconTube15mlGeometry, FalconTube50mlGeometry, Eppendorf5point0mlTubeGeometry, Eppendorf1point5mlTubeGeometry, IdtTubeWellGeometry, Biorad96WellPlateWellGeometry, is_well, EnhancedWell
 
 
@@ -140,6 +140,18 @@ class TipWetness(Enum):
 ########################################################################################################################
 
 class EnhancedPipette(Pipette):
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Hack management
+    #-------------------------------------------------------------------------------------------------------------------
+
+    perf_hacks_installed = False
+    use_perf_hacked_move = False
+    @classmethod
+    def install_perf_hacks(cls):
+        if not cls.perf_hacks_installed:
+            cls.use_perf_hacked_move = True
+            cls.perf_hacks_installed = True
 
     class AspirateParamsHack(object):
         def __init__(self, config: AspirateConfigurationContext) -> None:
@@ -607,6 +619,21 @@ class EnhancedPipette(Pipette):
         return result
 
     #-------------------------------------------------------------------------------------------------------------------
+    # Movement
+    #-------------------------------------------------------------------------------------------------------------------
+
+    def _move(self, pose_tree, x=None, y=None, z=None):
+        if not self.use_perf_hacked_move:
+            return super()._move(pose_tree, x=x, y=y, z=z)
+        else:
+            # In this hacked version, we make the assumption that copying of the pose_tree isn't necessary; we can instead update in place.
+            # This is reasonable because all extant callers of _move() are of the form: obj.pose_tree = pip._move(obj.pose_tree, ...)
+            thread_local_storage.update_pose_tree_in_place = True
+            result = super()._move(pose_tree, x=x, y=y, z=z)
+            thread_local_storage.update_pose_tree_in_place = False
+            return result
+
+    #-------------------------------------------------------------------------------------------------------------------
     # Tip Management
     #-------------------------------------------------------------------------------------------------------------------
 
@@ -891,6 +918,10 @@ class EnhancedPipette(Pipette):
 
         info_while(msg, do_one)
 
+
+#-----------------------------------------------------------------------------------------------------------------------
+# Management
+#-----------------------------------------------------------------------------------------------------------------------
 
 class InstrumentsManager(object):
     def __init__(self):
