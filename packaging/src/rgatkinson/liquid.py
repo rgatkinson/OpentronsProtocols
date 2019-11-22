@@ -10,7 +10,8 @@ from opentrons.legacy_api.containers import unpack_location
 import rgatkinson
 from rgatkinson.interval import supremum, Interval, fpu, is_interval, infimum
 from rgatkinson.logging import pretty, get_location_path
-from rgatkinson.util import first, is_scalar, is_close
+from rgatkinson.util import first, is_scalar, is_close, infinity
+
 
 class Liquid:
     def __init__(self, name):
@@ -263,7 +264,7 @@ class LiquidVolume(object):
         self.__well = None
         self.well = well
         self.initially_set = False
-        self.initially = Interval([0, fpu.infinity])
+        self.initially = Interval([0, infinity])
         self.cum_delta = 0
         self.min_delta = 0
         self.max_delta = 0
@@ -343,7 +344,7 @@ class LiquidVolume(object):
     def aspirate(self, volume):
         assert volume >= 0
         if not self.initially_set:
-            self.set_initially(Interval([volume, fpu.infinity if self.well is None else self.well.geometry.well_capacity]))
+            self.set_initially(Interval([volume, infinity if self.well is None else self.well.geometry.well_capacity]))
         self._track_volume(-volume)
 
     def dispense(self, volume):

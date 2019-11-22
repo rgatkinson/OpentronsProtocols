@@ -11,7 +11,7 @@ from opentrons.util.vector import Vector
 
 from rgatkinson.configuration import TopConfigurationContext
 from rgatkinson.interval import fpu
-from rgatkinson.util import is_indexable, thread_local_storage
+from rgatkinson.util import is_indexable, thread_local_storage, infinity
 from rgatkinson.well import WellGeometry, Eppendorf5point0mlTubeGeometry, Biorad96WellPlateWellGeometry, Eppendorf1point5mlTubeGeometry, FalconTube15mlGeometry, FalconTube50mlGeometry, EnhancedWell, UnknownWellGeometry
 
 
@@ -161,7 +161,7 @@ class CustomTubeRack(object):
         if dimensions_measurement_geometry is not None:
             # find the z height of the reference plane of the labware
             self.reference_dimensions = self.reference_dimensions - (0, 0, dimensions_measurement_geometry(well=None).rim_lip_height)
-        self.space_below_reference_plane = space_below_reference_plane if space_below_reference_plane is not None else fpu.infinity
+        self.space_below_reference_plane = space_below_reference_plane if space_below_reference_plane is not None else infinity
         self.brand = {
             'brand': brand if brand is not None else 'Atkinson Labs'
         }

@@ -14,7 +14,7 @@ from opentrons.util.vector import Vector
 from rgatkinson.configuration import WellGeometryConfigurationContext
 from rgatkinson.interval import fpu, is_interval, Interval, infimum
 from rgatkinson.liquid import LiquidVolume
-from rgatkinson.util import sqrt, square, cube, cubeRoot, instance_count, thread_local_storage
+from rgatkinson.util import sqrt, square, cube, cubeRoot, instance_count, thread_local_storage, infinity
 
 
 def is_well(location):
@@ -72,7 +72,7 @@ class WellGeometry(object):
         """
         result = self.well.hi_volume() if self.well is not None else None
         if result is None:
-            result = fpu.infinity
+            result = infinity
         return result
 
     @property
@@ -80,7 +80,7 @@ class WellGeometry(object):
         """
         How deep is the interior of the well, in mm? Default here to what Opentrons provides.
         """
-        return self.well.z_size() if self.well is not None else fpu.infinity
+        return self.well.z_size() if self.well is not None else infinity
 
     @property
     def well_diameter_at_top(self):
@@ -189,7 +189,7 @@ class UnknownWellGeometry(WellGeometry):
         return Interval([0, self.well_capacity])
 
     def radius_from_liquid_depth(self, depth):
-        return self.well.properties['diameter'] / 2 if self.well is not None else fpu.infinity
+        return self.well.properties['diameter'] / 2 if self.well is not None else infinity
 
 
 class IdtTubeWellGeometry(WellGeometry):

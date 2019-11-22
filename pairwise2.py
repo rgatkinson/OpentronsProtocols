@@ -15,6 +15,7 @@ from rgatkinson.custom_labware import labware_manager
 from rgatkinson.liquid import note_liquid
 from rgatkinson.logging import log, fatal, user_prompt
 from rgatkinson.pipette import verify_well_locations, instruments_manager
+from rgatkinson.util import infinity
 
 ########################################################################################################################
 # Parameters we tend to adjust for different runs depending on exact ingredient mix
@@ -111,7 +112,7 @@ for i, replica_group in enumerate(replica_groups):
         strand_b_plate[row][col] = replica_group['StrandB']
 
 total_water_plate = make_empty_plate()
-common_water_per_well = fpu.infinity
+common_water_per_well = infinity
 for row in range(num_rows):
     for col in range(num_columns):
         total_water_plate[row][col] = total_well_volume - buffer_per_well - evagreen_per_well - strand_a_plate[row][col] - strand_b_plate[row][col]

@@ -5,7 +5,8 @@
 import string
 import warnings
 from functools import wraps
-from rgatkinson.util import is_integer, is_nan
+from rgatkinson.util import is_integer, is_nan, infinity
+
 
 ########################################################################################################################
 # Fpu: numeric floating point helper
@@ -16,7 +17,7 @@ class Fpu(object):
         self.float = float
         self._min = min
         self._max = max
-        self.infinity = float('inf')
+        self.infinity = infinity
         self.nan = self.infinity / self.infinity
         self._fe_upward = None
         self._fe_downward = None
@@ -350,7 +351,7 @@ class Interval(tuple, metaclass=IntervalMetaclass):
         return all(any(x.infimum <= y.infimum and y.supremum <= x.supremum for x in self) for y in other)
 
     def __abs__(self):
-        return type(self)[0, fpu.infinity] & (self | (-self))
+        return type(self)[0, infinity] & (self | (-self))
 
     class ComponentError(ValueError):
         pass
@@ -361,7 +362,7 @@ class Interval(tuple, metaclass=IntervalMetaclass):
     class Component(tuple):
         def __new__(cls, inf, sup):
             if is_nan(inf) or is_nan(sup):
-                return tuple.__new__(cls, (-fpu.infinity, +fpu.infinity))
+                return tuple.__new__(cls, (-infinity, +infinity))
             return tuple.__new__(cls, (inf, sup))
 
         @property
@@ -415,8 +416,8 @@ class Interval(tuple, metaclass=IntervalMetaclass):
 
     def inverse(c):
         if c.infimum <= 0 <= c.supremum:
-            return ((-fpu.infinity, c.infimum_inv if c.infimum != 0 else -fpu.infinity),
-                    (c.supremum_inv if c.supremum != 0 else +fpu.infinity, +fpu.infinity))
+            return ((-infinity, c.infimum_inv if c.infimum != 0 else -infinity),
+                    (c.supremum_inv if c.supremum != 0 else +infinity, +infinity))
         else:
             return (c.supremum_inv, c.infimum_inv),
 
