@@ -32,7 +32,7 @@ class WellGeometry(object):
     #-------------------------------------------------------------------------------------------------------------------
 
     def __init__(self, well=None):
-        self.__well = None
+        self.__well: Well = None
         self.well = well
 
     @property
@@ -70,7 +70,7 @@ class WellGeometry(object):
         """
         How much can the well hold, in microliters? Default here to what Opentrons provides.
         """
-        result = self.well.hi_volume() if self.well is not None else None
+        result = self.well.max_volume() if self.well is not None else None
         if result is None:
             result = infinity
         return result
