@@ -968,6 +968,20 @@ class InstrumentsManager(object):
         result = EnhancedPipette(config, result)
         return self._add_instrument(result)
 
+    def P20_Single_GEN2(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
+        if config is None:
+            config = rgatkinson.configuration.config
+        result = instruments.P20_Single_GEN2(mount=mount,
+                                        trash_container=trash_container,
+                                        tip_racks=tip_racks,
+                                        aspirate_flow_rate=aspirate_flow_rate,
+                                        dispense_flow_rate=dispense_flow_rate,
+                                        min_volume=min_volume,
+                                        max_volume=max_volume,
+                                        blow_out_flow_rate=blow_out_flow_rate)
+        result = EnhancedPipette(config, result)
+        return self._add_instrument(result)
+
     def P50_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
         if config is None:
             config = rgatkinson.configuration.config
@@ -996,10 +1010,38 @@ class InstrumentsManager(object):
         result = EnhancedPipette(config, result)
         return self._add_instrument(result)
 
+    def P300_Single_GEN2(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
+        if config is None:
+            config = rgatkinson.configuration.config
+        result = instruments.P300_Single_GEN2(mount=mount,
+                                        trash_container=trash_container,
+                                        tip_racks=tip_racks,
+                                        aspirate_flow_rate=aspirate_flow_rate,
+                                        dispense_flow_rate=dispense_flow_rate,
+                                        min_volume=min_volume,
+                                        max_volume=max_volume,
+                                        blow_out_flow_rate=blow_out_flow_rate)
+        result = EnhancedPipette(config, result)
+        return self._add_instrument(result)
+
     def P1000_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
         if config is None:
             config = rgatkinson.configuration.config
         result = instruments.P1000_Single(mount=mount,
+                                        trash_container=trash_container,
+                                        tip_racks=tip_racks,
+                                        aspirate_flow_rate=aspirate_flow_rate,
+                                        dispense_flow_rate=dispense_flow_rate,
+                                        min_volume=min_volume,
+                                        max_volume=max_volume,
+                                        blow_out_flow_rate=blow_out_flow_rate)
+        result = EnhancedPipette(config, result)
+        return self._add_instrument(result)
+
+    def P1000_Single_GEN2(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
+        if config is None:
+            config = rgatkinson.configuration.config
+        result = instruments.P1000_Single_GEN2(mount=mount,
                                         trash_container=trash_container,
                                         tip_racks=tip_racks,
                                         aspirate_flow_rate=aspirate_flow_rate,

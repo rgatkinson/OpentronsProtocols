@@ -20,7 +20,7 @@ from rgatkinson.pipette import verify_well_locations, instruments_manager
 # Parameters we tend to adjust for different runs depending on exact ingredient mix
 ########################################################################################################################
 
-p50_start_tip = 'A1'
+pip_start_tip = 'A1'
 
 ########################################################################################################################
 # Labware
@@ -31,8 +31,8 @@ rack1 = labware_manager.load('Atkinson_15_tuberack_5ml_eppendorf', slot=8, label
 rack2 = labware_manager.load('Atkinson_10_tuberack_6x5ml_eppendorf_4x50ml_falcon', slot=2, label='rack2')
 trough = labware_manager.load('usascientific_12_reservoir_22ml', slot=6, label='trough')
 
-p50 = instruments_manager.P50_Single(mount='right', tip_racks=[tips300a])
-p50.start_at_tip(tips300a[p50_start_tip])
+pip = instruments_manager.P300_Single_GEN2(mount='right', tip_racks=[tips300a])
+pip.start_at_tip(tips300a[pip_start_tip])
 
 waters = [trough['A3']]
 vol_use_per_water_well = 7000
@@ -61,5 +61,5 @@ for well, vol in zip(wells, volumes):
     if water_volume < vol:
         water_well += 1
         water_volume = vol_use_per_water_well
-    p50.transfer(vol, waters[water_well], well, new_tip='once', full_dispense=True, trash=config.trash_control)
+    pip.transfer(vol, waters[water_well], well, new_tip='once', full_dispense=True, trash=config.trash_control)
     water_volume -= vol
