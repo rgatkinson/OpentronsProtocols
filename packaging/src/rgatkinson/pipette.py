@@ -22,7 +22,7 @@ from opentrons.util.vector import Vector
 
 import rgatkinson
 from rgatkinson.configuration import TopConfigurationContext, AspirateConfigurationContext, DispenseConfigurationContext
-from rgatkinson.logging import pretty, warn, log_while, info, info_while
+from rgatkinson.logging import pretty, warn, log_while, log_while_core, info, info_while
 from rgatkinson.util import zeroify, sqrt, is_close, infinity, thread_local_storage
 from rgatkinson.well import FalconTube15mlGeometry, FalconTube50mlGeometry, Eppendorf5point0mlTubeGeometry, Eppendorf1point5mlTubeGeometry, IdtTubeWellGeometry, Biorad96WellPlateWellGeometry, is_well, EnhancedWell
 
@@ -752,11 +752,12 @@ class EnhancedPipette(Pipette):
         seconds = seconds % 60
         seconds += float(minutes * 60)
 
-        opentrons.commands.do_publish(self.robot.broker, opentrons.commands.comment, f=self.dwell, when='before', res=None, meta=None, msg=msg)
-        self.robot.pause()
-        self.robot._driver.delay(seconds)
-        self.robot.resume()
-        opentrons.commands.do_publish(self.robot.broker, opentrons.commands.comment, f=self.dwell, when='after', res=None, meta=None, msg=msg)
+        def do_dwell():
+            self.robot.pause()
+            self.robot._driver.delay(seconds)
+            self.robot.resume()
+
+        log_while_core(msg, do_dwell)
 
     #-------------------------------------------------------------------------------------------------------------------
     # Mixing

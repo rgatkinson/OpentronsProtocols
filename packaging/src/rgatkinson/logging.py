@@ -50,18 +50,23 @@ def format_log_msg(msg: str, prefix="***********", suffix=' ***********'):
 def log(msg: str, prefix="***********", suffix=' ***********'):
     robot.comment(format_log_msg(msg, prefix=prefix, suffix=suffix))
 
-def log_while(msg: str, func, prefix="***********", suffix=' ***********'):
+def log_while_core(msg: str, func, prefix='', suffix=''):
     msg = format_log_msg(msg, prefix, suffix)
-    opentrons.commands.do_publish(robot.broker, opentrons.commands.comment, f=log_while, when='before', res=None, meta=None, msg=msg)
+    def comment_func(msg):
+        pass
+    opentrons.commands.do_publish(robot.broker, opentrons.commands.comment, f=comment_func, when='before', res=None, meta=None, msg=msg)
     if func is not None:
         func()
-    opentrons.commands.do_publish(robot.broker, opentrons.commands.comment, f=log_while, when='after', res=None, meta=None, msg=msg)
+    opentrons.commands.do_publish(robot.broker, opentrons.commands.comment, f=comment_func, when='after', res=None, meta=None, msg=msg)
+
+def log_while(msg: str, func, prefix="***********", suffix=' ***********'):
+    log_while_core(msg, func, prefix, suffix)
 
 def info(msg):
     log(msg, prefix='info:', suffix='')
 
 def info_while(msg, func):
-    log_while(msg, func, prefix='info:', suffix='')
+    log_while_core(msg, func, prefix='info:', suffix='')
 
 def warn(msg: str, prefix="***********", suffix=' ***********'):
     log(msg, prefix=prefix + " WARNING:", suffix=suffix)
