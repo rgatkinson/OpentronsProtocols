@@ -28,15 +28,14 @@ pip_start_tip = 'A1'
 
 tips300a = labware_manager.load('opentrons_96_tiprack_300ul', slot=4, label='tips300a')
 rack1 = labware_manager.load('Atkinson_15_tuberack_5ml_eppendorf', slot=8, label='rack1')
-rack2 = labware_manager.load('Atkinson_10_tuberack_6x5ml_eppendorf_4x50ml_falcon', slot=2, label='rack2')
 trough = labware_manager.load('usascientific_12_reservoir_22ml', slot=6, label='trough')
 
 pip = instruments_manager.P300_Single_GEN2(mount='right', tip_racks=[tips300a])
 pip.start_at_tip(tips300a[pip_start_tip])
 
-waters = [trough['A3']]
-vol_use_per_water_well = 7000
-water_initially_at_least = 7500
+waters = [trough['A1'], trough['A2'], trough['A3']]
+vol_use_per_water_well = 15000
+water_initially_at_least = 16000
 for well in waters:
     note_liquid(location=well, name='Water', initially_at_least=water_initially_at_least)
 
@@ -46,8 +45,8 @@ wells = [
     ]
 
 volumes = [
-    25, 50, 75, 125, 150,
-    175, 250, 350, 450, 550,
+    1700, 1800, 1900, 2000, 2500,
+    3000, 3500, 4000, 4500, 5000,
     ]
 
 ########################################################################################################################
