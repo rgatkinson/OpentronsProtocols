@@ -74,3 +74,6 @@ infinity = float('inf')
 
 # make thread local storage
 thread_local_storage = threading.local()
+# Initialze values so we don't get 'has no attribute' errors
+thread_local_storage.update_pose_tree_in_place = False
+thread_local_storage.config = None

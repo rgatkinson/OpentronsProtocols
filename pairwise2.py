@@ -22,20 +22,20 @@ from rgatkinson.util import infinity
 ########################################################################################################################
 
 # Tip usage
-p50_start_tip = 'A1'
-p10_start_tip = 'H5'
+p50_start_tip = 'F5'
+p10_start_tip = 'B5 '
 config.trash_control = True
 
 # Automation control
 manually_dilute_strands = False
-manually_make_master_mix = False
+manually_make_master_mix = True
 
 # Volumes of master mix ingredients, used when automatically making master mix. These are minimums in each tube.
 buffer_volumes = [2000, 2000]  # Fresh tubes of B9022S
 evagreen_volumes = [1000]      # Fresh tube of EvaGreen
 
-strand_a_conc = Concentration('9.197 uM')  # R19090902
-strand_b_conc = Concentration('8.886 uM')  # R19090904
+strand_a_conc = Concentration('10 uM')  # R19090907
+strand_b_conc = Concentration('10 uM')  # R19090909
 strand_a_min_vol = 700  # be conservative
 strand_b_min_vol = 700  # be conservative
 
@@ -215,8 +215,9 @@ def diluteStrands():
         note_liquid(location=diluted_strand_a, name='Diluted StrandA')
         note_liquid(location=diluted_strand_b, name='Diluted StrandB')
 
-        p50.layered_mix([strand_a])
-        p50.layered_mix([strand_b])
+        # We used to auto-mix, but now, even when auto-diluting, we rely on user to have mixed on the vortexer
+        # p50.layered_mix([strand_a])
+        # p50.layered_mix([strand_b])
 
         # Create dilutions of strands
         log('Moving water for diluting Strands A and B')
@@ -238,7 +239,7 @@ def createMasterMix():
         note_liquid(location=master_mix, name='Master Mix', initially=master_mix_vol)
 
         log('Creating Master Mix')
-        info(pretty.format('Master Mix recipe: water={0:n} buffer={1:n} EvaGreen={2:n} total={3:n} (extra={4})', master_mix_common_water_vol, master_mix_buffer_vol, master_mix_evagreen_vol, master_mix_vol, mm_overhead_factor))
+        info(pretty.format('Master Mix recipe: water={0:n} buffer={1:n} EvaGreen={2:n} total={3:n} (extra={4}%)', master_mix_common_water_vol, master_mix_buffer_vol, master_mix_evagreen_vol, master_mix_vol, 100.0 * (mm_overhead_factor-1)))
         user_prompt('Ensure master mix manually present and mixed')
 
     else:

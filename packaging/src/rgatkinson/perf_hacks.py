@@ -174,7 +174,7 @@ class PerfHackManager(object):
         self.installed = False
 
     def install(self):
-        if not self.installed:
+        if not self.installed and False:   # todo: we've disabled this because calibration (now) keeps crashing, complaining of update_pose_tree_in_place not being an attribute.
             #
             from opentrons.trackers import pose_tracker
             pose_tracker.update = pose_tracker_update

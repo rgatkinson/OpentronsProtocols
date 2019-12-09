@@ -38,7 +38,7 @@ class ClearanceConfigurationContext(AbstractConfigurationContext):
 
 class AspirateConfigurationContext(ClearanceConfigurationContext):
     def __init__(self, execution_context: ProtocolExecutionContext):
-        super().__init__(execution_context, -3.5, 1.0, 0.05)  # ie: allow for 5% slop in volume of manual pipetting when p
+        super().__init__(execution_context, -5.0, 1.0, 0.05)  # -5.0 was -3.5; temporary; fix when 5ml geometry fixed; ie: allow for 5% slop in volume of manual pipetting when p
         self.pre_wet = SimpleConfigurationContext(execution_context)
         self.pre_wet.default = True
         self.pre_wet.count = 2  # save some time vs 3
