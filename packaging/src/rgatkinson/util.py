@@ -73,7 +73,11 @@ def is_close(x, y, atol=1e-08, rtol=1e-05):  # after numpy.isclose, but faster, 
 infinity = float('inf')
 
 # make thread local storage
-thread_local_storage = threading.local()
-# Initialze values so we don't get 'has no attribute' errors
-thread_local_storage.update_pose_tree_in_place = False
-thread_local_storage.config = None
+class TLS(threading.local):
+    def __init__(self):
+        # This gets called on every thread we're used on. Define default values
+        from rgatkinson.configuration import config
+        self.update_pose_tree_in_place = False
+        self.config = config
+
+thread_local_storage = TLS()

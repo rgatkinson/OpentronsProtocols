@@ -1,8 +1,6 @@
 #
 # configuration.py
 #
-from rgatkinson.liquid import LiquidVolume
-from rgatkinson.util import thread_local_storage
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -11,8 +9,14 @@ class ProtocolExecutionContext(object):
     One instance of this across all configuration contexts
     """
     def __init__(self):
-        from rgatkinson.liquid import Liquids
-        self.liquids = Liquids()
+        self.__liquids = None
+
+    @property
+    def liquids(self):  # deferred creation to avoid initialization cycles between modules
+        if self.__liquids is None:
+            from rgatkinson.liquid import Liquids
+            self.__liquids = Liquids()
+        return self.__liquids
 
 #-----------------------------------------------------------------------------------------------------------------------
 
@@ -91,6 +95,3 @@ class TopConfigurationContext(AbstractConfigurationContext):
         self.wells = WellGeometryConfigurationContext(execution_context)
 
 config = TopConfigurationContext(ProtocolExecutionContext())
-
-# ambiently remember the default top configuration context
-thread_local_storage.config = config
