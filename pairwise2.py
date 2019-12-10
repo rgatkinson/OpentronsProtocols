@@ -23,7 +23,7 @@ from rgatkinson.util import infinity
 
 # Tip usage
 p50_start_tip = 'F5'
-p10_start_tip = 'B5 '
+p10_start_tip = 'B5'
 config.trash_control = True
 
 # Automation control
