@@ -1,5 +1,5 @@
 #
-# pipette.py
+# pipette_v1.py
 #
 
 import enum
@@ -22,7 +22,7 @@ import rgatkinson
 from rgatkinson.configuration import TopConfigurationContext, AspirateConfigurationContext, DispenseConfigurationContext
 from rgatkinson.logging import pretty, warn, log_while, log_while_core, info, info_while
 from rgatkinson.util import zeroify, sqrt, is_close, infinity, thread_local_storage
-from rgatkinson.well import FalconTube15MlGeometryV1, FalconTube50MlGeometryV1, Eppendorf5Point0MlTubeGeometryV1, Eppendorf1Point5MlTubeGeometryV1, IdtTubeWellGeometryV1, Biorad96WellPlateWellGeometryV1, is_well, EnhancedWellV1
+from rgatkinson.well_v1 import FalconTube15MlGeometryV1, FalconTube50MlGeometryV1, Eppendorf5Point0MlTubeGeometryV1, Eppendorf1Point5MlTubeGeometryV1, IdtTubeWellGeometryV1, Biorad96WellPlateWellGeometryV1, is_well, EnhancedWellV1
 
 
 class RadialClearanceManager(object):

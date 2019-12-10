@@ -14,7 +14,7 @@ from rgatkinson import *
 from rgatkinson.custom_labware import labware_manager
 from rgatkinson.liquid import note_liquid
 from rgatkinson.logging import log, fatal, user_prompt
-from rgatkinson.pipette import verify_well_locations, instruments_manager
+from rgatkinson.pipette_v1 import verify_well_locations, instruments_manager
 
 ########################################################################################################################
 # Tweakable protocol parameters
@@ -129,7 +129,7 @@ else:
     note_liquid(location=waterA, name='Water', initially_at_least=water_min_volume)
 
 # Clean up namespace
-del well
+del well_v1
 
 ########################################################################################################################
 # Well & Pipettes

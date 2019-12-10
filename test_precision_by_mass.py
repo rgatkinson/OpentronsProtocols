@@ -14,7 +14,7 @@ from rgatkinson import *
 from rgatkinson.custom_labware import labware_manager
 from rgatkinson.liquid import note_liquid
 from rgatkinson.logging import log
-from rgatkinson.pipette import instruments_manager
+from rgatkinson.pipette_v1 import instruments_manager
 
 ########################################################################################################################
 # Configurable protocol parameters
@@ -63,7 +63,7 @@ for well in mass_wells:
     note_liquid(location=well, name=pretty.format('mass_vol={0:n}', well.mass_vol))
 
 # Clean up namespace
-del well, i, j
+del well_v1, i, j
 
 ########################################################################################################################
 # Off to the races

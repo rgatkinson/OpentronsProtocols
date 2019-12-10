@@ -14,7 +14,7 @@ from rgatkinson import *
 from rgatkinson.custom_labware import labware_manager
 from rgatkinson.liquid import note_liquid
 from rgatkinson.logging import log, fatal, user_prompt
-from rgatkinson.pipette import verify_well_locations, instruments_manager
+from rgatkinson.pipette_v1 import verify_well_locations, instruments_manager
 
 ########################################################################################################################
 # Parameters we tend to adjust for different runs depending on exact ingredient mix

@@ -12,7 +12,7 @@ from opentrons.util.vector import Vector
 from rgatkinson.configuration import TopConfigurationContext
 from rgatkinson.interval import fpu
 from rgatkinson.util import is_indexable, thread_local_storage, infinity
-from rgatkinson.well import WellGeometryV1, Eppendorf5Point0MlTubeGeometryV1, Biorad96WellPlateWellGeometryV1, Eppendorf1Point5MlTubeGeometryV1, FalconTube15MlGeometryV1, FalconTube50MlGeometryV1, EnhancedWellV1, UnknownWellGeometryV1
+from rgatkinson.well_v1 import WellGeometryV1, Eppendorf5Point0MlTubeGeometryV1, Biorad96WellPlateWellGeometryV1, Eppendorf1Point5MlTubeGeometryV1, FalconTube15MlGeometryV1, FalconTube50MlGeometryV1, EnhancedWellV1, UnknownWellGeometryV1
 
 
 #-----------------------------------------------------------------------------------------------------------------------
