@@ -6,33 +6,33 @@ from abc import abstractmethod
 from typing import Union
 
 from opentrons import robot
-from opentrons.legacy_api.containers import Well, Container, Slot, location_to_list
+from opentrons.legacy_api.containers import Well as WellV1, Container, Slot, location_to_list
 from opentrons.legacy_api.containers.placeable import Placeable
 from opentrons.trackers import pose_tracker
 from opentrons.util.vector import Vector
 
 from rgatkinson.configuration import WellGeometryConfigurationContext
-from rgatkinson.interval import fpu, is_interval, Interval, infimum
+from rgatkinson.interval import Interval, infimum
 from rgatkinson.liquid import LiquidVolume
 from rgatkinson.util import sqrt, square, cube, cubeRoot, instance_count, thread_local_storage, infinity
 
 
 def is_well(location):
-    return isinstance(location, Well)
+    return isinstance(location, WellV1)
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Geometries
 #-----------------------------------------------------------------------------------------------------------------------
 
 # region Well Geometries
-class WellGeometry(object):
+class WellGeometryV1(object):
 
     #-------------------------------------------------------------------------------------------------------------------
     # Construction
     #-------------------------------------------------------------------------------------------------------------------
 
     def __init__(self, well=None):
-        self.__well: Well = None
+        self.__well: WellV1 = None
         self.well = well
 
     @property
@@ -174,7 +174,7 @@ class WellGeometry(object):
         return False
 
 
-class UnknownWellGeometry(WellGeometry):
+class UnknownWellGeometryV1(WellGeometryV1):
     def __init__(self, well=None):
         super().__init__(well)
 
@@ -192,7 +192,7 @@ class UnknownWellGeometry(WellGeometry):
         return self.well.properties['diameter'] / 2 if self.well is not None else infinity
 
 
-class IdtTubeWellGeometry(WellGeometry):
+class IdtTubeWellGeometryV1(WellGeometryV1):
     # parts[tube] -> <|cylindrical->cylinder[38.3037,4.16389],conical->invertedCone[3.69629,4.16389],cap->cylinder[0,0]|>
     def __init__(self, well=None):
         super().__init__(well)
@@ -247,7 +247,7 @@ class IdtTubeWellGeometry(WellGeometry):
         return 45.01
 
 
-class Biorad96WellPlateWellGeometry(WellGeometry):
+class Biorad96WellPlateWellGeometryV1(WellGeometryV1):
     # parts[tube]-><|cylindrical->cylinder[6.69498,2.61859],conical->invertedFrustum[8.11502,2.61859,1.16608],cap->cylinder[0,0]|>
     def __init__(self, well=None):
         super().__init__(well)
@@ -290,7 +290,7 @@ class Biorad96WellPlateWellGeometry(WellGeometry):
         return False
 
 
-class Eppendorf1point5mlTubeGeometry(WellGeometry):
+class Eppendorf1Point5MlTubeGeometryV1(WellGeometryV1):
     # parts[tube] -> <|cylindrical->invertedFrustum[21.1258,4.66267,4.272],conical->invertedFrustum[16.4801,4.272,1.48612],cap->invertedSphericalCap[0.194089,1.48612,rCap]|>
     def __init__(self, well=None):
         super().__init__(well)
@@ -343,7 +343,7 @@ class Eppendorf1point5mlTubeGeometry(WellGeometry):
         return 2
 
 
-class Eppendorf5point0mlTubeGeometry(WellGeometry):
+class Eppendorf5Point0MlTubeGeometryV1(WellGeometryV1):
     # parts[tube] -> <|cylindrical->invertedFrustum[35.8967,7.08628,6.37479],conical->invertedFrustum[18.3424,6.37479,1.50899],cap->invertedSphericalCap[1.16088,1.50899,rCap]|>
     def __init__(self, well=None):
         super().__init__(well)
@@ -396,7 +396,7 @@ class Eppendorf5point0mlTubeGeometry(WellGeometry):
         return 2.2
 
 
-class FalconTube15mlGeometry(WellGeometry):
+class FalconTube15MlGeometryV1(WellGeometryV1):
     # parts[tube] -> <|cylindrical->invertedFrustum[95.7737,7.47822,6.70634],conical->invertedFrustum[22.2963,6.70634,1.14806],cap->cylinder[0,0]|>
     def __init__(self, well=None):
         super().__init__(well)
@@ -431,8 +431,8 @@ class FalconTube15mlGeometry(WellGeometry):
         return 119.46
 
     def height_above_reference_plane(self, space_below_reference_plane, rack):
-        from rgatkinson.custom_labware import Opentrons10Rack, Opentrons15Rack
-        if self._is_rack(rack, [Opentrons15Rack, Opentrons10Rack], ['opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical']):
+        from rgatkinson.custom_labware import Opentrons10RackV1, Opentrons15RackV1
+        if self._is_rack(rack, [Opentrons15RackV1, Opentrons10RackV1], ['opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical']):
             return 45.65  # a measured value that accounts for the portion of the tube lying in the dimple at the bottom
         return super().height_above_reference_plane(space_below_reference_plane, rack)
 
@@ -449,7 +449,7 @@ class FalconTube15mlGeometry(WellGeometry):
         return 7.28
 
 
-class FalconTube50mlGeometry(WellGeometry):
+class FalconTube50MlGeometryV1(WellGeometryV1):
     # parts[tube] -> <|cylindrical->invertedFrustum[99.4458,13.6982,13.1264],conical->invertedFrustum[13.2242,13.1264,3.86673],cap->cylinder[0,0]|>
     def __init__(self, well=None):
         super().__init__(well)
@@ -496,8 +496,8 @@ class FalconTube50mlGeometry(WellGeometry):
         return 10.26
 
     def height_above_reference_plane(self, space_below_reference_plane, rack):
-        from rgatkinson.custom_labware import Opentrons6Rack, Opentrons10Rack
-        if self._is_rack(rack, [Opentrons6Rack, Opentrons10Rack], ['opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 'opentrons_6_tuberack_falcon_50ml_conical']):
+        from rgatkinson.custom_labware import Opentrons6RackV1, Opentrons10RackV1
+        if self._is_rack(rack, [Opentrons6RackV1, Opentrons10RackV1], ['opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical', 'opentrons_6_tuberack_falcon_50ml_conical']):
             return 42.04  # a measured value that accounts for the portion of the tube lying in the dimple at the bottom
         return super().height_above_reference_plane(space_below_reference_plane, rack)
 
@@ -507,7 +507,7 @@ class FalconTube50mlGeometry(WellGeometry):
 # Enhanced Well
 #-----------------------------------------------------------------------------------------------------------------------
 
-class EnhancedWell(Well):
+class EnhancedWellV1(WellV1):
 
     #-------------------------------------------------------------------------------------------------------------------
     # Construction
@@ -524,7 +524,7 @@ class EnhancedWell(Well):
         from rgatkinson.util import thread_local_storage
         self.config = thread_local_storage.config.wells
         self.__geometry = None
-        self.geometry = UnknownWellGeometry(well=self)
+        self.geometry = UnknownWellGeometryV1(well=self)
         self.__liquid_volume = None
         self.liquid_volume = LiquidVolume(well=self)
 
@@ -592,22 +592,22 @@ class EnhancedWell(Well):
         # Upgrade any existing well instances: usually (always?) only the two possible trash instances
         import gc
         for obj in gc.get_objects():
-            if obj.__class__ is Well:
+            if obj.__class__ is WellV1:
                 obj.__class__ = cls
-                well: EnhancedWell = obj
+                well: EnhancedWellV1 = obj
                 well._initialize()
-        assert instance_count(lambda obj: obj.__class__ is Well) == 0
+        assert instance_count(lambda obj: obj.__class__ is WellV1) == 0
 
     @classmethod
     def _hook_well_instance_creation(cls):
-        # Make sure that any new attempts at instantiating Well in fact create an EnhancedWell instead
-        Well.__new__ = cls._well_new
+        # Make sure that any new attempts at instantiating Well_v1 in fact create an EnhancedWell instead
+        WellV1.__new__ = cls._well_new
 
     @staticmethod
     def _well_new(cls, parent=None, properties=None):
         super_class = Placeable
-        result = super_class.__new__(EnhancedWell)
-        assert result.__class__ is EnhancedWell
+        result = super_class.__new__(EnhancedWellV1)
+        assert result.__class__ is EnhancedWellV1
         return result
 
     @classmethod
@@ -617,7 +617,7 @@ class EnhancedWell(Well):
         commands._stringify_legacy_loc = cls._stringify_legacy_loc
 
     @staticmethod
-    def _stringify_legacy_loc(loc: Union[Well, Container, Slot, None]) -> str:
+    def _stringify_legacy_loc(loc: Union[WellV1, Container, Slot, None]) -> str:
         # reworking of that found in commands.py in order to allow for subclasses
         def get_slot(location):
             trace = location.get_trace()
@@ -625,7 +625,7 @@ class EnhancedWell(Well):
                 if isinstance(item, Slot):
                     return item
 
-        type_to_text = {Slot: 'slot', Container: 'container', Well: 'well'}
+        type_to_text = {Slot: 'slot', Container: 'container', WellV1: 'well'}
 
         # Coordinates only
         if loc is None:
@@ -657,7 +657,7 @@ class EnhancedWell(Well):
     # region Pretty Printing
     @property
     def _display_class_name(self):
-        return Well.__name__
+        return WellV1.__name__
 
     def get_type(self):
         return self.properties.get('type', self._display_class_name)

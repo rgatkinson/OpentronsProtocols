@@ -55,7 +55,7 @@ for i in range(num_masses):
         mass_wells.append(well)
 
 for well in mass_wells:
-    Eppendorf1point5mlTubeGeometry(well)
+    Eppendorf1Point5MlTubeGeometryV1(well)
 
 log('Liquid Names')
 note_liquid(location=water, name='Water', initially_at_least=15000)  # volume is rough guess

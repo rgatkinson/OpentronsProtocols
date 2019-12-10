@@ -246,7 +246,7 @@ def createMasterMix():
         # Mostly just for fun, we put the ingredients for the master mix in a nice warm place to help them melt
         temp_slot = 11
         temp_module = modules.load('tempdeck', slot=temp_slot)
-        screwcap_rack = labware_manager.load('opentrons_24_aluminumblock_generic_2ml_screwcap', slot=temp_slot, label='screwcap_rack', share=True, well_geometry=IdtTubeWellGeometry)
+        screwcap_rack = labware_manager.load('opentrons_24_aluminumblock_generic_2ml_screwcap', slot=temp_slot, label='screwcap_rack', share=True, well_geometry=IdtTubeWellGeometryV1)
 
         buffers = list(zip(screwcap_rack.rows(0), buffer_volumes))
         evagreens = list(zip(screwcap_rack.rows(1), evagreen_volumes))
@@ -314,7 +314,7 @@ def plateMasterMix():
         for col in range(num_columns):
             volume = master_mix_plate[row][col]
             if volume == 0: continue
-            p: EnhancedPipette = p10 if usesP10(volume) else p50
+            p: EnhancedPipetteV1 = p10 if usesP10(volume) else p50
             if not p.tip_attached:
                 p.pick_up_tip()
             well = plate.rows(row).wells(col)
@@ -333,7 +333,7 @@ def platePerWellWater():
         for col in range(num_columns):
             volume = per_well_water_plate[row][col]
             if volume == 0: continue
-            p: EnhancedPipette = p10 if usesP10(volume) else p50
+            p: EnhancedPipetteV1 = p10 if usesP10(volume) else p50
             if not p.tip_attached:
                 p.pick_up_tip()
             well = plate.rows(row).wells(col)
@@ -352,7 +352,7 @@ def plateStrandA():
         for col in range(num_columns):
             volume = strand_a_plate[row][col]
             if volume == 0: continue
-            p: EnhancedPipette = p10 if usesP10(volume) else p50
+            p: EnhancedPipetteV1 = p10 if usesP10(volume) else p50
             if not p.tip_attached:
                 p.pick_up_tip()
             well = plate.rows(row).wells(col)
@@ -373,7 +373,7 @@ def plateStrandBAndMix():
         for col in range(num_columns):
             volume = strand_b_plate[row][col]
             if volume == 0: continue
-            p: EnhancedPipette = p10 if usesP10(volume, allow_zero=True) else p50
+            p: EnhancedPipetteV1 = p10 if usesP10(volume, allow_zero=True) else p50
             well = plate.rows(row).wells(col)
             log("Plating Strand B: well='%s' vol=%d pipette=%s" % (well.get_name(), volume, p.name))
             if not p.tip_attached: p.pick_up_tip()

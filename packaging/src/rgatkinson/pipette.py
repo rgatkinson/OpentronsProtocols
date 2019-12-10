@@ -9,11 +9,9 @@ from enum import Enum
 from numbers import Real
 from typing import List
 
-import opentrons
 from opentrons import instruments, robot
-from opentrons.commands import make_command
 from opentrons.helpers import helpers
-from opentrons.legacy_api.containers import unpack_location, Well
+from opentrons.legacy_api.containers import unpack_location
 from opentrons.legacy_api.containers.placeable import Placeable
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
@@ -24,7 +22,7 @@ import rgatkinson
 from rgatkinson.configuration import TopConfigurationContext, AspirateConfigurationContext, DispenseConfigurationContext
 from rgatkinson.logging import pretty, warn, log_while, log_while_core, info, info_while
 from rgatkinson.util import zeroify, sqrt, is_close, infinity, thread_local_storage
-from rgatkinson.well import FalconTube15mlGeometry, FalconTube50mlGeometry, Eppendorf5point0mlTubeGeometry, Eppendorf1point5mlTubeGeometry, IdtTubeWellGeometry, Biorad96WellPlateWellGeometry, is_well, EnhancedWell
+from rgatkinson.well import FalconTube15MlGeometryV1, FalconTube50MlGeometryV1, Eppendorf5Point0MlTubeGeometryV1, Eppendorf1Point5MlTubeGeometryV1, IdtTubeWellGeometryV1, Biorad96WellPlateWellGeometryV1, is_well, EnhancedWellV1
 
 
 class RadialClearanceManager(object):
@@ -32,12 +30,12 @@ class RadialClearanceManager(object):
     def __init__(self, config):
         self.config = config
         self._functions = {
-            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', FalconTube15mlGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_falcon15ml,
-            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', FalconTube50mlGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_falcon50ml,
-            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Eppendorf1point5mlTubeGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_eppendorf1_5ml,
-            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Eppendorf5point0mlTubeGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_eppendorf5_0ml,
-            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', IdtTubeWellGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_idt_tube,
-            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Biorad96WellPlateWellGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_biorad_plate_well,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', FalconTube15MlGeometryV1): self.p50_single_v1_4_opentrons_96_tiprack_300ul_falcon15ml,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', FalconTube50MlGeometryV1): self.p50_single_v1_4_opentrons_96_tiprack_300ul_falcon50ml,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Eppendorf1Point5MlTubeGeometryV1): self.p50_single_v1_4_opentrons_96_tiprack_300ul_eppendorf1_5ml,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Eppendorf5Point0MlTubeGeometryV1): self.p50_single_v1_4_opentrons_96_tiprack_300ul_eppendorf5_0ml,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', IdtTubeWellGeometryV1): self.p50_single_v1_4_opentrons_96_tiprack_300ul_idt_tube,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Biorad96WellPlateWellGeometryV1): self.p50_single_v1_4_opentrons_96_tiprack_300ul_biorad_plate_well,
         }
 
     def get_clearance_function(self, pipette, well):
@@ -139,7 +137,7 @@ class TipWetness(Enum):
 #   * support option to leave tip attached at end of transfer
 ########################################################################################################################
 
-class EnhancedPipette(Pipette):
+class EnhancedPipetteV1(Pipette):
 
     #-------------------------------------------------------------------------------------------------------------------
     # Hack management
@@ -226,15 +224,15 @@ class EnhancedPipette(Pipette):
     #-------------------------------------------------------------------------------------------------------------------
 
     def __new__(cls, config, parentInst):
-        parentInst.__class__ = EnhancedPipette
+        parentInst.__class__ = EnhancedPipetteV1
         return parentInst
 
     # noinspection PyMissingConstructor
     def __init__(self, config: TopConfigurationContext, parentInst):
         self.config: TopConfigurationContext = config
         self.prev_aspirated_location = None
-        self.aspirate_params_hack = EnhancedPipette.AspirateParamsHack(self.config.aspirate)
-        self.dispense_params_hack = EnhancedPipette.DispenseParamsHack(self.config.dispense)
+        self.aspirate_params_hack = EnhancedPipetteV1.AspirateParamsHack(self.config.aspirate)
+        self.dispense_params_hack = EnhancedPipetteV1.DispenseParamsHack(self.config.dispense)
         self.tip_wetness = TipWetness.NONE
         self.mixes_in_progress = list()
         self.radial_clearance_manager = RadialClearanceManager(self.config)
@@ -475,7 +473,7 @@ class EnhancedPipette(Pipette):
     # Aspirate and dispense
     #-------------------------------------------------------------------------------------------------------------------
 
-    def _pre_wet(self, well: EnhancedWell, volume, location: Placeable, rate, pre_wet: bool):
+    def _pre_wet(self, well: EnhancedWellV1, volume, location: Placeable, rate, pre_wet: bool):
         if pre_wet is None:
             pre_wet = self.aspirate_params_hack.pre_wet_transfer
         if pre_wet is None:
@@ -526,7 +524,7 @@ class EnhancedPipette(Pipette):
 
         def func():
             # calls to mover.move() in super() used stylized pose-tree management
-            super(EnhancedPipette, self).aspirate(volume=volume, location=location, rate=rate)
+            super(EnhancedPipetteV1, self).aspirate(volume=volume, location=location, rate=rate)
         self._update_pose_tree_in_place(func)
 
         # if we're asked to, pause after aspiration to let liquid rise
@@ -576,7 +574,7 @@ class EnhancedPipette(Pipette):
 
         def func():
             # calls to mover.move() in super() used stylized pose-tree management
-            super(EnhancedPipette, self).dispense(volume=volume, location=location, rate=rate)
+            super(EnhancedPipetteV1, self).dispense(volume=volume, location=location, rate=rate)
         self._update_pose_tree_in_place(func)
 
         self.dispense_params_hack.full_dispense_from_dispense = False
@@ -608,7 +606,7 @@ class EnhancedPipette(Pipette):
             return mm_from_vol
 
     def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, top_clearance=None, bottom_clearance=None, allow_above=False, manual_manufacture_tolerance=0):
-        if isinstance(location, EnhancedWell):
+        if isinstance(location, EnhancedWellV1):
             well = location; assert is_well(well)
             current_liquid_volume = well.liquid_volume.current_volume_min
             # if the well isn't machine made, don't go so close to the top
@@ -644,7 +642,7 @@ class EnhancedPipette(Pipette):
         # In this hacked version, we make the assumption that copying of the pose_tree isn't necessary; we can instead update in place.
         # This is reasonable because all extant callers of _move() are of the stylized form: obj.pose_tree = pip._move(obj.pose_tree, ...)
         def func():
-            return super(EnhancedPipette, self)._move(pose_tree, x=x, y=y, z=z)
+            return super(EnhancedPipetteV1, self)._move(pose_tree, x=x, y=y, z=z)
         return self._update_pose_tree_in_place(func)
 
     #-------------------------------------------------------------------------------------------------------------------
@@ -844,7 +842,7 @@ class EnhancedPipette(Pipette):
         else:
             return liquid_depth + clearance  # going down. we used to clamp to at least a fraction of the current liquid depth, but not worthwhile as tube modelling accuracy has improved
 
-    def _layered_mix_one(self, well: EnhancedWell, msg, **kwargs):
+    def _layered_mix_one(self, well: EnhancedWellV1, msg, **kwargs):
         def fetch(name, default=None):
             if default is None:
                 default = getattr(self.config.layered_mix, name, None)
@@ -966,7 +964,7 @@ class InstrumentsManager(object):
                                         min_volume=min_volume,
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
-        result = EnhancedPipette(config, result)
+        result = EnhancedPipetteV1(config, result)
         return self._add_instrument(result)
 
     def P20_Single_GEN2(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
@@ -980,7 +978,7 @@ class InstrumentsManager(object):
                                         min_volume=min_volume,
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
-        result = EnhancedPipette(config, result)
+        result = EnhancedPipetteV1(config, result)
         return self._add_instrument(result)
 
     def P50_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
@@ -994,7 +992,7 @@ class InstrumentsManager(object):
                                         min_volume=min_volume,
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
-        result = EnhancedPipette(config, result)
+        result = EnhancedPipetteV1(config, result)
         return self._add_instrument(result)
 
     def P300_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
@@ -1008,7 +1006,7 @@ class InstrumentsManager(object):
                                         min_volume=min_volume,
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
-        result = EnhancedPipette(config, result)
+        result = EnhancedPipetteV1(config, result)
         return self._add_instrument(result)
 
     def P300_Single_GEN2(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
@@ -1022,7 +1020,7 @@ class InstrumentsManager(object):
                                         min_volume=min_volume,
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
-        result = EnhancedPipette(config, result)
+        result = EnhancedPipetteV1(config, result)
         return self._add_instrument(result)
 
     def P1000_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
@@ -1036,7 +1034,7 @@ class InstrumentsManager(object):
                                         min_volume=min_volume,
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
-        result = EnhancedPipette(config, result)
+        result = EnhancedPipetteV1(config, result)
         return self._add_instrument(result)
 
     def P1000_Single_GEN2(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
@@ -1050,14 +1048,14 @@ class InstrumentsManager(object):
                                         min_volume=min_volume,
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
-        result = EnhancedPipette(config, result)
+        result = EnhancedPipetteV1(config, result)
         return self._add_instrument(result)
 
 
 instruments_manager = InstrumentsManager()
 
 
-def verify_well_locations(well_list: List[EnhancedWell], pipette: EnhancedPipette):
+def verify_well_locations(well_list: List[EnhancedWellV1], pipette: EnhancedPipetteV1):
     picked_tip = False
     if not pipette.tip_attached:
         pipette.pick_up_tip()
