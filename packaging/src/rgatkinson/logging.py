@@ -81,11 +81,8 @@ def silent_log(msg):
     pass
 
 def user_prompt(msg: str, prefix="***********", suffix=' ***********'):
-    from rgatkinson.pipette_v1 import instruments_manager
     if msg:
         log(msg=msg, prefix=prefix, suffix=suffix)
-    for pip in instruments_manager.instruments:
-        pass  # pip.retract()  # omit for now: Avoid 'Run encountered an error.'
     robot.pause('Press Return to Continue :-)')
 
 #-----------------------------------------------------------------------------------------------------------------------
