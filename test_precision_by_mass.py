@@ -63,7 +63,7 @@ for well in mass_wells:
     note_liquid(location=well, name=pretty.format('mass_vol={0:n}', well.mass_vol))
 
 # Clean up namespace
-del well_v1, i, j
+del well, i, j
 
 ########################################################################################################################
 # Off to the races

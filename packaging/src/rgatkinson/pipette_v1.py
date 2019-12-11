@@ -22,7 +22,7 @@ import rgatkinson
 from rgatkinson.configuration import TopConfigurationContext, AspirateConfigurationContext, DispenseConfigurationContext
 from rgatkinson.logging import pretty, warn, log_while, log_while_core, info, info_while
 from rgatkinson.util import zeroify, sqrt, is_close, infinity, thread_local_storage
-from rgatkinson.well_v1 import FalconTube15MlGeometryV1, FalconTube50MlGeometryV1, Eppendorf5Point0MlTubeGeometryV1, Eppendorf1Point5MlTubeGeometryV1, IdtTubeWellGeometryV1, Biorad96WellPlateWellGeometryV1, is_well, EnhancedWellV1
+from rgatkinson.well import FalconTube15MlGeometry, FalconTube50MlGeometry, Eppendorf5Point0MlTubeGeometry, Eppendorf1Point5MlTubeGeometry, IdtTubeWellGeometry, Biorad96WellPlateWellGeometry, is_well_v1, EnhancedWellV1
 
 
 class RadialClearanceManager(object):
@@ -30,12 +30,12 @@ class RadialClearanceManager(object):
     def __init__(self, config):
         self.config = config
         self._functions = {
-            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', FalconTube15MlGeometryV1): self.p50_single_v1_4_opentrons_96_tiprack_300ul_falcon15ml,
-            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', FalconTube50MlGeometryV1): self.p50_single_v1_4_opentrons_96_tiprack_300ul_falcon50ml,
-            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Eppendorf1Point5MlTubeGeometryV1): self.p50_single_v1_4_opentrons_96_tiprack_300ul_eppendorf1_5ml,
-            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Eppendorf5Point0MlTubeGeometryV1): self.p50_single_v1_4_opentrons_96_tiprack_300ul_eppendorf5_0ml,
-            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', IdtTubeWellGeometryV1): self.p50_single_v1_4_opentrons_96_tiprack_300ul_idt_tube,
-            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Biorad96WellPlateWellGeometryV1): self.p50_single_v1_4_opentrons_96_tiprack_300ul_biorad_plate_well,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', FalconTube15MlGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_falcon15ml,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', FalconTube50MlGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_falcon50ml,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Eppendorf1Point5MlTubeGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_eppendorf1_5ml,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Eppendorf5Point0MlTubeGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_eppendorf5_0ml,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', IdtTubeWellGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_idt_tube,
+            ('p50_single_v1.4', 'opentrons/opentrons_96_tiprack_300ul/1', Biorad96WellPlateWellGeometry): self.p50_single_v1_4_opentrons_96_tiprack_300ul_biorad_plate_well,
         }
 
     def get_clearance_function(self, pipette, well):
@@ -607,7 +607,7 @@ class EnhancedPipetteV1(Pipette):
 
     def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, top_clearance=None, bottom_clearance=None, allow_above=False, manual_manufacture_tolerance=0):
         if isinstance(location, EnhancedWellV1):
-            well = location; assert is_well(well)
+            well = location; assert is_well_v1(well)
             current_liquid_volume = well.liquid_volume.current_volume_min
             # if the well isn't machine made, don't go so close to the top
             if not well.liquid_volume.made_by_machine:
@@ -964,7 +964,7 @@ class InstrumentsManager(object):
                                         min_volume=min_volume,
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
-        result = EnhancedPipetteV1(config, result)
+        result = self._wrap(config, result)
         return self._add_instrument(result)
 
     def P20_Single_GEN2(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
@@ -978,7 +978,7 @@ class InstrumentsManager(object):
                                         min_volume=min_volume,
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
-        result = EnhancedPipetteV1(config, result)
+        result = self._wrap(config, result)
         return self._add_instrument(result)
 
     def P50_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
@@ -992,7 +992,7 @@ class InstrumentsManager(object):
                                         min_volume=min_volume,
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
-        result = EnhancedPipetteV1(config, result)
+        result = self._wrap(config, result)
         return self._add_instrument(result)
 
     def P300_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
@@ -1006,7 +1006,7 @@ class InstrumentsManager(object):
                                         min_volume=min_volume,
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
-        result = EnhancedPipetteV1(config, result)
+        result = self._wrap(config, result)
         return self._add_instrument(result)
 
     def P300_Single_GEN2(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
@@ -1020,7 +1020,7 @@ class InstrumentsManager(object):
                                         min_volume=min_volume,
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
-        result = EnhancedPipetteV1(config, result)
+        result = self._wrap(config, result)
         return self._add_instrument(result)
 
     def P1000_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
@@ -1034,7 +1034,7 @@ class InstrumentsManager(object):
                                         min_volume=min_volume,
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
-        result = EnhancedPipetteV1(config, result)
+        result = self._wrap(config, result)
         return self._add_instrument(result)
 
     def P1000_Single_GEN2(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
@@ -1048,9 +1048,11 @@ class InstrumentsManager(object):
                                         min_volume=min_volume,
                                         max_volume=max_volume,
                                         blow_out_flow_rate=blow_out_flow_rate)
-        result = EnhancedPipetteV1(config, result)
+        result = self._wrap(config, result)
         return self._add_instrument(result)
 
+    def _wrap(self, config, result):
+        return EnhancedPipetteV1(config, result)
 
 instruments_manager = InstrumentsManager()
 

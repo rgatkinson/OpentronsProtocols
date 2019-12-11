@@ -178,7 +178,7 @@ note_liquid(location=waterA, name='Water', initially=waterA_initial_volume)
 note_liquid(location=waterB, name='Water', initially=waterB_initial_volume)
 
 # Clean up namespace
-del well_v1
+del well
 
 ########################################################################################################################
 # Well & Pipettes

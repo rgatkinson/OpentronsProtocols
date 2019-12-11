@@ -1,5 +1,5 @@
 #
-# well_v1.py
+# well.py
 #
 
 from abc import abstractmethod
@@ -7,17 +7,24 @@ from typing import Union
 
 from opentrons import robot
 from opentrons.legacy_api.containers import Well as WellV1, Container, Slot, location_to_list
-from opentrons.legacy_api.containers.placeable import Placeable
 from opentrons.trackers import pose_tracker
+from opentrons.types import Location
 from opentrons.util.vector import Vector
+from opentrons.protocol_api.labware import Well as WellV2
+from opentrons.protocols.types import APIVersion
 
 from rgatkinson.configuration import WellGeometryConfigurationContext
 from rgatkinson.interval import Interval, infimum
 from rgatkinson.liquid import LiquidVolume
 from rgatkinson.util import sqrt, square, cube, cubeRoot, instance_count, thread_local_storage, infinity
 
+#-----------------------------------------------------------------------------------------------------------------------
+# Utility
+#-----------------------------------------------------------------------------------------------------------------------
 
-def is_well(location):
+EnhancedWellType = Union['EnhancedWell']
+
+def is_well_v1(location):
     return isinstance(location, WellV1)
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -25,22 +32,23 @@ def is_well(location):
 #-----------------------------------------------------------------------------------------------------------------------
 
 # region Well Geometries
-class WellGeometryV1(object):
+
+class WellGeometry(object):
 
     #-------------------------------------------------------------------------------------------------------------------
     # Construction
     #-------------------------------------------------------------------------------------------------------------------
 
-    def __init__(self, well=None):
-        self.__well: WellV1 = None
+    def __init__(self, well: EnhancedWellType = None):
+        self.__well: EnhancedWellType = None
         self.well = well
 
     @property
-    def well(self):
+    def well(self) -> EnhancedWellType:
         return self.__well
 
     @well.setter
-    def well(self, value):
+    def well(self, value: EnhancedWellType):
         if self.__well is not value:
             old_well = self.__well
             self.__well = None
@@ -80,7 +88,7 @@ class WellGeometryV1(object):
         """
         How deep is the interior of the well, in mm? Default here to what Opentrons provides.
         """
-        return self.well.z_size() if self.well is not None else infinity
+        return self.well.well_depth if self.well is not None else infinity
 
     @property
     def well_diameter_at_top(self):
@@ -173,8 +181,9 @@ class WellGeometryV1(object):
                     return True
         return False
 
+#-----------------------------------------------------------------------------------------------------------------------
 
-class UnknownWellGeometryV1(WellGeometryV1):
+class UnknownWellGeometry(WellGeometry):
     def __init__(self, well=None):
         super().__init__(well)
 
@@ -192,7 +201,7 @@ class UnknownWellGeometryV1(WellGeometryV1):
         return self.well.properties['diameter'] / 2 if self.well is not None else infinity
 
 
-class IdtTubeWellGeometryV1(WellGeometryV1):
+class IdtTubeWellGeometry(WellGeometry):
     # parts[tube] -> <|cylindrical->cylinder[38.3037,4.16389],conical->invertedCone[3.69629,4.16389],cap->cylinder[0,0]|>
     def __init__(self, well=None):
         super().__init__(well)
@@ -247,7 +256,7 @@ class IdtTubeWellGeometryV1(WellGeometryV1):
         return 45.01
 
 
-class Biorad96WellPlateWellGeometryV1(WellGeometryV1):
+class Biorad96WellPlateWellGeometry(WellGeometry):
     # parts[tube]-><|cylindrical->cylinder[6.69498,2.61859],conical->invertedFrustum[8.11502,2.61859,1.16608],cap->cylinder[0,0]|>
     def __init__(self, well=None):
         super().__init__(well)
@@ -290,7 +299,7 @@ class Biorad96WellPlateWellGeometryV1(WellGeometryV1):
         return False
 
 
-class Eppendorf1Point5MlTubeGeometryV1(WellGeometryV1):
+class Eppendorf1Point5MlTubeGeometry(WellGeometry):
     # parts[tube] -> <|cylindrical->invertedFrustum[21.1258,4.66267,4.272],conical->invertedFrustum[16.4801,4.272,1.48612],cap->invertedSphericalCap[0.194089,1.48612,rCap]|>
     def __init__(self, well=None):
         super().__init__(well)
@@ -343,7 +352,7 @@ class Eppendorf1Point5MlTubeGeometryV1(WellGeometryV1):
         return 2
 
 
-class Eppendorf5Point0MlTubeGeometryV1(WellGeometryV1):
+class Eppendorf5Point0MlTubeGeometry(WellGeometry):
     # parts[tube] -> <|cylindrical->invertedFrustum[35.8967,7.08628,6.37479],conical->invertedFrustum[18.3424,6.37479,1.50899],cap->invertedSphericalCap[1.16088,1.50899,rCap]|>
     def __init__(self, well=None):
         super().__init__(well)
@@ -396,7 +405,7 @@ class Eppendorf5Point0MlTubeGeometryV1(WellGeometryV1):
         return 2.2
 
 
-class FalconTube15MlGeometryV1(WellGeometryV1):
+class FalconTube15MlGeometry(WellGeometry):
     # parts[tube] -> <|cylindrical->invertedFrustum[95.7737,7.47822,6.70634],conical->invertedFrustum[22.2963,6.70634,1.14806],cap->cylinder[0,0]|>
     def __init__(self, well=None):
         super().__init__(well)
@@ -449,7 +458,7 @@ class FalconTube15MlGeometryV1(WellGeometryV1):
         return 7.28
 
 
-class FalconTube50MlGeometryV1(WellGeometryV1):
+class FalconTube50MlGeometry(WellGeometry):
     # parts[tube] -> <|cylindrical->invertedFrustum[99.4458,13.6982,13.1264],conical->invertedFrustum[13.2242,13.1264,3.86673],cap->cylinder[0,0]|>
     def __init__(self, well=None):
         super().__init__(well)
@@ -507,7 +516,7 @@ class FalconTube50MlGeometryV1(WellGeometryV1):
 # Enhanced Well
 #-----------------------------------------------------------------------------------------------------------------------
 
-class EnhancedWellV1(WellV1):
+class EnhancedWell(object):
 
     #-------------------------------------------------------------------------------------------------------------------
     # Construction
@@ -515,16 +524,11 @@ class EnhancedWellV1(WellV1):
 
     # region Construction
 
-    def __init__(self, parent=None, properties=None):
-        super().__init__(parent=parent, properties=properties)
-        self._initialize()
-
     def _initialize(self):
         self.label = None
         from rgatkinson.util import thread_local_storage
         self.config = thread_local_storage.config.wells
         self.__geometry = None
-        self.geometry = UnknownWellGeometryV1(well=self)
         self.__liquid_volume = None
         self.liquid_volume = LiquidVolume(well=self)
 
@@ -533,6 +537,29 @@ class EnhancedWellV1(WellV1):
     #-------------------------------------------------------------------------------------------------------------------
     # Accessing
     #-------------------------------------------------------------------------------------------------------------------
+
+    @abstractmethod
+    def wellSuper(self):
+        pass
+
+    @abstractmethod
+    def get_parent(self):
+        pass
+
+    @property
+    @abstractmethod
+    def well_depth(self):
+        """
+        How deep is the interior of the well, in mm?
+        """
+        pass
+
+    @abstractmethod
+    def top_coords_absolute(self):
+        """
+        Returns the coordinates of the top-center of the well in absolute coordinate space
+        """
+        pass
 
     @property
     def geometry(self):
@@ -568,9 +595,32 @@ class EnhancedWellV1(WellV1):
             if self.__liquid_volume is not None:
                 self.__liquid_volume.well = self
 
-    def top_coords_absolute(self):
-        xyz = pose_tracker.absolute(robot.poses, self)
-        return Vector(xyz)
+    #-------------------------------------------------------------------------------------------------------------------
+    # Pretty printing
+    #-------------------------------------------------------------------------------------------------------------------
+
+    # region Pretty Printing
+
+    @abstractmethod
+    def _display_class_name(self):
+        pass
+
+    def __str__(self):
+        if not self.get_parent():  # todo: is the parent *ever* empty?
+            return '<{}>'.format(self._display_class_name)
+        return '<{} {}>'.format(self._display_class_name, self.get_name())
+
+    def get_name(self):
+        result = self.wellSuper().get_name()
+        if self.label is not None:
+            result += ' (' + self.label + ')'
+        return result
+
+    @property
+    def has_labelled_well_name(self):
+        return True
+
+    # endregion
 
     #-------------------------------------------------------------------------------------------------------------------
     # Hooking
@@ -593,26 +643,42 @@ class EnhancedWellV1(WellV1):
         import gc
         for obj in gc.get_objects():
             if obj.__class__ is WellV1:
-                obj.__class__ = cls
+                obj.__class__ = EnhancedWellV1
+                well: EnhancedWellV1 = obj
+                well._initialize()
+            if obj.__class__ is WellV2:
+                obj.__class__ = EnhancedWellV2
                 well: EnhancedWellV1 = obj
                 well._initialize()
         assert instance_count(lambda obj: obj.__class__ is WellV1) == 0
+        assert instance_count(lambda obj: obj.__class__ is WellV2) == 0
 
     @classmethod
     def _hook_well_instance_creation(cls):
-        # Make sure that any new attempts at instantiating Well_v1 in fact create an EnhancedWell instead
-        WellV1.__new__ = cls._well_new
+        # Make sure that any new attempts at instantiating a Well in fact create an EnhancedWell instead
+        WellV1.__new__ = cls._well_new_v1
+        WellV2.__new__ = cls._well_new_v2
 
     @staticmethod
-    def _well_new(cls, parent=None, properties=None):
-        super_class = Placeable
+    def _well_new_v1(cls, parent=None, properties=None):
+        super_class = super(WellV1, EnhancedWellV1)  # Placeable
         result = super_class.__new__(EnhancedWellV1)
         assert result.__class__ is EnhancedWellV1
         return result
 
+    @staticmethod
+    def _well_new_v2(cls, well_props: dict,
+                 parent: Location,
+                 display_name: str,
+                 has_tip: bool,
+                 api_level: APIVersion):
+        super_class = super(WellV2, EnhancedWellV2)  # object
+        result = super_class.__new__(EnhancedWellV2)
+        assert result.__class__ is EnhancedWellV2
+        return result
+
     @classmethod
     def _hook_other(cls):
-        # from opentrons.commands.commands import _stringify_legacy_loc
         import opentrons.commands.commands as commands
         commands._stringify_legacy_loc = cls._stringify_legacy_loc
 
@@ -650,11 +716,51 @@ class EnhancedWellV1(WellV1):
 
     # endregion
 
+
+#-----------------------------------------------------------------------------------------------------------------------
+
+class EnhancedWellV1(EnhancedWell, WellV1):
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Construction
+    #-------------------------------------------------------------------------------------------------------------------
+
+    # region Construction
+
+    def __init__(self, parent=None, properties=None):
+        super().__init__(parent=parent, properties=properties)
+        self._initialize()
+
+    def _initialize(self):
+        super()._initialize()
+        self.geometry = UnknownWellGeometry(well=self)
+
+    # endregion
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Accessing
+    #-------------------------------------------------------------------------------------------------------------------
+
+    def wellSuper(self):
+        return super(WellV1, self)
+
+    def get_parent(self):
+        return self.parent
+
+    @property
+    def well_depth(self):
+        return self.z_size()
+
+    def top_coords_absolute(self):
+        xyz = pose_tracker.absolute(robot.poses, self)
+        return Vector(xyz)
+
     #-------------------------------------------------------------------------------------------------------------------
     # Pretty printing
     #-------------------------------------------------------------------------------------------------------------------
 
     # region Pretty Printing
+
     @property
     def _display_class_name(self):
         return WellV1.__name__
@@ -662,20 +768,56 @@ class EnhancedWellV1(WellV1):
     def get_type(self):
         return self.properties.get('type', self._display_class_name)
 
-    def __str__(self):
-        if not self.parent:
-            return '<{}>'.format(self._display_class_name)
-        return '<{} {}>'.format(self._display_class_name, self.get_name())
-
-    def get_name(self):
-        result = super().get_name()
-        if self.label is not None:
-            result += ' (' + self.label + ')'
-        return result
-
-    @property
-    def has_labelled_well_name(self):
-        return True
     # endregion
 
+#-----------------------------------------------------------------------------------------------------------------------
+
+class EnhancedWellV2(EnhancedWell, WellV2):
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Construction
+    #-------------------------------------------------------------------------------------------------------------------
+
+    # region Construction
+
+    def __init__(self, well_props: dict,
+                 parent: Location,
+                 display_name: str,
+                 has_tip: bool,
+                 api_level: APIVersion) -> None:
+        super().__init__(well_props, parent, display_name, has_tip, api_level)
+        self._initialize()
+
+    def _initialize(self):
+        super()._initialize()
+        self.geometry = UnknownWellGeometry(well=self)
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Accessing
+    #-------------------------------------------------------------------------------------------------------------------
+
+    def wellSuper(self):
+        return super(WellV2, self)
+
+    def get_parent(self):
+        return self._parent
+
+    @property
+    def well_depth(self):
+        return self._depth
+
+    def top_coords_absolute(self):
+        pass  # WRONG
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Pretty printing
+    #-------------------------------------------------------------------------------------------------------------------
+
+    # region Pretty Printing
+
+    @property
+    def _display_class_name(self):
+        return WellV2.__name__
+
+    # endregion
 

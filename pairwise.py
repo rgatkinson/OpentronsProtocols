@@ -129,7 +129,7 @@ else:
     note_liquid(location=waterA, name='Water', initially_at_least=water_min_volume)
 
 # Clean up namespace
-del well_v1
+del well
 
 ########################################################################################################################
 # Well & Pipettes
