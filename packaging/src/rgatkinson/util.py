@@ -76,8 +76,8 @@ infinity = float('inf')
 class TLS(threading.local):
     def __init__(self):
         # This gets called on every thread we're used on. Define default values
-        from rgatkinson.configuration import config
+        from rgatkinson.configuration import config, TopConfigurationContext
         self.update_pose_tree_in_place = False
-        self.config = config
+        self.config: TopConfigurationContext = config
 
-thread_local_storage = TLS()
+tls = TLS()

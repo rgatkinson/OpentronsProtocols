@@ -1,5 +1,5 @@
 #
-# pipette_v1.py
+# pipette.py
 #
 
 import enum
@@ -7,7 +7,7 @@ import math
 import random
 from enum import Enum
 from numbers import Real
-from typing import List
+from typing import Callable, List, NamedTuple
 
 from opentrons import instruments, robot
 from opentrons.helpers import helpers
@@ -15,13 +15,15 @@ from opentrons.legacy_api.containers import unpack_location
 from opentrons.legacy_api.containers.placeable import Placeable
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
+from opentrons.protocol_api import InstrumentContext
 from opentrons.trackers import pose_tracker
+from opentrons.types import Mount
 from opentrons.util.vector import Vector
 
 import rgatkinson
 from rgatkinson.configuration import TopConfigurationContext, AspirateConfigurationContext, DispenseConfigurationContext
 from rgatkinson.logging import pretty, warn, log_while, log_while_core, info, info_while
-from rgatkinson.util import zeroify, sqrt, is_close, infinity, thread_local_storage
+from rgatkinson.util import zeroify, sqrt, is_close, infinity, tls
 from rgatkinson.well import FalconTube15MlGeometry, FalconTube50MlGeometry, Eppendorf5Point0MlTubeGeometry, Eppendorf1Point5MlTubeGeometry, IdtTubeWellGeometry, Biorad96WellPlateWellGeometry, is_well_v1, EnhancedWellV1
 
 
@@ -633,9 +635,9 @@ class EnhancedPipetteV1(Pipette):
         if not self.use_perf_hacked_move:
             return func()
         else:
-            thread_local_storage.update_pose_tree_in_place = True
+            tls.update_pose_tree_in_place = True
             result = func()
-            thread_local_storage.update_pose_tree_in_place = False
+            tls.update_pose_tree_in_place = False
             return result
 
     def _move(self, pose_tree, x=None, y=None, z=None):
@@ -935,15 +937,40 @@ class EnhancedPipetteV1(Pipette):
         info_while(msg, do_one)
 
 
+class EnhancedPipetteV2(InstrumentContext):
+    pass
+
+
 #-----------------------------------------------------------------------------------------------------------------------
 # Management
 #-----------------------------------------------------------------------------------------------------------------------
 
+class PipNameV1V2(NamedTuple):
+    v1_ctor: Callable
+    v2_name: str
+
+@enum.unique
+class PipetteName(Enum):
+    P10_Single = PipNameV1V2(instruments.P10_Single, 'p10_single')
+    P10_Multi = PipNameV1V2(instruments.P10_Multi, 'p10_multi')
+    P50_Single = PipNameV1V2(instruments.P50_Single, 'p50_single')
+    P50_Multi = PipNameV1V2(instruments.P50_Multi, 'p50_multi')
+    P300_Single = PipNameV1V2(instruments.P300_Single, 'p300_single')
+    P300_Multi = PipNameV1V2(instruments.P300_Multi, 'p300_multi')
+    P1000_Single = PipNameV1V2(instruments.P1000_Single, 'p1000_single')
+    P20_Single_Gen2 = PipNameV1V2(instruments.P20_Single_GEN2, 'p20_single_gen2')
+    P300_Single_Gen2 = PipNameV1V2(instruments.P300_Single_GEN2, 'p300_single_gen2')
+    P1000_Single_Gen2 = PipNameV1V2(instruments.P1000_Single_GEN2, 'p1000_single_gen2')
+
+
 class InstrumentsManager(object):
+
     def __init__(self):
+        self.config = tls.config
         self._instruments = set()
-        from rgatkinson.perf_hacks import perf_hack_manager
-        perf_hack_manager.install()
+        if self.config.isApiV1:
+            from rgatkinson.perf_hacks import perf_hack_manager
+            perf_hack_manager.install()
 
     def _add_instrument(self, instrument):
         self._instruments.add(instrument)
@@ -953,106 +980,68 @@ class InstrumentsManager(object):
     def instruments(self):
         return self._instruments
 
-    def P10_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
+    def P10_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, blow_out_flow_rate=None, config=None):
         if config is None:
-            config = rgatkinson.configuration.config
-        result = instruments.P10_Single(mount=mount,
-                                        trash_container=trash_container,
-                                        tip_racks=tip_racks,
-                                        aspirate_flow_rate=aspirate_flow_rate,
-                                        dispense_flow_rate=dispense_flow_rate,
-                                        min_volume=min_volume,
-                                        max_volume=max_volume,
-                                        blow_out_flow_rate=blow_out_flow_rate)
-        result = self._wrap(config, result)
+            config = tls.config
+        result = self.create(config, PipetteName.P10_Single, mount, trash_container, tip_racks, aspirate_flow_rate, dispense_flow_rate, blow_out_flow_rate)
         return self._add_instrument(result)
 
-    def P20_Single_GEN2(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
+    def P20_Single_GEN2(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, blow_out_flow_rate=None, config=None):
         if config is None:
-            config = rgatkinson.configuration.config
-        result = instruments.P20_Single_GEN2(mount=mount,
-                                        trash_container=trash_container,
-                                        tip_racks=tip_racks,
-                                        aspirate_flow_rate=aspirate_flow_rate,
-                                        dispense_flow_rate=dispense_flow_rate,
-                                        min_volume=min_volume,
-                                        max_volume=max_volume,
-                                        blow_out_flow_rate=blow_out_flow_rate)
-        result = self._wrap(config, result)
+            config = tls.config
+        result = self.create(config, PipetteName.P20_Single_Gen2, mount, trash_container, tip_racks, aspirate_flow_rate, dispense_flow_rate, blow_out_flow_rate)
         return self._add_instrument(result)
 
-    def P50_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
+    def P50_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, blow_out_flow_rate=None, config=None):
         if config is None:
-            config = rgatkinson.configuration.config
-        result = instruments.P50_Single(mount=mount,
-                                        trash_container=trash_container,
-                                        tip_racks=tip_racks,
-                                        aspirate_flow_rate=aspirate_flow_rate,
-                                        dispense_flow_rate=dispense_flow_rate,
-                                        min_volume=min_volume,
-                                        max_volume=max_volume,
-                                        blow_out_flow_rate=blow_out_flow_rate)
-        result = self._wrap(config, result)
+            config = tls.config
+        result = self.create(config, PipetteName.P50_Single, mount, trash_container, tip_racks, aspirate_flow_rate, dispense_flow_rate, blow_out_flow_rate)
         return self._add_instrument(result)
 
-    def P300_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
+    def P300_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, blow_out_flow_rate=None, config=None):
         if config is None:
-            config = rgatkinson.configuration.config
-        result = instruments.P300_Single(mount=mount,
-                                        trash_container=trash_container,
-                                        tip_racks=tip_racks,
-                                        aspirate_flow_rate=aspirate_flow_rate,
-                                        dispense_flow_rate=dispense_flow_rate,
-                                        min_volume=min_volume,
-                                        max_volume=max_volume,
-                                        blow_out_flow_rate=blow_out_flow_rate)
-        result = self._wrap(config, result)
+            config = tls.config
+        result = self.create(config, PipetteName.P300_Single, mount, trash_container, tip_racks, aspirate_flow_rate, dispense_flow_rate, blow_out_flow_rate)
         return self._add_instrument(result)
 
-    def P300_Single_GEN2(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
+    def P300_Single_GEN2(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, blow_out_flow_rate=None, config=None):
         if config is None:
-            config = rgatkinson.configuration.config
-        result = instruments.P300_Single_GEN2(mount=mount,
-                                        trash_container=trash_container,
-                                        tip_racks=tip_racks,
-                                        aspirate_flow_rate=aspirate_flow_rate,
-                                        dispense_flow_rate=dispense_flow_rate,
-                                        min_volume=min_volume,
-                                        max_volume=max_volume,
-                                        blow_out_flow_rate=blow_out_flow_rate)
-        result = self._wrap(config, result)
+            config = tls.config
+        result = self.create(config, PipetteName.P300_Single_Gen2, mount, trash_container, tip_racks, aspirate_flow_rate, dispense_flow_rate, blow_out_flow_rate)
         return self._add_instrument(result)
 
-    def P1000_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
+    def P1000_Single(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, blow_out_flow_rate=None, config=None):
         if config is None:
-            config = rgatkinson.configuration.config
-        result = instruments.P1000_Single(mount=mount,
-                                        trash_container=trash_container,
-                                        tip_racks=tip_racks,
-                                        aspirate_flow_rate=aspirate_flow_rate,
-                                        dispense_flow_rate=dispense_flow_rate,
-                                        min_volume=min_volume,
-                                        max_volume=max_volume,
-                                        blow_out_flow_rate=blow_out_flow_rate)
-        result = self._wrap(config, result)
+            config = tls.config
+        result = self.create(config, PipetteName.P1000_Single, mount, trash_container, tip_racks, aspirate_flow_rate, dispense_flow_rate, blow_out_flow_rate)
         return self._add_instrument(result)
 
-    def P1000_Single_GEN2(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, min_volume=None, max_volume=None, blow_out_flow_rate=None, config=None):
+    def P1000_Single_GEN2(self, mount, trash_container='', tip_racks=[], aspirate_flow_rate=None, dispense_flow_rate=None, blow_out_flow_rate=None, config=None):
         if config is None:
-            config = rgatkinson.configuration.config
-        result = instruments.P1000_Single_GEN2(mount=mount,
-                                        trash_container=trash_container,
-                                        tip_racks=tip_racks,
-                                        aspirate_flow_rate=aspirate_flow_rate,
-                                        dispense_flow_rate=dispense_flow_rate,
-                                        min_volume=min_volume,
-                                        max_volume=max_volume,
-                                        blow_out_flow_rate=blow_out_flow_rate)
-        result = self._wrap(config, result)
+            config = tls.config
+        result = self.create(config, PipetteName.P1000_Single_Gen2, mount, trash_container, tip_racks, aspirate_flow_rate, dispense_flow_rate, blow_out_flow_rate)
         return self._add_instrument(result)
 
-    def _wrap(self, config, result):
-        return EnhancedPipetteV1(config, result)
+    def create(self, config, name: PipetteName, mount=None, trash_container=None, tip_racks=None, aspirate_flow_rate=None, dispense_flow_rate=None, blow_out_flow_rate=None):
+        if config.isApiV1:
+            result: Pipette = name.value.v1_ctor(mount=mount,
+                            trash_container=trash_container,
+                            tip_racks=tip_racks,
+                            aspirate_flow_rate=aspirate_flow_rate,
+                            dispense_flow_rate=dispense_flow_rate,
+                            min_volume=None,
+                            max_volume=None,
+                            blow_out_flow_rate=blow_out_flow_rate)
+            return EnhancedPipetteV1(config, result)
+        else:
+            result: InstrumentContext = config.execution_context.protocol_context.load_instrument(name.value.v2_name, mount, tip_racks)
+            if aspirate_flow_rate:
+                result.flow_rate.aspirate = aspirate_flow_rate
+            if dispense_flow_rate:
+                result.flow_rate.dispense = dispense_flow_rate
+            if blow_out_flow_rate:
+                result.flow_rate.blow_out = blow_out_flow_rate
+            return EnhancedPipetteV2(config, result)
 
 instruments_manager = InstrumentsManager()
 

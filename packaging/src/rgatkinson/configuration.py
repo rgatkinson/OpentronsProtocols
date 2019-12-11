@@ -2,13 +2,16 @@
 # configuration.py
 #
 
+from opentrons import protocol_api
+
 #-----------------------------------------------------------------------------------------------------------------------
 
-class ProtocolExecutionContext(object):
+class ExecutionContext(object):
     """
     One instance of this across all configuration contexts
     """
     def __init__(self):
+        self.protocol_context: protocol_api.ProtocolContext = None
         self.__liquids = None
 
     @property
@@ -18,30 +21,38 @@ class ProtocolExecutionContext(object):
             self.__liquids = Liquids()
         return self.__liquids
 
+    @property
+    def isApiV1(self):
+        return self.protocol_context is None
+
 #-----------------------------------------------------------------------------------------------------------------------
 
 class AbstractConfigurationContext(object):
-    def __init__(self, execution_context: ProtocolExecutionContext):
+    def __init__(self, execution_context: ExecutionContext):
         self.execution_context = execution_context
 
+    @property
+    def isApiV1(self):
+        return self.execution_context.isApiV1
+
 class SimpleConfigurationContext(AbstractConfigurationContext):
-    def __init__(self, execution_context: ProtocolExecutionContext):
+    def __init__(self, execution_context: ExecutionContext):
         super().__init__(execution_context)
 
 class PauseConfigurationContext(AbstractConfigurationContext):
-    def __init__(self, execution_context: ProtocolExecutionContext, ms_default):
+    def __init__(self, execution_context: ExecutionContext, ms_default):
         super().__init__(execution_context)
         self.ms_default = ms_default
 
 class ClearanceConfigurationContext(AbstractConfigurationContext):
-    def __init__(self, execution_context: ProtocolExecutionContext, top, bottom, manual_manufacture_tolerance):
+    def __init__(self, execution_context: ExecutionContext, top, bottom, manual_manufacture_tolerance):
         super().__init__(execution_context)
         self.top_clearance = top
         self.bottom_clearance = bottom
         self.manual_manufacture_tolerance = manual_manufacture_tolerance
 
 class AspirateConfigurationContext(ClearanceConfigurationContext):
-    def __init__(self, execution_context: ProtocolExecutionContext):
+    def __init__(self, execution_context: ExecutionContext):
         super().__init__(execution_context, -5.0, 1.0, 0.05)  # -5.0 was -3.5; temporary; fix when 5ml geometry fixed; ie: allow for 5% slop in volume of manual pipetting when p
         self.pre_wet = SimpleConfigurationContext(execution_context)
         self.pre_wet.default = True
@@ -51,13 +62,13 @@ class AspirateConfigurationContext(ClearanceConfigurationContext):
         self.pause = PauseConfigurationContext(execution_context, 750)
 
 class DispenseConfigurationContext(ClearanceConfigurationContext):
-    def __init__(self, execution_context: ProtocolExecutionContext):
+    def __init__(self, execution_context: ExecutionContext):
         super().__init__(execution_context, -2.0, 0.5, 0)  # dispensing at top is less critical than aspirating
         self.full_dispense = SimpleConfigurationContext(execution_context)
         self.full_dispense.default = True
 
 class LayeredMixConfigurationContext(ClearanceConfigurationContext):
-    def __init__(self, execution_context: ProtocolExecutionContext):
+    def __init__(self, execution_context: ExecutionContext):
         super().__init__(execution_context, -1.5, 1.0, 0)  # close, so we mix top layers too
         self.aspirate_rate_factor = 4.0
         self.dispense_rate_factor = 4.0
@@ -75,12 +86,12 @@ class LayeredMixConfigurationContext(ClearanceConfigurationContext):
         self.radial_clearance_tolerance = 0.5
 
 class WellGeometryConfigurationContext(AbstractConfigurationContext):
-    def __init__(self, execution_context: ProtocolExecutionContext):
+    def __init__(self, execution_context: ExecutionContext):
         super().__init__(execution_context)
         self.radial_clearance_tolerance = 0.5
 
 class TopConfigurationContext(AbstractConfigurationContext):
-    def __init__(self, execution_context: ProtocolExecutionContext):
+    def __init__(self, execution_context: ExecutionContext):
         super().__init__(execution_context)
         self.enable_enhancements = True
         self.trash_control = True
@@ -94,4 +105,13 @@ class TopConfigurationContext(AbstractConfigurationContext):
         self.layered_mix: LayeredMixConfigurationContext = LayeredMixConfigurationContext(execution_context)
         self.wells = WellGeometryConfigurationContext(execution_context)
 
-config = TopConfigurationContext(ProtocolExecutionContext())
+    @property
+    def protocol_context(self):
+        return self.execution_context.protocol_context
+
+    @protocol_context.setter
+    def protocol_context(self, value):
+        self.execution_context.protocol_context = value
+
+
+config: TopConfigurationContext = TopConfigurationContext(ExecutionContext())

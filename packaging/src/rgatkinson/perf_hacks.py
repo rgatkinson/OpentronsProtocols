@@ -7,7 +7,7 @@ import numpy as np
 from numpy.linalg import inv
 from opentrons.trackers.pose_tracker import Point, translate, change_base, ascend, ROOT
 
-from rgatkinson.util import is_close, thread_local_storage
+from rgatkinson.util import is_close, tls
 
 
 #-----------------------------------------------------------------------------------------------------------------------
@@ -36,7 +36,7 @@ def transform_dot_inv_translate(point: Point, transform=None):
     return result
 
 def pose_tracker_update(state, obj, point: Point, transform=None):
-    if not thread_local_storage.update_pose_tree_in_place:
+    if not tls.update_pose_tree_in_place:
         state = state.copy()
     state[obj] = state[obj].update(transform_dot_inv_translate(point, transform))
     return state
@@ -184,8 +184,8 @@ class PerfHackManager(object):
             mover.Mover.move = mover_move
             mover.Mover.update_pose_from_driver = mover_update_pose_from_driver
             #
-            from rgatkinson.pipette_v1 import EnhancedPipetteV1
-            thread_local_storage.update_pose_tree_in_place = False
+            from rgatkinson.pipette import EnhancedPipetteV1
+            tls.update_pose_tree_in_place = False
             EnhancedPipetteV1.install_perf_hacks()
             #
             self.installed = True

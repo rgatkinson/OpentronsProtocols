@@ -11,7 +11,7 @@ from opentrons.util.vector import Vector
 
 from rgatkinson.configuration import TopConfigurationContext
 from rgatkinson.interval import fpu
-from rgatkinson.util import is_indexable, thread_local_storage, infinity
+from rgatkinson.util import is_indexable, tls, infinity
 from rgatkinson.well import WellGeometry, Eppendorf5Point0MlTubeGeometry, Biorad96WellPlateWellGeometry, Eppendorf1Point5MlTubeGeometry, FalconTube15MlGeometry, FalconTube50MlGeometry, EnhancedWellV1, UnknownWellGeometry
 
 
@@ -342,7 +342,7 @@ class LabwareManager(object):
 
     def load(self, name, slot, label=None, share=False, version=None, config: TopConfigurationContext = None, well_geometry=None, second_well_geometry=None, well_geometries: dict = None):
         if config is None:
-            config = thread_local_storage.config
+            config = tls.config
 
         def set_custom_well_geometries(custom_tube_rack: CustomTubeRackV1):
             if well_geometries is not None:

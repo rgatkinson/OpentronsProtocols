@@ -16,7 +16,7 @@ from opentrons.protocols.types import APIVersion
 from rgatkinson.configuration import WellGeometryConfigurationContext
 from rgatkinson.interval import Interval, infimum
 from rgatkinson.liquid import LiquidVolume
-from rgatkinson.util import sqrt, square, cube, cubeRoot, instance_count, thread_local_storage, infinity
+from rgatkinson.util import sqrt, square, cube, cubeRoot, instance_count, tls, infinity
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Utility
@@ -63,7 +63,7 @@ class WellGeometry(object):
     def config(self) -> WellGeometryConfigurationContext:
         if self.well is not None:
             return self.well.config
-        return thread_local_storage.config.wells
+        return tls.config.wells
 
     #-------------------------------------------------------------------------------------------------------------------
     # Accessing
@@ -526,8 +526,7 @@ class EnhancedWell(object):
 
     def _initialize(self):
         self.label = None
-        from rgatkinson.util import thread_local_storage
-        self.config = thread_local_storage.config.wells
+        self.config = tls.config.wells
         self.__geometry = None
         self.__liquid_volume = None
         self.liquid_volume = LiquidVolume(well=self)

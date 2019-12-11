@@ -14,7 +14,7 @@ from rgatkinson import *
 from rgatkinson.custom_labware import labware_manager
 from rgatkinson.liquid import note_liquid
 from rgatkinson.logging import log
-from rgatkinson.pipette_v1 import instruments_manager
+from rgatkinson.pipette import instruments_manager
 
 ########################################################################################################################
 # Configurable protocol parameters
