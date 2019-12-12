@@ -830,7 +830,9 @@ class EnhancedWellV2(EnhancedWell, WellV2):
         return self.well_depth
 
     def top_coords_absolute(self):
-        pass  # WRONG
+        top = self.top()
+        raise NotImplementedError
+        return top  # WRONG
 
     #-------------------------------------------------------------------------------------------------------------------
     # Pretty printing

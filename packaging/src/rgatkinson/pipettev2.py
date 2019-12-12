@@ -7,7 +7,7 @@ from opentrons import types
 from opentrons.hardware_control import  Pipette as HwPipette, SHAKE_OFF_TIPS_DROP_DISTANCE
 from opentrons.protocol_api import InstrumentContext, transfers
 from opentrons.protocol_api.contexts import AdvancedLiquidHandling
-from opentrons.protocol_api.labware import Well as WellV2, quirks_from_any_parent
+from opentrons.protocol_api.labware import Well as WellV2, quirks_from_any_parent, Well
 from opentrons.protocol_api.util import Clearances
 
 from rgatkinson.configuration import TopConfigurationContext
@@ -15,6 +15,7 @@ from rgatkinson.logging import info, log_while_core, pretty, warn
 from rgatkinson.pipette import EnhancedPipette, DispenseParams
 from rgatkinson.tls import tls
 from rgatkinson.math_util import is_close
+from rgatkinson.types import TipWetness
 from rgatkinson.well import EnhancedWellV2
 
 
@@ -43,6 +44,12 @@ class EnhancedPipetteV2(EnhancedPipette, InstrumentContext):
     #-------------------------------------------------------------------------------------------------------------------
     # Accessing
     #-------------------------------------------------------------------------------------------------------------------
+
+    def get_name(self):
+        return self.name
+
+    def get_model(self):
+        return self.model
 
     def get_speeds(self):
         return {'aspirate': self.speed.aspirate,
@@ -252,6 +259,43 @@ class EnhancedPipetteV2(EnhancedPipette, InstrumentContext):
         return result
 
     #-------------------------------------------------------------------------------------------------------------------
+    # Movement
+    #-------------------------------------------------------------------------------------------------------------------
+
+    def move_to(self, location, strategy=None):
+        force_direct = strategy and strategy == 'direct'
+        result = super(EnhancedPipette, self).move_to(location=location, force_direct=force_direct)
+        return result
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Tip Management
+    #-------------------------------------------------------------------------------------------------------------------
+
+    @property
+    def has_tip(self):
+        return self.hw_pipette['has_tip']
+
+    def pick_up_tip(self, location=None, presses=None, increment=None):
+        if self.has_tip:
+            info('pick_up_tip(): tip is already attached')
+        result = super(EnhancedPipette, self).pick_up_tip(location=location, presses=presses, increment=increment)
+        self.tip_wetness = TipWetness.DRY
+        return result
+
+    def drop_tip(self, location=None, home_after=True):
+        if not self.has_tip:
+            info('drop_tip(): no tip attached')
+        result = super(EnhancedPipette, self).drop_tip(location, home_after)
+        self.tip_wetness = TipWetness.NONE
+        return result
+
+    def return_tip(self, home_after: bool = True):
+        return super(EnhancedPipette, self).return_tip()
+
+    def get_current_volume(self):
+        return self.current_volume
+
+    #-------------------------------------------------------------------------------------------------------------------
     # Blow outs
     #-------------------------------------------------------------------------------------------------------------------
 
@@ -289,6 +333,20 @@ class EnhancedPipetteV2(EnhancedPipette, InstrumentContext):
             self.config.protocol_context.resume()
 
         log_while_core(msg, do_dwell)
+
+    #-------------------------------------------------------------------------------------------------------------------
+    # Mixing
+    #-------------------------------------------------------------------------------------------------------------------
+
+    def mix(self,
+            repetitions: int = 1,
+            volume: float = None,
+            location: Union[types.Location, Well] = None,
+            rate: float = 1.0) -> 'InstrumentContext':
+        self.begin_internal_mix(False)
+        result = super().mix(repetitions, volume, location, rate)
+        self.end_internal_mix(False)
+        return result
 
     #-------------------------------------------------------------------------------------------------------------------
     # Utility

@@ -73,8 +73,14 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
             self.plunger_positions['drop_tip'] = self.pipette_config_drop_tip_min
 
     #-------------------------------------------------------------------------------------------------------------------
-    # Rates and speeds
+    # Accessing
     #-------------------------------------------------------------------------------------------------------------------
+
+    def get_name(self):
+        return self.name
+
+    def get_model(self):
+        return self.model
 
     def _get_speed(self, func: str):
         return self.speeds[func]
@@ -427,11 +433,14 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
             tls.update_pose_tree_in_place = False
             return result
 
+    def move_to(self, location, strategy=None):
+        super(EnhancedPipette, self).move_to(location=location, strategy=strategy)
+
     def _move(self, pose_tree, x=None, y=None, z=None):
         # In this hacked version, we make the assumption that copying of the pose_tree isn't necessary; we can instead update in place.
         # This is reasonable because all extant callers of _move() are of the stylized form: obj.pose_tree = pip._move(obj.pose_tree, ...)
         def func():
-            return super(EnhancedPipetteV1, self)._move(pose_tree, x=x, y=y, z=z)
+            return super(EnhancedPipette, self)._move(pose_tree, x=x, y=y, z=z)
         return self._update_pose_tree_in_place(func)
 
     #-------------------------------------------------------------------------------------------------------------------
@@ -474,28 +483,29 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
         xyz = pose_tracker.absolute(self.robot.poses, self)
         return Vector(xyz)
 
+    @property
+    def has_tip(self):
+        return self.tip_attached
+
     def pick_up_tip(self, location=None, presses=None, increment=None):
         if self.tip_attached:
             info('pick_up_tip(): tip is already attached')
-        result = super().pick_up_tip(location, presses, increment)
+        result = super(EnhancedPipette, self).pick_up_tip(location, presses, increment)
         self.tip_wetness = TipWetness.DRY
         return result
 
     def drop_tip(self, location=None, home_after=True):
         if not self.tip_attached:
             info('drop_tip(): no tip attached')
-        result = super().drop_tip(location, home_after)
+        result = super(EnhancedPipette, self).drop_tip(location, home_after)
         self.tip_wetness = TipWetness.NONE
         return result
 
-    def done_tip(self):  # a handy little utility that looks at self.config.trash_control
-        if self.tip_attached:
-            if self.current_volume > 0:
-                info(pretty.format('{0} has {1:n} uL remaining', self.name, self.current_volume))
-            if self.config.trash_control:
-                self.drop_tip()
-            else:
-                self.return_tip()
+    def return_tip(self, home_after: bool = True):
+        return super(EnhancedPipette, self).return_tip(home_after)
+
+    def get_current_volume(self):
+        return self.current_volume
 
     #-------------------------------------------------------------------------------------------------------------------
     # Blow outs
@@ -560,161 +570,6 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
         result = super().mix(repetitions, volume, location, rate)
         self.end_internal_mix(False)
         return result
-
-    def begin_internal_mix(self, during_transfer: bool):
-        self.mixes_in_progress.append('internal_transfer_mix' if bool else 'internal_mix')
-
-    def end_internal_mix(self, during_transfer: bool):
-        top = self.mixes_in_progress.pop()
-        assert top == ('internal_transfer_mix' if bool else 'internal_mix')
-
-    def begin_layered_mix(self):
-        self.mixes_in_progress.append('layered_mix')
-
-    def end_layered_mix(self):
-        top = self.mixes_in_progress.pop()
-        assert top == 'layered_mix'
-
-    def is_mix_in_progress(self):
-        return len(self.mixes_in_progress) > 0
-
-    # If count is provided, we do (at most) that many asp/disp cycles, clamped to an increment of min_incr
-    def layered_mix(self, wells, msg='Mixing',
-                    count=None,
-                    min_incr=None,
-                    incr=None,
-                    count_per_incr=None,
-                    volume=None,
-                    keep_last_tip=None,  # todo: add ability to control tip changing per well
-                    ms_pause=None,
-                    ms_final_pause=None,
-                    aspirate_rate=None,
-                    dispense_rate=None,
-                    initial_turnover=None,
-                    max_tip_cycles=None,
-                    pre_wet=None,
-                    top_clearance=None,
-                    bottom_clearance=None
-                    ):
-
-        def do_layered_mix():
-            self.begin_layered_mix()
-            local_keep_last_tip = keep_last_tip if keep_last_tip is not None else self.config.layered_mix.keep_last_tip
-
-            for well in wells:
-                self._layered_mix_one(well, msg=msg,
-                                      count=count,
-                                      min_incr=min_incr,
-                                      incr=incr,
-                                      count_per_incr=count_per_incr,
-                                      volume=volume,
-                                      ms_pause=ms_pause,
-                                      ms_final_pause=ms_final_pause,
-                                      apirate_rate=aspirate_rate,
-                                      dispense_rate=dispense_rate,
-                                      initial_turnover=initial_turnover,
-                                      max_tip_cycles=max_tip_cycles,
-                                      pre_wet=pre_wet,
-                                      top_clearance=top_clearance,
-                                      bottom_clearance=bottom_clearance
-                                      )
-            if not local_keep_last_tip:
-                self.done_tip()
-            self.end_layered_mix()
-
-        log_while(f'{msg} {[well.get_name() for well in wells]}', do_layered_mix)
-
-    def _layered_mix_one(self, well: EnhancedWellV1, msg, **kwargs):
-        def fetch(name, default=None):
-            if default is None:
-                default = getattr(self.config.layered_mix, name, None)
-            result = kwargs.get(name, default)
-            if result is None:
-                result = default  # replace any explicitly stored 'None' with default
-            return result
-
-        count = fetch('count')
-        min_incr = fetch('min_incr')
-        incr = fetch('incr')
-        count_per_incr = fetch('count_per_incr')
-        volume = fetch('volume', self.max_volume)
-        ms_pause = fetch('ms_pause')
-        ms_final_pause = fetch('ms_final_pause')
-        aspirate_rate = fetch('aspirate_rate', self.config.layered_mix.aspirate_rate_factor)
-        dispense_rate = fetch('dispense_rate', self.config.layered_mix.dispense_rate_factor)
-        initial_turnover = fetch('initial_turnover')
-        max_tip_cycles = fetch('max_tip_cycles', infinity)
-        pre_wet = fetch('pre_wet', False)  # not much point in pre-wetting during mixing; save some time, simpler. but we do so if asked
-        top_clearance = fetch('top_clearance')
-        bottom_clearance = fetch('bottom_clearance')
-
-        current_liquid_volume = well.liquid_volume.current_volume_min
-        liquid_depth = well.geometry.liquid_depth_from_volume(current_liquid_volume)
-        liquid_depth_after_asp = well.geometry.liquid_depth_from_volume(current_liquid_volume - volume)
-        msg = pretty.format("{0:s} well='{1:s}' cur_vol={2:n} well_depth={3:n} after_aspirate={4:n}", msg, well.get_name(), current_liquid_volume, liquid_depth, liquid_depth_after_asp)
-
-        def do_one():
-            count_ = count
-            y_min = y = bottom_clearance
-            y_max = self._top_clearance(liquid_depth=liquid_depth_after_asp, clearance=top_clearance)
-            if count_ is not None:
-                if count_ <= 1:
-                    y_max = y_min
-                    y_incr = 1  # just so we only go one time through the loop
-                else:
-                    y_incr = (y_max - y_min) / (count_-1)
-                    y_incr = max(y_incr, min_incr)
-            else:
-                assert incr is not None
-                y_incr = incr
-
-            def do_layer(y_layer):
-                return y_layer <= y_max or is_close(y_layer, y_max)
-            first = True
-            tip_cycles = 0
-            looped = False
-            while do_layer(y):
-                looped = True
-                if not first and ms_pause > 0:
-                    self.dwell(seconds=ms_pause / 1000.0)  # pause to let dispensed liquid disperse
-                #
-                if first and initial_turnover is not None:
-                    count_ = int(0.5 + (initial_turnover / volume))
-                    count_ = max(count_, count_per_incr)
-                else:
-                    count_ = count_per_incr
-                if not self.tip_attached:
-                    self.pick_up_tip()
-
-                radial_clearance_func = self.radial_clearance_manager.get_clearance_function(self, well)
-                radial_clearance = 0 if radial_clearance_func is None or not self.config.layered_mix.enable_radial_randomness else radial_clearance_func(y_max)
-                radial_clearance = max(0, radial_clearance - max(well.geometry.radial_clearance_tolerance, self.config.layered_mix.radial_clearance_tolerance))
-
-                for i in range(count_):
-                    tip_cycles += 1
-                    need_new_tip = tip_cycles >= max_tip_cycles
-                    full_dispense = need_new_tip or (not do_layer(y + y_incr) and i == count_ - 1)
-
-                    theta = random.random() * (2 * math.pi)
-                    _, dispense_coordinates = well.bottom(y_max)
-                    random_offset = (radial_clearance * math.cos(theta), radial_clearance * math.sin(theta), 0)
-                    dispense_location = (well, dispense_coordinates + random_offset)
-
-                    self.aspirate(volume, well.bottom(y), rate=aspirate_rate, pre_wet=pre_wet)
-                    self.move_to(well.bottom(y_max))  # ascend vertically from aspirate location
-                    self.dispense(volume, dispense_location, rate=dispense_rate, full_dispense=full_dispense)
-                    self.move_to(well.bottom(y_max))  # prepare for vertical descent on a subsequent aspirate
-
-                    if need_new_tip:
-                        self.done_tip()
-                        tip_cycles = 0
-                #
-                y += y_incr
-                first = False
-            if looped and ms_final_pause > 0:
-                self.dwell(seconds=ms_final_pause / 1000.0)
-
-        info_while(msg, do_one)
 
 
 def verify_well_locations(well_list: List[EnhancedWellV1], pipette: EnhancedPipetteV1):
