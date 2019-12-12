@@ -234,7 +234,8 @@ class EnhancedSimulatingSmoothieDriver(SmoothieDriver_3_0_0):
     # Construction
     #-------------------------------------------------------------------------------------------------------------------
 
-    def __new__(cls, parentInst):
+    def __new__(cls, parentInst: SmoothieDriver_3_0_0):
+        assert isinstance(parentInst, SmoothieDriver_3_0_0)
         parentInst.__class__ = EnhancedSimulatingSmoothieDriver
         return parentInst
 

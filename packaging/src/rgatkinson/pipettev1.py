@@ -1,22 +1,23 @@
+#
+# pipettev1.py
+#
 import math
 import random
-from numbers import Real
+from typing import List
 
-from opentrons import instruments
+from opentrons import instruments, robot
 from opentrons.helpers import helpers
 from opentrons.legacy_api.containers import unpack_location
-from opentrons.legacy_api.containers.placeable import Placeable
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
 from opentrons.trackers import pose_tracker
 from opentrons.util.vector import Vector
 
-from rgatkinson import info, pretty, warn, zeroify, info_while, is_close, is_well_v1, log_while
-from rgatkinson.configuration import AspirateConfigurationContext, DispenseConfigurationContext, TopConfigurationContext
-from rgatkinson.logging import log_while_core
-from rgatkinson.pipette import EnhancedPipette
+from rgatkinson.configuration import TopConfigurationContext
+from rgatkinson.logging import log_while_core, info, warn, info_while, log_while, pretty
+from rgatkinson.pipette import EnhancedPipette, AspirateParamsTransfer, DispenseParamsTransfer, DispenseParams
 from rgatkinson.types import TipWetness
-from rgatkinson.util import tls, infinity
+from rgatkinson.util import tls, infinity, zeroify, is_close
 from rgatkinson.well import EnhancedWellV1
 
 
@@ -34,88 +35,22 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
             cls.use_perf_hacked_move = True
             cls.perf_hacks_installed = True
 
-    class AspirateParamsHack(object):
-        def __init__(self, config: AspirateConfigurationContext) -> None:
-            self.config = config
-            self.pre_wet_during_transfer_kw = '_pre_wet_transfer'
-            self.ms_pause_during_transfer_kw = '_ms_pause_transfer'
-            self.top_clearance_transfer_kw = '_top_clearance_transfer'
-            self.bottom_clearance_transfer_kw = '_bottom_clearance_transfer'
-            self.manual_manufacture_tolerance_transfer_kw = '_manual_manufacture_tolerance_transfer'
-            self.pre_wet_transfer = None
-            self.ms_pause_transfer = None
-            self.top_clearance_transfer = None
-            self.bottom_clearance_transfer = None
-            self.manual_manufacture_tolerance_transfer = None
-
-        def clear_transfer(self):
-            self.pre_wet_transfer = None
-            self.ms_pause_transfer = None
-            self.top_clearance_transfer = None
-            self.bottom_clearance_transfer = None
-            self.manual_manufacture_tolerance_transfer = None
-
-        def sequester_transfer(self, kwargs):
-            kwargs[self.pre_wet_during_transfer_kw] = not not kwargs.get('pre_wet', self.config.pre_wet.default)
-            kwargs[self.ms_pause_during_transfer_kw] = kwargs.get('ms_pause', self.config.pause.ms_default)
-            kwargs[self.top_clearance_transfer_kw] = kwargs.get('aspirate_top_clearance', None)
-            kwargs[self.bottom_clearance_transfer_kw] = kwargs.get('aspirate_bottom_clearance', None)
-            kwargs[self.manual_manufacture_tolerance_transfer_kw] = kwargs.get('manual_manufacture_tolerance', None)
-
-        def unsequester_transfer(self, kwargs):
-            self.pre_wet_transfer = kwargs.get(self.pre_wet_during_transfer_kw)
-            self.ms_pause_transfer = kwargs.get(self.ms_pause_during_transfer_kw)
-            self.top_clearance_transfer = kwargs.get(self.top_clearance_transfer_kw)
-            self.bottom_clearance_transfer = kwargs.get(self.bottom_clearance_transfer_kw)
-            self.manual_manufacture_tolerance_transfer = kwargs.get(self.manual_manufacture_tolerance_transfer_kw)
-
-    class DispenseParamsHack(object):
-        def __init__(self, config: DispenseConfigurationContext) -> None:
-            self.config = config
-            self.full_dispense_from_dispense = False
-            self.full_dispense_transfer_kw = '_full_dispense_transfer'
-            self.full_dispense_transfer = False
-            self.fully_dispensed = False
-            self.top_clearance_transfer_kw = '_top_clearance_transfer'
-            self.bottom_clearance_transfer_kw = '_bottom_clearance_transfer'
-            self.manual_manufacture_tolerance_transfer_kw = '_manual_manufacture_tolerance_transfer'
-            self.top_clearance_transfer = None
-            self.bottom_clearance_transfer = None
-            self.manual_manufacture_tolerance_transfer = None
-
-        def clear_transfer(self):
-            self.full_dispense_transfer = False
-            self.top_clearance_transfer = None
-            self.bottom_clearance_transfer = None
-            self.manual_manufacture_tolerance_transfer = None
-
-        def sequester_transfer(self, kwargs, can_full_dispense):
-            kwargs[self.full_dispense_transfer_kw] = not not (kwargs.get('full_dispense', self.config.full_dispense.default) and can_full_dispense)
-            kwargs[self.top_clearance_transfer_kw] = kwargs.get('dispense_top_clearance', None)
-            kwargs[self.bottom_clearance_transfer_kw] = kwargs.get('dispense_bottom_clearance', None)
-            kwargs[self.manual_manufacture_tolerance_transfer_kw] = kwargs.get('manual_manufacture_tolerance', None)
-
-        def unsequester_transfer(self, kwargs):
-            assert kwargs.get(self.full_dispense_transfer_kw, None) is not None
-            self.full_dispense_transfer = kwargs.get(self.full_dispense_transfer_kw)
-            self.top_clearance_transfer = kwargs.get(self.top_clearance_transfer_kw)
-            self.bottom_clearance_transfer = kwargs.get(self.bottom_clearance_transfer_kw)
-            self.manual_manufacture_tolerance_transfer = kwargs.get(self.manual_manufacture_tolerance_transfer_kw)
-
     #-------------------------------------------------------------------------------------------------------------------
     # Construction
     #-------------------------------------------------------------------------------------------------------------------
 
-    def __new__(cls, config, parentInst):
+    @classmethod
+    def hook(cls, config: TopConfigurationContext, parentInst: Pipette):
+        return cls(config, parentInst)
+
+    def __new__(cls, config: TopConfigurationContext, parentInst: Pipette):
+        assert isinstance(parentInst, Pipette)
         parentInst.__class__ = EnhancedPipetteV1
         return parentInst
 
     # noinspection PyMissingConstructor
     def __init__(self, config: TopConfigurationContext, parentInst: Pipette):
-        super(self).__init__(config)
-        self.prev_aspirated_location = None
-        self.aspirate_params_hack = EnhancedPipetteV1.AspirateParamsHack(self.config.aspirate)
-        self.dispense_params_hack = EnhancedPipetteV1.DispenseParamsHack(self.config.dispense)
+        super(EnhancedPipetteV1, self).__init__(config)
 
         # load the config (again) in order to extract some more data later
         from opentrons.config import pipette_config
@@ -155,6 +90,9 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
 
     def _get_ul_per_mm(self, func):  # hack, but there seems no public way
         return self._ul_per_mm(self.max_volume, func)
+
+    def get_max_volume(self):
+        return self.max_volume
 
     #-------------------------------------------------------------------------------------------------------------------
     # Transfers
@@ -224,155 +162,142 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
         assert len(plan) == 0 or plan[0].get('aspirate')  # first step must be an aspirate
 
         step_info_map = dict()
-        for i, step in enumerate(plan):
-            aspirate = step.get('aspirate')
-            dispense = step.get('dispense')
 
-            if aspirate:
-                # *always* record on aspirates so we can test has_disposal_vol on subsequent dispenses
-                have_disposal_vol = self.has_disposal_vol(plan, i, step_info_map, **kwargs)
+        with AspirateParamsTransfer(self.config.aspirate):
+            with DispenseParamsTransfer(self.config.dispense):
 
-                # we might have overspill from a previous transfer.
-                if self.current_volume > 0:
-                    info(pretty.format('carried over {0:n} uL from prev operation', self.current_volume))
+                for i, step in enumerate(plan):
+                    aspirate = step.get('aspirate')
+                    dispense = step.get('dispense')
 
-                if not seen_aspirate:
-                    assert i == 0
+                    if aspirate:
+                        # *always* record on aspirates so we can test has_disposal_vol on subsequent dispenses
+                        have_disposal_vol = self.has_disposal_vol(plan, i, step_info_map, **kwargs)
 
-                    if kwargs.get('pre_wet', None) and kwargs.get('mix_before', None):
-                        warn("simultaneous use of 'pre_wet' and 'mix_before' is not tested")
+                        # we might have overspill from a previous transfer.
+                        if self.current_volume > 0:
+                            info(pretty.format('carried over {0:n} uL from prev operation', self.current_volume))
 
-                    if (kwargs.get('allow_overspill', self.config.allow_overspill_default) and self.config.enable_enhancements) and zeroify(self.current_volume) > 0:
-                        this_aspirated_location, __ = unpack_location(aspirate['location'])
-                        if self.prev_aspirated_location is this_aspirated_location:
-                            if have_disposal_vol:
-                                # try to remove current volume from this aspirate
-                                new_aspirate_vol = zeroify(aspirate.get('volume') - self.current_volume)
-                                if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
-                                    aspirate['volume'] = new_aspirate_vol
-                                    info(pretty.format('reduced this aspirate by {0:n} uL', self.current_volume))
-                                    extra = 0  # can't blow out since we're relying on its presence in pipette
+                        if not seen_aspirate:
+                            assert i == 0
+
+                            if kwargs.get('pre_wet', None) and kwargs.get('mix_before', None):
+                                warn("simultaneous use of 'pre_wet' and 'mix_before' is not tested")
+
+                            if (kwargs.get('allow_overspill', self.config.allow_overspill_default) and self.config.enable_enhancements) and zeroify(self.current_volume) > 0:
+                                this_aspirated_well, __ = unpack_location(aspirate['location'])
+                                if self.prev_aspirated_well is this_aspirated_well:
+                                    if have_disposal_vol:
+                                        # try to remove current volume from this aspirate
+                                        new_aspirate_vol = zeroify(aspirate.get('volume') - self.current_volume)
+                                        if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
+                                            aspirate['volume'] = new_aspirate_vol
+                                            info(pretty.format('reduced this aspirate by {0:n} uL', self.current_volume))
+                                            extra = 0  # can't blow out since we're relying on its presence in pipette
+                                        else:
+                                            extra = self.current_volume - aspirate['volume']
+                                            assert zeroify(extra) > 0
+                                    else:
+                                        info(pretty.format("overspill of {0:n} uL isn't for disposal", self.current_volume))
+                                        extra = self.current_volume
                                 else:
-                                    extra = self.current_volume - aspirate['volume']
-                                    assert zeroify(extra) > 0
-                            else:
-                                info(pretty.format("overspill of {0:n} uL isn't for disposal", self.current_volume))
-                                extra = self.current_volume
-                        else:
-                            # different locations; can't re-use
-                            info('this aspirate is from location different than current pipette contents')
-                            extra = self.current_volume
-                        if zeroify(extra) > 0:
-                            # quiet_log('blowing out overspill of %s uL' % format_number(self.current_volume))
+                                    # different locations; can't re-use
+                                    info('this aspirate is from location different than current pipette contents')
+                                    extra = self.current_volume
+                                if zeroify(extra) > 0:
+                                    # quiet_log('blowing out overspill of %s uL' % format_number(self.current_volume))
+                                    self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
+
+                            elif zeroify(self.current_volume) > 0:
+                                info(pretty.format('blowing out unexpected overspill of {0:n} uL', self.current_volume))
+                                self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
+
+                        seen_aspirate = True
+
+                        self._add_tip_during_transfer(tips, **kwargs)
+                        # Previous blow-out elisions that don't reduce their adjacent aspirates (because they're not
+                        # carrying disposal_vols) might eventually catch up with us in the form of blowing the capacity
+                        # of the pipette. When they do, we give in, and carry out the blow-out. This still can be a net
+                        # win, in that we reduce the overall number of blow-outs. We might be tempted here to reduce
+                        # the capacity of the overflowing aspirate, but that would reduce precision (we still *could*
+                        # do that if it has disposal_vol, but that doesn't seem worth it).
+                        if self.current_volume + aspirate['volume'] > self._working_volume:
+                            info(pretty.format('current {0:n} uL with aspirate(has_disposal={1}) of {2:n} uL would overflow capacity',
+                                               self.current_volume,
+                                               self.has_disposal_vol(plan, i, step_info_map, **kwargs),
+                                               aspirate['volume']))
                             self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
 
-                    elif zeroify(self.current_volume) > 0:
-                        info(pretty.format('blowing out unexpected overspill of {0:n} uL', self.current_volume))
-                        self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
+                        tls.aspirate_params_transfer.sequester(kwargs)
+                        self._aspirate_during_transfer(aspirate['volume'], aspirate['location'], **kwargs)
 
-                seen_aspirate = True
+                    if dispense:
+                        if self.current_volume < dispense['volume']:
+                            warn(pretty.format('current {0:n} uL will truncate dispense of {1:n} uL', self.current_volume, dispense['volume']))
 
-                self._add_tip_during_transfer(tips, **kwargs)
-                # Previous blow-out elisions that don't reduce their adjacent aspirates (because they're not
-                # carrying disposal_vols) might eventually catch up with us in the form of blowing the capacity
-                # of the pipette. When they do, we give in, and carry out the blow-out. This still can be a net
-                # win, in that we reduce the overall number of blow-outs. We might be tempted here to reduce
-                # the capacity of the overflowing aspirate, but that would reduce precision (we still *could*
-                # do that if it has disposal_vol, but that doesn't seem worth it).
-                if self.current_volume + aspirate['volume'] > self._working_volume:
-                    info(pretty.format('current {0:n} uL with aspirate(has_disposal={1}) of {2:n} uL would overflow capacity',
-                                       self.current_volume,
-                                       self.has_disposal_vol(plan, i, step_info_map, **kwargs),
-                                       aspirate['volume']))
-                    self._blowout_during_transfer(loc=None, **kwargs)  # loc isn't actually used
-                self.aspirate_params_hack.sequester_transfer(kwargs)
-                self._aspirate_during_transfer(aspirate['volume'], aspirate['location'], **kwargs)
+                        can_full_dispense = self.current_volume - dispense['volume'] <= 0
 
-            if dispense:
-                if self.current_volume < dispense['volume']:
-                    warn(pretty.format('current {0:n} uL will truncate dispense of {1:n} uL', self.current_volume, dispense['volume']))
+                        tls.dispense_params_transfer.sequester(kwargs, can_full_dispense)
+                        self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
 
-                can_full_dispense = self.current_volume - dispense['volume'] <= 0
-                self.dispense_params_hack.sequester_transfer(kwargs, can_full_dispense)
-                self._dispense_during_transfer(dispense['volume'], dispense['location'], **kwargs)
-
-                do_touch = touch_tip or touch_tip is 0
-                is_last_step = step is plan[-1]
-                if is_last_step or plan[i + 1].get('aspirate'):
-                    do_drop = not is_last_step or not (kwargs.get('keep_last_tip', False) and self.config.enable_enhancements)
-                    # original always blew here. there are several reasons we could still be forced to blow
-                    do_blow = not is_distribute  # other modes (are there any?) we're not sure about
-                    do_blow = do_blow or kwargs.get('blow_out', False)  # for compatibility
-                    do_blow = do_blow or do_touch  # for compatibility
-                    do_blow = do_blow or not (kwargs.get('allow_blow_elision', self.config.allow_blow_elision_default) and self.config.enable_enhancements)
-                    if not do_blow:
-                        if is_last_step:
-                            if self.current_volume > 0:
-                                if not (kwargs.get('allow_overspill', self.config.allow_overspill_default) and self.config.enable_enhancements):
-                                    do_blow = True
-                                elif self.current_volume > kwargs.get('disposal_vol', 0):
-                                    warn(pretty.format('carried over {0:n} uL to next operation', self.current_volume))
-                                else:
-                                    info(pretty.format('carried over {0:n} uL to next operation', self.current_volume))
-                        else:
-                            # if we can, account for any overspill in the next aspirate
-                            if self.current_volume > 0:
-                                if self.has_disposal_vol(plan, i + 1, step_info_map, **kwargs):
-                                    next_aspirate = plan[i + 1].get('aspirate'); assert next_aspirate
-                                    next_aspirated_location, __ = unpack_location(next_aspirate['location'])
-                                    if self.prev_aspirated_location is next_aspirated_location:
-                                        new_aspirate_vol = zeroify(next_aspirate.get('volume') - self.current_volume)
-                                        if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
-                                            next_aspirate['volume'] = new_aspirate_vol
-                                            info(
-                                                pretty.format('reduced next aspirate by {0:n} uL', self.current_volume))
-                                        else:
+                        do_touch = touch_tip or touch_tip is 0
+                        is_last_step = step is plan[-1]
+                        if is_last_step or plan[i + 1].get('aspirate'):
+                            do_drop = not is_last_step or not (kwargs.get('keep_last_tip', False) and self.config.enable_enhancements)
+                            # original always blew here. there are several reasons we could still be forced to blow
+                            do_blow = not is_distribute  # other modes (are there any?) we're not sure about
+                            do_blow = do_blow or kwargs.get('blow_out', False)  # for compatibility
+                            do_blow = do_blow or do_touch  # for compatibility
+                            do_blow = do_blow or not (kwargs.get('allow_blow_elision', self.config.allow_blow_elision_default) and self.config.enable_enhancements)
+                            if not do_blow:
+                                if is_last_step:
+                                    if self.current_volume > 0:
+                                        if not (kwargs.get('allow_overspill', self.config.allow_overspill_default) and self.config.enable_enhancements):
                                             do_blow = True
-                                    else:
-                                        do_blow = True  # different aspirate locations
+                                        elif self.current_volume > kwargs.get('disposal_vol', 0):
+                                            warn(pretty.format('carried over {0:n} uL to next operation', self.current_volume))
+                                        else:
+                                            info(pretty.format('carried over {0:n} uL to next operation', self.current_volume))
                                 else:
-                                    # Next aspirate doesn't *want* our overspill, so we don't reduce his
-                                    # volume. But it's harmless to just leave the overspill present; might
-                                    # be useful down the line
-                                    pass
-                            else:
-                                pass  # currently empty
-                    if do_touch:
-                        self.touch_tip(touch_tip)
-                    if do_blow:
-                        self._blowout_during_transfer(dispense['location'], **kwargs)
-                    if do_drop:
-                        tips = self._drop_tip_during_transfer(tips, i, total_transfers, **kwargs)
-                else:
-                    if air_gap:
-                        self.air_gap(air_gap)
-                    if do_touch:
-                        self.touch_tip(touch_tip)
+                                    # if we can, account for any overspill in the next aspirate
+                                    if self.current_volume > 0:
+                                        if self.has_disposal_vol(plan, i + 1, step_info_map, **kwargs):
+                                            next_aspirate = plan[i + 1].get('aspirate'); assert next_aspirate
+                                            next_aspirated_well, __ = unpack_location(next_aspirate['location'])
+                                            if self.prev_aspirated_well is next_aspirated_well:
+                                                new_aspirate_vol = zeroify(next_aspirate.get('volume') - self.current_volume)
+                                                if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
+                                                    next_aspirate['volume'] = new_aspirate_vol
+                                                    info(
+                                                        pretty.format('reduced next aspirate by {0:n} uL', self.current_volume))
+                                                else:
+                                                    do_blow = True
+                                            else:
+                                                do_blow = True  # different aspirate locations
+                                        else:
+                                            # Next aspirate doesn't *want* our overspill, so we don't reduce his
+                                            # volume. But it's harmless to just leave the overspill present; might
+                                            # be useful down the line
+                                            pass
+                                    else:
+                                        pass  # currently empty
+                            if do_touch:
+                                self.touch_tip(touch_tip)
+                            if do_blow:
+                                self._blowout_during_transfer(dispense['location'], **kwargs)
+                            if do_drop:
+                                tips = self._drop_tip_during_transfer(tips, i, total_transfers, **kwargs)
+                        else:
+                            if air_gap:
+                                self.air_gap(air_gap)
+                            if do_touch:
+                                self.touch_tip(touch_tip)
 
     #-------------------------------------------------------------------------------------------------------------------
     # Aspirate and dispense
     #-------------------------------------------------------------------------------------------------------------------
 
-    def _pre_wet(self, well: EnhancedWellV1, volume, location: Placeable, rate, pre_wet: bool):
-        if pre_wet is None:
-            pre_wet = self.aspirate_params_hack.pre_wet_transfer
-        if pre_wet is None:
-            pre_wet = self.config.aspirate.pre_wet.default
-        if pre_wet and self.config.enable_enhancements:
-            if self.tip_wetness is TipWetness.DRY:
-                pre_wet_volume = min(
-                    self.max_volume * self.config.aspirate.pre_wet.max_volume_fraction,
-                    max(volume, well.liquid_volume.available_volume_min))
-                pre_wet_rate = self.config.aspirate.pre_wet.rate_func(rate)
-                self.tip_wetness = TipWetness.WETTING
-                def do_pre_wet():
-                    for i in range(self.config.aspirate.pre_wet.count):
-                        self.aspirate(volume=pre_wet_volume, location=location, rate=pre_wet_rate, pre_wet=False, ms_pause=0)
-                        self.dispense(volume=pre_wet_volume, location=location, rate=pre_wet_rate, full_dispense=(i+1 == self.config.aspirate.pre_wet.count))
-                info_while(pretty.format('prewetting tip in well {0} vol={1:n}', well.get_name(), pre_wet_volume), do_pre_wet)
-                self.tip_wetness = TipWetness.WET
-
-    def aspirate(self, volume=None, location=None, rate: Real = 1.0, pre_wet: bool = None, ms_pause: Real = None, top_clearance=None, bottom_clearance=None, manual_manufacture_tolerance=None):
+    def aspirate(self, volume=None, location=None, rate: float = 1.0, pre_wet: bool = None, ms_pause: float = None, top_clearance=None, bottom_clearance=None, manual_liquid_volume_allowance=None):
         if not helpers.is_number(volume):  # recapitulate super
             if volume and not location:
                 location = volume
@@ -381,52 +306,49 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
         well, _ = unpack_location(location)
 
         if top_clearance is None:
-            top_clearance = self.aspirate_params_hack.top_clearance_transfer
+            if tls.aspirate_params_transfer:
+                top_clearance = tls.aspirate_params_transfer.top_clearance_transfer
             if top_clearance is None:
                 top_clearance = self.config.aspirate.top_clearance
         if bottom_clearance is None:
-            bottom_clearance = self.aspirate_params_hack.bottom_clearance_transfer
+            if tls.aspirate_params_transfer:
+                bottom_clearance = tls.aspirate_params_transfer.bottom_clearance_transfer
             if bottom_clearance is None:
                 bottom_clearance = self.config.aspirate.bottom_clearance
-        if manual_manufacture_tolerance is None:
-            manual_manufacture_tolerance = self.aspirate_params_hack.manual_manufacture_tolerance_transfer
-            if manual_manufacture_tolerance is None:
-                manual_manufacture_tolerance = self.config.aspirate.manual_manufacture_tolerance
+        if manual_liquid_volume_allowance is None:
+            if tls.aspirate_params_transfer:
+                manual_liquid_volume_allowance = tls.aspirate_params_transfer.manual_manufacture_tolerance_transfer
+            if manual_liquid_volume_allowance is None:
+                manual_liquid_volume_allowance = self.config.aspirate.manual_liquid_volume_allowance
 
         current_liquid_volume = well.liquid_volume.current_volume_min
-        needed_liquid_volume = well.geometry.min_aspiratable_volume + volume;
+        needed_liquid_volume = well.geometry.min_aspiratable_volume + volume
         if current_liquid_volume < needed_liquid_volume:
             msg = pretty.format('aspirating too much from well={0} have={1:n} need={2:n}', well.get_name(), current_liquid_volume, needed_liquid_volume)
             warn(msg)
 
         self._pre_wet(well, volume, location, rate, pre_wet)
-        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume, top_clearance=top_clearance, bottom_clearance=bottom_clearance, manual_manufacture_tolerance=manual_manufacture_tolerance)
+        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=volume, top_clearance=top_clearance, bottom_clearance=bottom_clearance, manual_liquid_volume_allowance=manual_liquid_volume_allowance)
 
-        def func():
-            # calls to mover.move() in super() used stylized pose-tree management
-            super(EnhancedPipetteV1, self).aspirate(volume=volume, location=location, rate=rate)
-        self._update_pose_tree_in_place(func)
+        def call_super():
+            super(EnhancedPipette, self).aspirate(volume=volume, location=location, rate=rate)
+        self._update_pose_tree_in_place(call_super)
 
-        # if we're asked to, pause after aspiration to let liquid rise
-        if ms_pause is None:
-            ms_pause = self.aspirate_params_hack.ms_pause_transfer
-        if ms_pause is None:
-            ms_pause = self.config.aspirate.pause.ms_default
-        if self.config.enable_enhancements and ms_pause > 0 and not self.is_mix_in_progress():
-            self.dwell(seconds=ms_pause / 1000.0)
+        self.pause_after_aspirate(ms_pause)
 
-        # track volume todo: what if we're doing an air gap
+        # finish up todo: what if we're doing an air gap
         well, __ = unpack_location(location)
         well.liquid_volume.aspirate(volume)
         if volume != 0:
-            self.prev_aspirated_location = well
+            self.prev_aspirated_well = well
 
     def _aspirate_during_transfer(self, vol, loc, **kwargs):
-        self.aspirate_params_hack.unsequester_transfer(kwargs)
+        assert tls.aspirate_params_transfer
+        tls.aspirate_params_transfer.unsequester(kwargs)
         super()._aspirate_during_transfer(vol, loc, **kwargs)  # might 'mix_before' todo: is that ok? seems like it is...
-        self.aspirate_params_hack.clear_transfer()
+        tls.aspirate_params_transfer.clear()
 
-    def dispense(self, volume=None, location=None, rate=1.0, full_dispense: bool = False, top_clearance=None, bottom_clearance=None, manual_manufacture_tolerance=None):
+    def dispense(self, volume=None, location=None, rate=1.0, full_dispense: bool = False, top_clearance=None, bottom_clearance=None, manual_liquid_volume_allowance=None):
         if not helpers.is_number(volume):  # recapitulate super
             if volume and not location:
                 location = volume
@@ -435,75 +357,61 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
         well, _ = unpack_location(location)
 
         if top_clearance is None:
-            top_clearance = self.dispense_params_hack.top_clearance_transfer
+            if tls.dispense_params_transfer:
+                top_clearance = tls.dispense_params_transfer.top_clearance_transfer
             if top_clearance is None:
                 top_clearance = self.config.dispense.top_clearance
         if bottom_clearance is None:
-            bottom_clearance = self.dispense_params_hack.bottom_clearance_transfer
+            if tls.dispense_params_transfer:
+                bottom_clearance = tls.dispense_params_transfer.bottom_clearance_transfer
             if bottom_clearance is None:
                 bottom_clearance = self.config.dispense.bottom_clearance
-        if manual_manufacture_tolerance is None:
-            manual_manufacture_tolerance = self.aspirate_params_hack.manual_manufacture_tolerance_transfer
-            if manual_manufacture_tolerance is None:
-                manual_manufacture_tolerance = self.config.dispense.manual_manufacture_tolerance
+        if manual_liquid_volume_allowance is None:
+            if tls.dispense_params_transfer:
+                manual_liquid_volume_allowance = tls.dispense_params_transfer.manual_manufacture_tolerance_transfer
+            if manual_liquid_volume_allowance is None:
+                manual_liquid_volume_allowance = self.config.dispense.manual_liquid_volume_allowance
 
         if is_close(volume, self.current_volume):  # avoid finicky floating-point precision issues
             volume = self.current_volume
-        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None, top_clearance=top_clearance, bottom_clearance=bottom_clearance, manual_manufacture_tolerance=manual_manufacture_tolerance)
-        self.dispense_params_hack.full_dispense_from_dispense = full_dispense
+        location = self._adjust_location_to_liquid_top(location=location, aspirate_volume=None, top_clearance=top_clearance, bottom_clearance=bottom_clearance, manual_liquid_volume_allowance=manual_liquid_volume_allowance)
 
-        def func():
-            # calls to mover.move() in super() used stylized pose-tree management
-            super(EnhancedPipetteV1, self).dispense(volume=volume, location=location, rate=rate)
-        self._update_pose_tree_in_place(func)
+        with DispenseParams():
+            tls.dispense_params.full_dispense_from_dispense = full_dispense
 
-        self.dispense_params_hack.full_dispense_from_dispense = False
-        if self.dispense_params_hack.fully_dispensed:
-            assert self.current_volume == 0
-            if self.current_volume == 0:
-                pass  # nothing to do: the next self._position_for_aspirate will reposition for us: 'if pipette is currently empty, ensure the plunger is at "bottom"'
-            else:
-                raise NotImplementedError
-            self.dispense_params_hack.fully_dispensed = False
-        # track volume
-        well, __ = unpack_location(location)
-        well.liquid_volume.dispense(volume)
+            def call_super():
+                super(EnhancedPipette, self).dispense(volume=volume, location=location, rate=rate)
+            self._update_pose_tree_in_place(call_super)
+
+            if tls.dispense_params.fully_dispensed:
+                assert self.current_volume == 0
+                if self.current_volume == 0:
+                    pass  # nothing to do: the next self._position_for_aspirate will reposition for us: 'if pipette is currently empty, ensure the plunger is at "bottom"'
+                else:
+                    raise NotImplementedError
+
+            # track volume
+            well, __ = unpack_location(location)
+            well.liquid_volume.dispense(volume)
 
     def _dispense_during_transfer(self, vol, loc, **kwargs):
-        self.dispense_params_hack.unsequester_transfer(kwargs)
+        tls.dispense_params_transfer.unsequester(kwargs)
         super()._dispense_during_transfer(vol, loc, **kwargs)  # might 'mix_after' todo: is that ok? probably: we'd just do full_dispense on all of those too?
-        self.dispense_params_hack.clear_transfer()
+        tls.dispense_params_transfer.clear()
 
     def _dispense_plunger_position(self, ul):
+        assert tls.dispense_params
         mm_from_vol = super()._dispense_plunger_position(ul)  # retrieve position historically used
-        if self.config.enable_enhancements and (self.dispense_params_hack.full_dispense_from_dispense or self.dispense_params_hack.full_dispense_transfer):
+        if self.config.enable_enhancements and \
+                (tls.dispense_params.full_dispense_from_dispense or
+                 (tls.dispense_params_transfer and tls.dispense_params_transfer.full_dispense_transfer)):
             mm_from_blow = self._get_plunger_position('blow_out')
             info(pretty.format('full dispensing to mm={0:n} instead of mm={1:n}', mm_from_blow, mm_from_vol))
-            self.dispense_params_hack.fully_dispensed = True
+            tls.dispense_params.fully_dispensed = True
             return mm_from_blow
         else:
-            self.dispense_params_hack.fully_dispensed = False
+            tls.dispense_params.fully_dispensed = False
             return mm_from_vol
-
-    def _adjust_location_to_liquid_top(self, location=None, aspirate_volume=None, top_clearance=None, bottom_clearance=None, allow_above=False, manual_manufacture_tolerance=0):
-        if isinstance(location, EnhancedWellV1):
-            well = location; assert is_well_v1(well)
-            current_liquid_volume = well.liquid_volume.current_volume_min
-            # if the well isn't machine made, don't go so close to the top
-            if not well.liquid_volume.made_by_machine:
-                current_liquid_volume = current_liquid_volume * (1 - manual_manufacture_tolerance)
-            liquid_depth = well.geometry.liquid_depth_from_volume_min(current_liquid_volume if aspirate_volume is None else current_liquid_volume - aspirate_volume)
-            z = self._top_clearance(liquid_depth=liquid_depth, clearance=(0 if top_clearance is None else top_clearance))
-            if bottom_clearance is not None:
-                z = max(z, bottom_clearance)
-            if not allow_above:
-                z = min(z, well.z_size())
-            result = well.bottom(z)
-        else:
-            assert not isinstance(location, Placeable)
-            result = location  # we already had a displacement baked in to the location, don't adjust (when does this happen?)
-        assert isinstance(result, tuple)
-        return result
 
     #-------------------------------------------------------------------------------------------------------------------
     # Movement
@@ -715,13 +623,6 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
 
         log_while(f'{msg} {[well.get_name() for well in wells]}', do_layered_mix)
 
-    def _top_clearance(self, liquid_depth, clearance):
-        assert liquid_depth >= 0
-        if clearance > 0:
-            return liquid_depth + clearance  # going up
-        else:
-            return liquid_depth + clearance  # going down. we used to clamp to at least a fraction of the current liquid depth, but not worthwhile as tube modelling accuracy has improved
-
     def _layered_mix_one(self, well: EnhancedWellV1, msg, **kwargs):
         def fetch(name, default=None):
             if default is None:
@@ -813,3 +714,26 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
                 self.dwell(seconds=ms_final_pause / 1000.0)
 
         info_while(msg, do_one)
+
+
+def verify_well_locations(well_list: List[EnhancedWellV1], pipette: EnhancedPipetteV1):
+    picked_tip = False
+    if not pipette.tip_attached:
+        pipette.pick_up_tip()
+        picked_tip = True
+
+    for well in well_list:
+        move_to_loc = well.top()
+        pipette.move_to(move_to_loc)
+        #
+        well_top_coords_absolute = well.top_coords_absolute()
+        _, top_coords = unpack_location(well.top())
+        _, move_to_coords = unpack_location(move_to_loc)
+        intended_coords = well_top_coords_absolute + (move_to_coords - top_coords)
+        tip_coords = pipette.tip_coords_absolute()
+        #
+        robot.pause(
+            pretty.format('verify location: {0} in {1} loc={2} tip={3}', well.get_name(), well.parent.get_name(), intended_coords, tip_coords))
+
+    if picked_tip:
+        pipette.return_tip()  # we didn't dirty it, we can always re-use it todo: enhance return_tip() to adjust iterator so that next pick can pick up again

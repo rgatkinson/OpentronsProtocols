@@ -16,16 +16,18 @@ from opentrons.protocols.types import APIVersion
 from rgatkinson.configuration import WellGeometryConfigurationContext
 from rgatkinson.interval import Interval, infimum
 from rgatkinson.liquid import LiquidVolume
+from rgatkinson.types import EnhancedWellType
 from rgatkinson.util import sqrt, square, cube, cubeRoot, instance_count, tls, infinity
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Utility
 #-----------------------------------------------------------------------------------------------------------------------
 
-EnhancedWellType = Union['EnhancedWell']
-
 def is_well_v1(location):
     return isinstance(location, WellV1)
+
+def is_well_v2(location):
+    return isinstance(location, WellV2)
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Geometries
@@ -804,6 +806,25 @@ class EnhancedWellV2(EnhancedWell, WellV2):
     @property
     def well_depth(self):
         return self._depth
+
+    def x_size(self):
+        result = infinity
+        if self.diameter:
+            result = min(result, self.diameter)
+        if self._length:
+            result = min(result, self._length)
+        return result
+
+    def y_size(self):
+        result = infinity
+        if self.diameter:
+            result = min(result, self.diameter)
+        if self._width:
+            result = min(result, self._width)
+        return result
+
+    def z_size(self):
+        return self.well_depth
 
     def top_coords_absolute(self):
         pass  # WRONG

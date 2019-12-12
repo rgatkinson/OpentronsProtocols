@@ -8,13 +8,12 @@ metadata = {
     'description': 'Tests precision by pipetting water in various mass sizes'
 }
 
-from opentrons import instruments, labware, modules, robot, types
-
-from rgatkinson import *
+from rgatkinson.configuration import config
 from rgatkinson.custom_labware import labware_manager
+from rgatkinson.instruments import instruments_manager
 from rgatkinson.liquid import note_liquid
-from rgatkinson.logging import log
-from rgatkinson.pipette import instruments_manager
+from rgatkinson.logging import log, pretty
+from rgatkinson.well import Eppendorf1Point5MlTubeGeometry
 
 ########################################################################################################################
 # Configurable protocol parameters
@@ -55,7 +54,7 @@ for i in range(num_masses):
         mass_wells.append(well)
 
 for well in mass_wells:
-    Eppendorf1Point5MlTubeGeometryV1(well)
+    Eppendorf1Point5MlTubeGeometry(well)
 
 log('Liquid Names')
 note_liquid(location=water, name='Water', initially_at_least=15000)  # volume is rough guess

@@ -9,7 +9,7 @@ a designated volume in destination.
 from opentrons import labware, instruments, robot, modules
 
 from rgatkinson.custom_labware import labware_manager
-from rgatkinson.pipette import instruments_manager
+from rgatkinson.instruments import instruments_manager
 
 metadata = {
     'protocolName': 'Dilution in Tubes',

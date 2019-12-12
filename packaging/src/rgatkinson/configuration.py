@@ -11,8 +11,21 @@ class ExecutionContext(object):
     One instance of this across all configuration contexts
     """
     def __init__(self):
-        self.protocol_context: protocol_api.ProtocolContext = None
+        self.__protocol_context: protocol_api.ProtocolContext = None
         self.__liquids = None
+
+    @property
+    def protocol_context(self) -> protocol_api.ProtocolContext:
+        return self.__protocol_context
+
+    @protocol_context.setter
+    def protocol_context(self, protocol_context: protocol_api.ProtocolContext):
+        # Hook the HardwareManager with our extensions
+        if protocol_context:  # will be None in v1
+            from rgatkinson.hardware import EnhancedHardwareManager
+            if not isinstance(protocol_context._hw_manager, EnhancedHardwareManager):
+                EnhancedHardwareManager.hook(protocol_context._hw_manager)
+        self.__protocol_context = protocol_context
 
     @property
     def liquids(self):  # deferred creation to avoid initialization cycles between modules
@@ -35,6 +48,14 @@ class AbstractConfigurationContext(object):
     def isApiV1(self):
         return self.execution_context.isApiV1
 
+    @property
+    def protocol_context(self):
+        return self.execution_context.protocol_context
+
+    @protocol_context.setter
+    def protocol_context(self, value):
+        self.execution_context.protocol_context = value
+
 class SimpleConfigurationContext(AbstractConfigurationContext):
     def __init__(self, execution_context: ExecutionContext):
         super().__init__(execution_context)
@@ -45,11 +66,11 @@ class PauseConfigurationContext(AbstractConfigurationContext):
         self.ms_default = ms_default
 
 class ClearanceConfigurationContext(AbstractConfigurationContext):
-    def __init__(self, execution_context: ExecutionContext, top, bottom, manual_manufacture_tolerance):
+    def __init__(self, execution_context: ExecutionContext, top, bottom, manual_liquid_volume_allowance):
         super().__init__(execution_context)
         self.top_clearance = top
         self.bottom_clearance = bottom
-        self.manual_manufacture_tolerance = manual_manufacture_tolerance
+        self.manual_liquid_volume_allowance = manual_liquid_volume_allowance
 
 class AspirateConfigurationContext(ClearanceConfigurationContext):
     def __init__(self, execution_context: ExecutionContext):
@@ -104,14 +125,5 @@ class TopConfigurationContext(AbstractConfigurationContext):
         self.dispense: DispenseConfigurationContext = DispenseConfigurationContext(execution_context)
         self.layered_mix: LayeredMixConfigurationContext = LayeredMixConfigurationContext(execution_context)
         self.wells = WellGeometryConfigurationContext(execution_context)
-
-    @property
-    def protocol_context(self):
-        return self.execution_context.protocol_context
-
-    @protocol_context.setter
-    def protocol_context(self, value):
-        self.execution_context.protocol_context = value
-
 
 config: TopConfigurationContext = TopConfigurationContext(ExecutionContext())

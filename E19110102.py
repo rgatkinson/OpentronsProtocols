@@ -14,7 +14,8 @@ from rgatkinson.configuration import config
 from rgatkinson.custom_labware import labware_manager
 from rgatkinson.liquid import note_liquid
 from rgatkinson.logging import log, info
-from rgatkinson.pipette import verify_well_locations, instruments_manager
+from rgatkinson.instruments import instruments_manager
+from rgatkinson.pipettev1 import verify_well_locations
 
 ########################################################################################################################
 # Configurable protocol parameters

@@ -184,7 +184,7 @@ class PerfHackManager(object):
             mover.Mover.move = mover_move
             mover.Mover.update_pose_from_driver = mover_update_pose_from_driver
             #
-            from rgatkinson.pipette import EnhancedPipetteV1
+            from rgatkinson.pipettev1 import EnhancedPipetteV1
             tls.update_pose_tree_in_place = False
             EnhancedPipetteV1.install_perf_hacks()
             #

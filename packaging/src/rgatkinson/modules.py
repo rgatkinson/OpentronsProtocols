@@ -4,7 +4,6 @@
 
 from opentrons import modules
 
-from rgatkinson.configuration import TopConfigurationContext
 from rgatkinson.util import tls
 
 class ModulesManager(object):
@@ -13,7 +12,10 @@ class ModulesManager(object):
 
     def load(self, name, slot):
         if self.config.execution_context.isApiV1:
-            return modules.load(name, slot)
-        return None  # WRONG
+            result = modules.load(name, slot)
+        else:
+            result = self.config.protocol_context.load_module(name, slot)
+        return result
+
 
 modules_manager = ModulesManager()
