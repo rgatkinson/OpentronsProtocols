@@ -17,7 +17,10 @@ from rgatkinson.configuration import WellGeometryConfigurationContext
 from rgatkinson.interval import Interval, infimum
 from rgatkinson.liquid import LiquidVolume
 from rgatkinson.types import EnhancedWellType
-from rgatkinson.util import sqrt, square, cube, cubeRoot, instance_count, tls, infinity
+from rgatkinson.tls import tls
+from rgatkinson.collection_util import instance_count
+from rgatkinson.math_util import square, cube, sqrt, cubeRoot, infinity
+
 
 #-----------------------------------------------------------------------------------------------------------------------
 # Utility

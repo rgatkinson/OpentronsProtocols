@@ -4,7 +4,7 @@
 
 from opentrons import modules
 
-from rgatkinson.util import tls
+from rgatkinson.tls import tls
 
 class ModulesManager(object):
     def __init__(self):

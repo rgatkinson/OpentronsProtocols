@@ -10,8 +10,8 @@ from opentrons.legacy_api.containers import Container
 from opentrons.util.vector import Vector
 
 from rgatkinson.configuration import TopConfigurationContext
-from rgatkinson.interval import fpu
-from rgatkinson.util import is_indexable, tls, infinity
+from rgatkinson.tls import tls
+from rgatkinson.math_util import is_indexable, infinity
 from rgatkinson.well import WellGeometry, Eppendorf5Point0MlTubeGeometry, Biorad96WellPlateWellGeometry, Eppendorf1Point5MlTubeGeometry, FalconTube15MlGeometry, FalconTube50MlGeometry, EnhancedWellV1, UnknownWellGeometry
 
 

@@ -5,7 +5,7 @@ from opentrons.legacy_api.instruments import Pipette
 from opentrons.protocol_api import InstrumentContext
 
 from rgatkinson.types import PipetteName
-from rgatkinson.util import tls
+from rgatkinson.tls import tls
 
 
 class InstrumentsManager(object):

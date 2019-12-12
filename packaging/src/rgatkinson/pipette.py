@@ -7,7 +7,8 @@ from abc import abstractmethod
 from rgatkinson.configuration import TopConfigurationContext, AspirateConfigurationContext, DispenseConfigurationContext
 from rgatkinson.logging import pretty, info_while
 from rgatkinson.types import TipWetness
-from rgatkinson.util import sqrt, infinity, tls
+from rgatkinson.tls import tls
+from rgatkinson.math_util import sqrt, infinity
 from rgatkinson.well import FalconTube15MlGeometry, FalconTube50MlGeometry, Eppendorf5Point0MlTubeGeometry, \
     Eppendorf1Point5MlTubeGeometry, IdtTubeWellGeometry, Biorad96WellPlateWellGeometry, EnhancedWellV1, \
     EnhancedWell, EnhancedWellV2

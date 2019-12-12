@@ -13,7 +13,8 @@ from opentrons.protocol_api.util import Clearances
 from rgatkinson.configuration import TopConfigurationContext
 from rgatkinson.logging import info, log_while_core, pretty, warn
 from rgatkinson.pipette import EnhancedPipette, DispenseParams
-from rgatkinson.util import tls, is_close
+from rgatkinson.tls import tls
+from rgatkinson.math_util import is_close
 from rgatkinson.well import EnhancedWellV2
 
 

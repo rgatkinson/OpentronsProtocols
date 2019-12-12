@@ -5,12 +5,12 @@ import json
 from enum import Enum
 
 from opentrons import robot
-from opentrons.legacy_api.containers import unpack_location
 
 import rgatkinson
+from rgatkinson.collection_util import first, well_vector
 from rgatkinson.interval import supremum, Interval, fpu, is_interval, infimum
 from rgatkinson.logging import pretty, get_location_path
-from rgatkinson.util import first, is_scalar, is_close, infinity
+from rgatkinson.math_util import is_scalar, is_close, infinity
 
 
 class Liquid:
@@ -365,7 +365,7 @@ def note_liquid(location, name=None, initially=None, initially_at_least=None, co
     if local_config is None:
         local_config = rgatkinson.configuration.config
 
-    well, __ = unpack_location(location)
+    well, __ = well_vector(location)
     if name is None:
         name = well.label
     else:

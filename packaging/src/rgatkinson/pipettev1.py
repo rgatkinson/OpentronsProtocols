@@ -7,7 +7,6 @@ from typing import List
 
 from opentrons import instruments, robot
 from opentrons.helpers import helpers
-from opentrons.legacy_api.containers import unpack_location
 from opentrons.legacy_api.instruments import Pipette
 from opentrons.legacy_api.instruments.pipette import SHAKE_OFF_TIPS_DROP_DISTANCE, SHAKE_OFF_TIPS_SPEED
 from opentrons.trackers import pose_tracker
@@ -17,7 +16,9 @@ from rgatkinson.configuration import TopConfigurationContext
 from rgatkinson.logging import log_while_core, info, warn, info_while, log_while, pretty
 from rgatkinson.pipette import EnhancedPipette, AspirateParamsTransfer, DispenseParamsTransfer, DispenseParams
 from rgatkinson.types import TipWetness
-from rgatkinson.util import tls, infinity, zeroify, is_close
+from rgatkinson.tls import tls
+from rgatkinson.collection_util import well_vector
+from rgatkinson.math_util import zeroify, is_close, infinity
 from rgatkinson.well import EnhancedWellV1
 
 
@@ -185,7 +186,7 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
                                 warn("simultaneous use of 'pre_wet' and 'mix_before' is not tested")
 
                             if (kwargs.get('allow_overspill', self.config.allow_overspill_default) and self.config.enable_enhancements) and zeroify(self.current_volume) > 0:
-                                this_aspirated_well, __ = unpack_location(aspirate['location'])
+                                this_aspirated_well, __ = well_vector(aspirate['location'])
                                 if self.prev_aspirated_well is this_aspirated_well:
                                     if have_disposal_vol:
                                         # try to remove current volume from this aspirate
@@ -263,7 +264,7 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
                                     if self.current_volume > 0:
                                         if self.has_disposal_vol(plan, i + 1, step_info_map, **kwargs):
                                             next_aspirate = plan[i + 1].get('aspirate'); assert next_aspirate
-                                            next_aspirated_well, __ = unpack_location(next_aspirate['location'])
+                                            next_aspirated_well, __ = well_vector(next_aspirate['location'])
                                             if self.prev_aspirated_well is next_aspirated_well:
                                                 new_aspirate_vol = zeroify(next_aspirate.get('volume') - self.current_volume)
                                                 if new_aspirate_vol == 0 or new_aspirate_vol >= self.min_volume:
@@ -303,7 +304,7 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
                 location = volume
             volume = self._working_volume - self.current_volume
         location = location if location else self.previous_placeable
-        well, _ = unpack_location(location)
+        well, _ = well_vector(location)
 
         if top_clearance is None:
             if tls.aspirate_params_transfer:
@@ -337,7 +338,7 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
         self.pause_after_aspirate(ms_pause)
 
         # finish up todo: what if we're doing an air gap
-        well, __ = unpack_location(location)
+        well, __ = well_vector(location)
         well.liquid_volume.aspirate(volume)
         if volume != 0:
             self.prev_aspirated_well = well
@@ -354,7 +355,7 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
                 location = volume
             volume = self._working_volume - self.current_volume
         location = location if location else self.previous_placeable
-        well, _ = unpack_location(location)
+        well, _ = well_vector(location)
 
         if top_clearance is None:
             if tls.dispense_params_transfer:
@@ -391,7 +392,7 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
                     raise NotImplementedError
 
             # track volume
-            well, __ = unpack_location(location)
+            well, __ = well_vector(location)
             well.liquid_volume.dispense(volume)
 
     def _dispense_during_transfer(self, vol, loc, **kwargs):
@@ -511,7 +512,7 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
         # Modelled after Pipette._shake_off_tips()
         shake_off_distance = SHAKE_OFF_TIPS_DROP_DISTANCE / 2  # / 2 == less distance than shaking off tips
         if location:
-            placeable, _ = unpack_location(location)
+            placeable, _ = well_vector(location)
             # ensure the distance is not >25% the diameter of placeable
             x = placeable.x_size()
             if x != 0:  # trash well has size zero
@@ -727,8 +728,8 @@ def verify_well_locations(well_list: List[EnhancedWellV1], pipette: EnhancedPipe
         pipette.move_to(move_to_loc)
         #
         well_top_coords_absolute = well.top_coords_absolute()
-        _, top_coords = unpack_location(well.top())
-        _, move_to_coords = unpack_location(move_to_loc)
+        _, top_coords = well_vector(well.top())
+        _, move_to_coords = well_vector(move_to_loc)
         intended_coords = well_top_coords_absolute + (move_to_coords - top_coords)
         tip_coords = pipette.tip_coords_absolute()
         #

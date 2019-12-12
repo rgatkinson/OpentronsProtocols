@@ -5,7 +5,7 @@
 import string
 import warnings
 from functools import wraps
-from rgatkinson.util import is_integer, is_nan, infinity
+from rgatkinson.math_util import is_integer, is_nan, infinity
 
 
 ########################################################################################################################

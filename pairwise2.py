@@ -17,7 +17,7 @@ from rgatkinson.liquid import note_liquid, Concentration
 from rgatkinson.logging import log, fatal, user_prompt, info, pretty, warn
 from rgatkinson.modules import modules_manager
 from rgatkinson.pipettev1 import EnhancedPipetteV1
-from rgatkinson.util import infinity
+from rgatkinson.math_util import infinity
 from rgatkinson.well import IdtTubeWellGeometry
 
 ########################################################################################################################

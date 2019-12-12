@@ -7,7 +7,8 @@ import numpy as np
 from numpy.linalg import inv
 from opentrons.trackers.pose_tracker import Point, translate, change_base, ascend, ROOT
 
-from rgatkinson.util import is_close, tls
+from rgatkinson.tls import tls
+from rgatkinson.math_util import is_close
 
 
 #-----------------------------------------------------------------------------------------------------------------------

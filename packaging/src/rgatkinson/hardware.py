@@ -4,7 +4,7 @@
 from opentrons.hardware_control import adapters, API, Pipette, Controller
 from opentrons.protocol_api.util import HardwareManager
 
-from rgatkinson.util import tls
+from rgatkinson.tls import tls
 
 ########################################################################################################################
 
