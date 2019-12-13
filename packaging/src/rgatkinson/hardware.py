@@ -15,16 +15,16 @@ class EnhancedAPI(API):
     #-------------------------------------------------------------------------------------------------------------------
 
     @classmethod
-    def hook(cls, parentInst: API):
-        return cls(parentInst)
+    def hook(cls, existingInstance: API):
+        return cls(existingInstance)
 
-    def __new__(cls, parentInst: API):
-        assert isinstance(parentInst, API)
-        parentInst.__class__ = EnhancedAPI
-        return parentInst
+    def __new__(cls, existingInstance: API):
+        assert isinstance(existingInstance, API)
+        existingInstance.__class__ = EnhancedAPI
+        return existingInstance
 
     # noinspection PyMissingConstructor
-    def __init__(self, parentInst: API):
+    def __init__(self, existingInstance: API):
         pass
 
     #-------------------------------------------------------------------------------------------------------------------
@@ -68,16 +68,16 @@ class EnhancedHardwareManager(HardwareManager):
     #-------------------------------------------------------------------------------------------------------------------
 
     @classmethod
-    def hook(cls, parentInst: HardwareManager):
-        return cls(parentInst)
+    def hook(cls, existingInstance: HardwareManager):
+        return cls(existingInstance)
 
-    def __new__(cls, parentInst: HardwareManager):
-        assert isinstance(parentInst, HardwareManager)
-        parentInst.__class__ = EnhancedHardwareManager
-        return parentInst
+    def __new__(cls, existingInstance: HardwareManager):
+        assert isinstance(existingInstance, HardwareManager)
+        existingInstance.__class__ = EnhancedHardwareManager
+        return existingInstance
 
     # noinspection PyMissingConstructor
-    def __init__(self, parentInst: HardwareManager):
+    def __init__(self, existingInstance: HardwareManager):
         self.config = tls.config
         #
         # more to come
@@ -87,7 +87,7 @@ class EnhancedHardwareManager(HardwareManager):
     # Accessing
     #-------------------------------------------------------------------------------------------------------------------
 
-    def enhanced_api(self):
+    def enhanced_hardware(self):
         target = super().hardware
         if isinstance(target, adapters.SynchronousAdapter):
             target = target._api
@@ -98,7 +98,7 @@ class EnhancedHardwareManager(HardwareManager):
 
     @property
     def hardware(self):
-        self.enhanced_api()
+        self.enhanced_hardware()  # make sure hook is in place
         return super().hardware
 
 

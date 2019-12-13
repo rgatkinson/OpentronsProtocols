@@ -4,9 +4,12 @@
 # Support for custom labware
 
 import collections
+from typing import Dict
 
 from opentrons import robot, labware
 from opentrons.legacy_api.containers import Container
+from opentrons.protocol_api.labware import LabwareDefinition, load as oload
+from opentrons.protocols.types import APIVersion
 from opentrons.util.vector import Vector
 
 from rgatkinson.configuration import TopConfigurationContext
@@ -340,9 +343,33 @@ class LabwareManager(object):
         from rgatkinson.perf_hacks import perf_hack_manager
         perf_hack_manager.install()
 
-    def load(self, name, slot, label=None, share=False, version=None, config: TopConfigurationContext = None, well_geometry=None, second_well_geometry=None, well_geometries: dict = None):
+    def load(self, name, slot,
+             label=None,
+             share=False,
+             namespace=None,
+             version=None,
+             config: TopConfigurationContext = None,
+             well_geometry=None,
+             second_well_geometry=None,
+             well_geometries: dict = None,
+             ):
         if config is None:
             config = tls.config
+
+        if config.isApiV1:
+            def loader():
+                return labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
+        else:
+            def loader():
+                if share:
+                    # this is from ModulesManager.load_labware_func()
+                    # logic here mirrors ModuleContext.load_labware()
+                    bundled_defs = config.protocol_context._bundled_labware
+                    extra_defs = config.protocol_context._extra_labware
+                    result = oload(load_name=name, parent=slot, label=label, namespace=namespace, version=version, bundled_defs=bundled_defs, extra_defs=extra_defs)
+                    return result
+                else:
+                    return config.protocol_context.load_labware(load_name=name, location=slot, label=label, namespace=namespace, version=version)
 
         def set_custom_well_geometries(custom_tube_rack: CustomTubeRackV1):
             if well_geometries is not None:
@@ -368,14 +395,14 @@ class LabwareManager(object):
         if name == 'biorad_96_wellplate_200ul_pcr':
             if well_geometry is None:
                 well_geometry = Biorad96WellPlateWellGeometry
-            result = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
+            result = loader()
             set_well_geometries(result)
             return result
 
         if name == 'opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap':
             if well_geometry is None:
                 well_geometry = Eppendorf1Point5MlTubeGeometry
-            result = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
+            result = loader()
             set_well_geometries(result)
             return result
 
@@ -385,7 +412,7 @@ class LabwareManager(object):
                 well_geometry = FalconTube15MlGeometry
             if second_well_geometry is None:
                 second_well_geometry = FalconTube50MlGeometry
-            result: Container = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
+            result: Container = loader()
             for well_name in ['A1', 'B1', 'C1', 'A2', 'B2', 'C2']:
                 well = result.wells(well_name)
                 well.geometry = well_geometry()
@@ -400,7 +427,7 @@ class LabwareManager(object):
             # https://labware.opentrons.com/opentrons_6_tuberack_falcon_50ml_conical?category=tubeRack
             if well_geometry is None:
                 well_geometry = FalconTube50MlGeometry
-            result: Container = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
+            result: Container = loader()
             set_well_geometries(result)
             return result
 
@@ -438,7 +465,7 @@ class LabwareManager(object):
         #---------------------------------------------------------------------------------------------------------------
 
         # If it's not something we know about, just pass it through. But set the geometry, if asked
-        result = labware.load(container_name=name, slot=slot, label=label, share=share, version=version)
+        result = loader()
         set_well_geometries(result)
         return result
 

@@ -41,16 +41,16 @@ class EnhancedPipetteV1(EnhancedPipette, Pipette):
     #-------------------------------------------------------------------------------------------------------------------
 
     @classmethod
-    def hook(cls, config: TopConfigurationContext, parentInst: Pipette):
-        return cls(config, parentInst)
+    def hook(cls, config: TopConfigurationContext, existingInstance: Pipette):
+        return cls(config, existingInstance)
 
-    def __new__(cls, config: TopConfigurationContext, parentInst: Pipette):
-        assert isinstance(parentInst, Pipette)
-        parentInst.__class__ = EnhancedPipetteV1
-        return parentInst
+    def __new__(cls, config: TopConfigurationContext, existingInstance: Pipette):
+        assert isinstance(existingInstance, Pipette)
+        existingInstance.__class__ = EnhancedPipetteV1
+        return existingInstance
 
     # noinspection PyMissingConstructor
-    def __init__(self, config: TopConfigurationContext, parentInst: Pipette):
+    def __init__(self, config: TopConfigurationContext, existingInstance: Pipette):
         super(EnhancedPipetteV1, self).__init__(config)
 
         # load the config (again) in order to extract some more data later

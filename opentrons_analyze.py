@@ -234,13 +234,13 @@ class EnhancedSimulatingSmoothieDriver(SmoothieDriver_3_0_0):
     # Construction
     #-------------------------------------------------------------------------------------------------------------------
 
-    def __new__(cls, parentInst: SmoothieDriver_3_0_0):
-        assert isinstance(parentInst, SmoothieDriver_3_0_0)
-        parentInst.__class__ = EnhancedSimulatingSmoothieDriver
-        return parentInst
+    def __new__(cls, existingInstance: SmoothieDriver_3_0_0):
+        assert isinstance(existingInstance, SmoothieDriver_3_0_0)
+        existingInstance.__class__ = EnhancedSimulatingSmoothieDriver
+        return existingInstance
 
     # noinspection PyMissingConstructor
-    def __init__(self, parentInst):
+    def __init__(self, existingInstance):
         self.simulated_mountings = dict()
 
     #-------------------------------------------------------------------------------------------------------------------

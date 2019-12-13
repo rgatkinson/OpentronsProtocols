@@ -26,16 +26,16 @@ class EnhancedPipetteV2(EnhancedPipette, InstrumentContext):
     #-------------------------------------------------------------------------------------------------------------------
 
     @classmethod
-    def hook(cls, config: TopConfigurationContext, parentInst: InstrumentContext):
-        return cls(config, parentInst)
+    def hook(cls, config: TopConfigurationContext, existingInstance: InstrumentContext):
+        return cls(config, existingInstance)
 
-    def __new__(cls, config: TopConfigurationContext, parentInst: InstrumentContext):
-        assert isinstance(parentInst, InstrumentContext)
-        parentInst.__class__ = EnhancedPipetteV2
-        return parentInst
+    def __new__(cls, config: TopConfigurationContext, existingInstance: InstrumentContext):
+        assert isinstance(existingInstance, InstrumentContext)
+        existingInstance.__class__ = EnhancedPipetteV2
+        return existingInstance
 
     # noinspection PyMissingConstructor
-    def __init__(self, config: TopConfigurationContext, parentInst: InstrumentContext):
+    def __init__(self, config: TopConfigurationContext, existingInstance: InstrumentContext):
         super(self).__init__(config)
         #
         # more to come
@@ -312,7 +312,7 @@ class EnhancedPipetteV2(EnhancedPipette, InstrumentContext):
             x = well.x_size()
             if x != 0:  # trash well has size zero
                 shake_off_dist = min(shake_off_dist, x / 4)
-        self._hw_manager.enhanced_api().shake_off_tips_drop(self._mount, shake_off_dist * 4)  # *4 because api will div by 4
+        self._hw_manager.enhanced_hardware().shake_off_tips_drop(self._mount, shake_off_dist * 4)  # *4 because api will div by 4
 
     #-------------------------------------------------------------------------------------------------------------------
     # Delaying
@@ -329,7 +329,7 @@ class EnhancedPipetteV2(EnhancedPipette, InstrumentContext):
 
         def do_dwell():
             self.config.protocol_context.pause()
-            self._hw_manager.enhanced_api().dwell(seconds)
+            self._hw_manager.enhanced_hardware().dwell(seconds)
             self.config.protocol_context.resume()
 
         log_while_core(msg, do_dwell)
