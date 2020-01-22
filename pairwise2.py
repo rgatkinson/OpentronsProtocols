@@ -17,7 +17,7 @@ from rgatkinson.liquid import note_liquid, Concentration
 from rgatkinson.logging import log, fatal, user_prompt, info, pretty, warn
 from rgatkinson.modules import modules_manager
 from rgatkinson.pipettev1 import EnhancedPipetteV1
-from rgatkinson.math_util import infinity
+from rgatkinson.math_util import infinity, float_range, mean
 from rgatkinson.well import IdtTubeWellGeometry
 
 ########################################################################################################################
@@ -49,8 +49,38 @@ waterB_initial_volume = 5000
 ## Protocol Design
 ########################################################################################################################
 
+def make_pair(a, b):
+    return {'StrandA': a, 'StrandB': b}
+
+# Figure out what each of the replica groups looks like
+def pair_up_strand_volumes(strand_a_vols, strand_b_vols):
+    for b in strand_b_vols:
+        for a in strand_a_vols:
+            yield make_pair(a, b)
+
 def run(protocol_context: protocol_api.ProtocolContext):
     config.protocol_context = protocol_context
+
+    ####################################################################################################################
+    ## Well volumes
+    ####################################################################################################################
+
+    strand_volume_min = 0
+    strand_volume_max = 28
+    strand_a_volume_count = 6
+    strand_b_volume_count = 5
+
+    # historic : strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
+    strand_a_volumes = list(float_range(strand_volume_min, strand_volume_max, strand_a_volume_count))
+    strand_b_volumes = list(float_range(strand_volume_min, strand_volume_max, strand_b_volume_count))
+
+    replica_groups = list(pair_up_strand_volumes(strand_a_volumes, strand_b_volumes))
+    replica_groups.append(make_pair(mean(strand_a_volumes[-2], strand_a_volumes[-3]), mean(strand_b_volumes[-2], strand_b_volumes[-3])))
+    replica_groups.append(make_pair(mean(strand_a_volumes[-1], strand_a_volumes[-2]), mean(strand_b_volumes[-1], strand_b_volumes[-2])))
+
+    ####################################################################################################################
+    ## Accounting
+    ####################################################################################################################
 
     num_columns = 12
     num_rows = 8
@@ -70,9 +100,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
     evagreen_per_well = total_well_volume / evagreen_source_concentration.molar * evagreen_target_concentration.molar
     dna_and_water_per_well = total_well_volume - buffer_per_well - evagreen_per_well
 
-    strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
-    low_strand_volumes = strand_volumes[0:4]
-    high_strand_volumes = strand_volumes[4:8]
+    assert len(replica_groups) == num_replica_groups
 
     ####################################################################################################################
     ## Strand Dilution
@@ -80,23 +108,13 @@ def run(protocol_context: protocol_api.ProtocolContext):
 
     # Diluting each strand
     strand_dilution_vol = 1200
-    strand_dilution_factor = max(strand_volumes) / total_well_volume * nominal_source_strand_concentration.molar / max_dna_working_concentration.molar
+    strand_dilution_factor = strand_volume_max / total_well_volume * nominal_source_strand_concentration.molar / max_dna_working_concentration.molar
     strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
     strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
 
     ####################################################################################################################
     ## Plating Volumes
     ####################################################################################################################
-
-    # Figure out what each of the replica groups looks like
-    def pair_up(strand_a_vols, strand_b_vols):
-        for b in strand_b_vols:
-            for a in strand_a_vols:
-                yield {'StrandA': a, 'StrandB': b}
-
-    replica_groups = list(pair_up(low_strand_volumes, low_strand_volumes))
-    replica_groups.extend(pair_up(high_strand_volumes, high_strand_volumes))
-    assert len(replica_groups) == num_replica_groups
 
     # Figure out the strand a, strand b, and per-well-water volumes
     def make_empty_plate():

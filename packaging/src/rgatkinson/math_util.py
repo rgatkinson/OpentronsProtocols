@@ -60,5 +60,14 @@ def is_close(x, y, atol=1e-08, rtol=1e-05):  # after numpy.isclose, but faster, 
         return True
     return abs(x-y) <= atol + rtol * abs(y)
 
+def float_range(start, stop, count):
+    cur = start
+    step = (stop - start) / (count - 1)
+    for i in range(count):
+        yield cur
+        cur = cur + step
+
+def mean(a, b):
+    return (a + b) / 2
 
 infinity = float('inf')
