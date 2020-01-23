@@ -25,8 +25,8 @@ from rgatkinson.well import IdtTubeWellGeometry
 ########################################################################################################################
 
 # Tip usage
-p50_start_tip = 'F5'
-p10_start_tip = 'B5'
+p50_start_tip = 'A1'
+p10_start_tip = 'A1'
 config.trash_control = True
 
 # Automation control
@@ -67,23 +67,21 @@ def run(protocol_context: protocol_api.ProtocolContext):
 
     strand_volume_min = 0
     strand_volume_max = 28
-    strand_a_volume_count = 6
-    strand_b_volume_count = 5
+    strand_a_volume_count = 8
+    strand_b_volume_count = 8
 
-    # historic : strand_volumes = [0, 2, 5, 8, 12, 16, 20, 28]
     strand_a_volumes = list(float_range(strand_volume_min, strand_volume_max, strand_a_volume_count))
     strand_b_volumes = list(float_range(strand_volume_min, strand_volume_max, strand_b_volume_count))
 
     replica_groups = list(pair_up_strand_volumes(strand_a_volumes, strand_b_volumes))
-    replica_groups.append(make_pair(mean(strand_a_volumes[-2], strand_a_volumes[-3]), mean(strand_b_volumes[-2], strand_b_volumes[-3])))
-    replica_groups.append(make_pair(mean(strand_a_volumes[-1], strand_a_volumes[-2]), mean(strand_b_volumes[-1], strand_b_volumes[-2])))
 
     ####################################################################################################################
     ## Accounting
     ####################################################################################################################
 
     num_columns = 12
-    num_rows = 8
+    num_rows_per_plate = 8
+    num_rows = num_rows_per_plate * 2
     num_wells = num_rows * num_columns
     num_replicates = 3
     num_replica_groups = num_wells // num_replicates
@@ -123,6 +121,21 @@ def run(protocol_context: protocol_api.ProtocolContext):
         for i in range(num_rows):
             result.append(row.copy())
         return result
+
+    def get_plate_array(plates):
+        result = []
+        for plate in plates:
+            for plate_row in plate.rows:
+                row = []
+                for well in plate_row:
+                    row.append(well)
+                result.append(row)
+        return result
+
+    def wells_of(plate_array):
+        for row in plate_array:
+            for well in row:
+                yield well
 
     strand_a_plate = make_empty_plate()
     strand_b_plate = make_empty_plate()
@@ -169,14 +182,25 @@ def run(protocol_context: protocol_api.ProtocolContext):
     # Labware
     ####################################################################################################################
 
+    slot_temp_module = 11
+    slot_plate0 = 6
+    slot_plate1 = 3
+    slot_tips300a = 1
+    slot_tips300b = 4
+    slot_tips300c = 7
+    slot_tips10 = 2
+    slot_eppendorf_1_5 = 5
+    slot_eppendorf_5_0 = 8
+
     # Configure the tips
-    tips300a = labware_manager.load('opentrons_96_tiprack_300ul', slot=1, label='tips300a')
-    tips10 = labware_manager.load('opentrons_96_tiprack_10ul', slot=4, label='tips10')
-    tips300b = labware_manager.load('opentrons_96_tiprack_300ul', slot=7, label='tips300b')
+    tips300a = labware_manager.load('opentrons_96_tiprack_300ul', slot=slot_tips300a, label='tips300a')
+    tips300b = labware_manager.load('opentrons_96_tiprack_300ul', slot=slot_tips300b, label='tips300b')
+    tips300c = labware_manager.load('opentrons_96_tiprack_300ul', slot=slot_tips300c, label='tips300c')
+    tips10 = labware_manager.load('opentrons_96_tiprack_10ul', slot=slot_tips10, label='tips10')
 
     # Configure the pipettes.
     p10 = instruments_manager.P10_Single(mount='left', tip_racks=[tips10])
-    p50 = instruments_manager.P50_Single(mount='right', tip_racks=[tips300a, tips300b])
+    p50 = instruments_manager.P50_Single(mount='right', tip_racks=[tips300a, tips300b, tips300c])
 
     # Blow out faster than default in an attempt to avoid hanging droplets on the pipettes after blowout (probably not needed any more)
     p10.set_flow_rate(blow_out=p10.get_flow_rates()['blow_out'] * config.blow_out_rate_factor)
@@ -186,15 +210,19 @@ def run(protocol_context: protocol_api.ProtocolContext):
     p10.start_at_tip(tips10[p10_start_tip])
     p50.start_at_tip(tips300a[p50_start_tip])
 
-    # Labware containers
-    eppendorf_1_5_rack = labware_manager.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', slot=5, label='eppendorf_1_5_rack')
-    plate = labware_manager.load('biorad_96_wellplate_200ul_pcr', slot=6, label='plate')
+    # Rack in which to manipulate strands
+    eppendorf_1_5_rack = labware_manager.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', slot=slot_eppendorf_1_5, label='eppendorf_1_5_rack')
+
+    # Plates to form our result. Multiple plates vertically concatenated
+    plate0 = labware_manager.load('biorad_96_wellplate_200ul_pcr', slot=slot_plate0, label='plate0')
+    plate1 = labware_manager.load('biorad_96_wellplate_200ul_pcr', slot=slot_plate1, label='plate1')
+    plate_array = get_plate_array([plate0, plate1])
 
     # Name specific places in the labware containers
     diluted_strand_a = eppendorf_1_5_rack['A6']
     diluted_strand_b = eppendorf_1_5_rack['B6']
 
-    eppendorf_5_0_rack = labware_manager.load('Atkinson_15_tuberack_5ml_eppendorf', slot=8, label='eppendorf_5_0_rack')
+    eppendorf_5_0_rack = labware_manager.load('Atkinson_15_tuberack_5ml_eppendorf', slot=slot_eppendorf_5_0, label='eppendorf_5_0_rack')
     master_mix = eppendorf_5_0_rack['A1']
     waterA = eppendorf_5_0_rack['C4']
     waterB = eppendorf_5_0_rack['C5']
@@ -264,9 +292,8 @@ def run(protocol_context: protocol_api.ProtocolContext):
 
         else:
             # Mostly just for fun, we put the ingredients for the master mix in a nice warm place to help them melt
-            temp_slot = 11
-            temp_module = modules_manager.load('tempdeck', slot=temp_slot)
-            screwcap_rack = labware_manager.load('opentrons_24_aluminumblock_generic_2ml_screwcap', slot=temp_slot, label='screwcap_rack', share=True, well_geometry=IdtTubeWellGeometry)
+            temp_module = modules_manager.load('tempdeck', slot=slot_temp_module)
+            screwcap_rack = labware_manager.load('opentrons_24_aluminumblock_generic_2ml_screwcap', slot=slot_temp_module, label='screwcap_rack', share=True, well_geometry=IdtTubeWellGeometry)
 
             buffers = list(zip(screwcap_rack.rows(0), buffer_volumes))
             evagreens = list(zip(screwcap_rack.rows(1), evagreen_volumes))
@@ -336,7 +363,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
                 p: EnhancedPipetteV1 = p10 if usesP10(volume) else p50
                 if not p.tip_attached:
                     p.pick_up_tip()
-                well = plate.rows(row).wells(col)
+                well = plate_array[row][col]
                 p.transfer(volume, master_mix, well,
                            new_tip='never',
                            trash=config.trash_control,
@@ -355,7 +382,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
                 p: EnhancedPipetteV1 = p10 if usesP10(volume) else p50
                 if not p.tip_attached:
                     p.pick_up_tip()
-                well = plate.rows(row).wells(col)
+                well = plate_array[row][col]
                 p.transfer(volume, waterB, well, new_tip='never', trash=config.trash_control, full_dispense=True)
         p10.done_tip()
         p50.done_tip()
@@ -374,7 +401,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
                 p: EnhancedPipetteV1 = p10 if usesP10(volume) else p50
                 if not p.tip_attached:
                     p.pick_up_tip()
-                well = plate.rows(row).wells(col)
+                well = plate_array[row][col]
                 log('Plating Strand A: volume %d with %s' % (volume, p.name))
                 p.transfer(volume, diluted_strand_a, well, new_tip='never', trash=config.trash_control, full_dispense=True)
         p10.done_tip()
@@ -393,7 +420,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
                 volume = strand_b_plate[row][col]
                 if volume == 0: continue
                 p: EnhancedPipetteV1 = p10 if usesP10(volume, allow_zero=True) else p50
-                well = plate.rows(row).wells(col)
+                well = plate_array[row][col]
                 log("Plating Strand B: well='%s' vol=%d pipette=%s" % (well.get_name(), volume, p.name))
                 if not p.tip_attached: p.pick_up_tip()
                 p.transfer(volume, diluted_strand_b, well, new_tip='never', trash=config.trash_control, full_dispense=True)
@@ -402,7 +429,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
                     mixed_wells.add(well)
                 p.done_tip()
 
-        for well in plate.wells():
+        for well in wells_of(plate_array):
             if well not in mixed_wells:
                 mix_plate_well(well)
 
