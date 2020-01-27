@@ -42,8 +42,9 @@ strand_b_conc = Concentration('10 uM')  # R19090909
 strand_a_min_vol = 700  # be conservative
 strand_b_min_vol = 700  # be conservative
 
-waterA_initial_volume = 5000
-waterB_initial_volume = 5000
+water0_initial_volume = 5000
+water1_initial_volume = 5000
+water2_initial_volume = 5000
 
 ########################################################################################################################
 ## Protocol Design
@@ -105,7 +106,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
     ####################################################################################################################
 
     # Diluting each strand
-    strand_dilution_vol = 1200
+    strand_dilution_vol = 3000  # need more for slop?
     strand_dilution_factor = strand_volume_max / total_well_volume * nominal_source_strand_concentration.molar / max_dna_working_concentration.molar
     strand_dilution_source_vol = strand_dilution_vol / strand_dilution_factor
     strand_dilution_water_vol = strand_dilution_vol - strand_dilution_source_vol
@@ -210,8 +211,9 @@ def run(protocol_context: protocol_api.ProtocolContext):
     p10.start_at_tip(tips10[p10_start_tip])
     p50.start_at_tip(tips300a[p50_start_tip])
 
-    # Rack in which to manipulate strands
-    eppendorf_1_5_rack = labware_manager.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', slot=slot_eppendorf_1_5, label='eppendorf_1_5_rack')
+    # Racks for small and large eppendorf tubes
+    eppendorf_1_5_rack = labware_manager.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', slot=slot_eppendorf_1_5, label='eppendorf_1_5_rack')  # 4 x 6
+    eppendorf_5_0_rack = labware_manager.load('Atkinson_15_tuberack_5ml_eppendorf', slot=slot_eppendorf_5_0, label='eppendorf_5_0_rack')  # 3 x 5
 
     # Plates to form our result. Multiple plates vertically concatenated
     plate0 = labware_manager.load('biorad_96_wellplate_200ul_pcr', slot=slot_plate0, label='plate0')
@@ -219,15 +221,18 @@ def run(protocol_context: protocol_api.ProtocolContext):
     plate_array = get_plate_array([plate0, plate1])
 
     # Name specific places in the labware containers
-    diluted_strand_a = eppendorf_1_5_rack['A6']
-    diluted_strand_b = eppendorf_1_5_rack['B6']
+    strand_a = eppendorf_1_5_rack['A1']
+    strand_b = eppendorf_1_5_rack['A2']
+    diluted_strand_a = eppendorf_5_0_rack['C1']
+    diluted_strand_b = eppendorf_5_0_rack['C2']
 
-    eppendorf_5_0_rack = labware_manager.load('Atkinson_15_tuberack_5ml_eppendorf', slot=slot_eppendorf_5_0, label='eppendorf_5_0_rack')
     master_mix = eppendorf_5_0_rack['A1']
-    waterA = eppendorf_5_0_rack['C4']
-    waterB = eppendorf_5_0_rack['C5']
-    note_liquid(location=waterA, name='Water', initially=waterA_initial_volume)
-    note_liquid(location=waterB, name='Water', initially=waterB_initial_volume)
+    water0 = eppendorf_5_0_rack['C3']
+    water1 = eppendorf_5_0_rack['C4']
+    water2 = eppendorf_5_0_rack['C5']
+    note_liquid(location=water0, name='Water', initially=water0_initial_volume)
+    note_liquid(location=water1, name='Water', initially=water1_initial_volume)
+    note_liquid(location=water2, name='Water', initially=water2_initial_volume)
 
     ####################################################################################################################
     # Well & Pipettes
@@ -254,8 +259,6 @@ def run(protocol_context: protocol_api.ProtocolContext):
             user_prompt('Ensure diluted strands manually present and mixed')
 
         else:
-            strand_a = eppendorf_1_5_rack['A1']
-            strand_b = eppendorf_1_5_rack['B1']
             assert strand_a_min_vol >= strand_dilution_source_vol + strand_a.geometry.min_aspiratable_volume
             assert strand_b_min_vol >= strand_dilution_source_vol + strand_b.geometry.min_aspiratable_volume
 
@@ -270,7 +273,11 @@ def run(protocol_context: protocol_api.ProtocolContext):
 
             # Create dilutions of strands
             log('Moving water for diluting Strands A and B')
-            p50.transfer(strand_dilution_water_vol, waterA, [diluted_strand_a, diluted_strand_b],
+            p50.transfer(strand_dilution_water_vol, water0, [diluted_strand_a],
+                         new_tip='once',  # can reuse for all diluent dispensing since dest tubes are initially empty
+                         trash=config.trash_control
+                         )
+            p50.transfer(strand_dilution_water_vol, water1, [diluted_strand_b],
                          new_tip='once',  # can reuse for all diluent dispensing since dest tubes are initially empty
                          trash=config.trash_control
                          )
@@ -339,7 +346,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
                 p50.layered_mix([master_mix], incr=2, initial_turnover=master_mix_evagreen_vol * 1.2, max_tip_cycles=config.layered_mix.max_tip_cycles_large)
 
             log('Creating Master Mix: Water')
-            p50.transfer(master_mix_common_water_vol, waterB, master_mix, trash=config.trash_control)
+            p50.transfer(master_mix_common_water_vol, water2, master_mix, trash=config.trash_control)
 
             log('Creating Master Mix: Buffer')
             transfer_multiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', keep_last_tip=True)  # 'once' because we've only got water & buffer in context
@@ -383,7 +390,8 @@ def run(protocol_context: protocol_api.ProtocolContext):
                 if not p.tip_attached:
                     p.pick_up_tip()
                 well = plate_array[row][col]
-                p.transfer(volume, waterB, well, new_tip='never', trash=config.trash_control, full_dispense=True)
+                water = water2 if row >= 4 else water1  # 4 is empirical
+                p.transfer(volume, water, well, new_tip='never', trash=config.trash_control, full_dispense=True)
         p10.done_tip()
         p50.done_tip()
 
