@@ -33,7 +33,7 @@ config.trash_control = True
 manually_dilute_strands = False
 manually_make_master_mix = True
 
-# Volumes of master mix ingredients, used when automatically making master mix. These are minimums in each tube.
+# Volumes of master mix ingredients, used only when automatically making master mix. These are minimums in each tube.
 buffer_volumes = [2000, 2000]  # Fresh tubes of B9022S
 evagreen_volumes = [1000]      # Fresh tube of EvaGreen
 
@@ -42,9 +42,8 @@ strand_b_conc = Concentration('10 uM')  # R19090909
 strand_a_min_vol = 700  # be conservative
 strand_b_min_vol = 700  # be conservative
 
-water0_initial_volume = 5000
-water1_initial_volume = 5000
-water2_initial_volume = 5000
+water0_trough_initial_volume = 12000
+water1_trough_initial_volume = 12000
 
 ########################################################################################################################
 ## Protocol Design
@@ -184,6 +183,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
     ####################################################################################################################
 
     slot_temp_module = 11
+    slot_water_trough = 9
     slot_plate0 = 6
     slot_plate1 = 3
     slot_tips300a = 1
@@ -211,9 +211,10 @@ def run(protocol_context: protocol_api.ProtocolContext):
     p10.start_at_tip(tips10[p10_start_tip])
     p50.start_at_tip(tips300a[p50_start_tip])
 
-    # Racks for small and large eppendorf tubes
+    # Racks and troughs
     eppendorf_1_5_rack = labware_manager.load('opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap', slot=slot_eppendorf_1_5, label='eppendorf_1_5_rack')  # 4 x 6
     eppendorf_5_0_rack = labware_manager.load('Atkinson_15_tuberack_5ml_eppendorf', slot=slot_eppendorf_5_0, label='eppendorf_5_0_rack')  # 3 x 5
+    trough = labware_manager.load('usascientific_12_reservoir_22ml', slot_water_trough, label='trough')
 
     # Plates to form our result. Multiple plates vertically concatenated
     plate0 = labware_manager.load('biorad_96_wellplate_200ul_pcr', slot=slot_plate0, label='plate0')
@@ -227,12 +228,10 @@ def run(protocol_context: protocol_api.ProtocolContext):
     diluted_strand_b = eppendorf_5_0_rack['C2']
 
     master_mix = eppendorf_5_0_rack['A1']
-    water0 = eppendorf_5_0_rack['C3']
-    water1 = eppendorf_5_0_rack['C4']
-    water2 = eppendorf_5_0_rack['C5']
-    note_liquid(location=water0, name='Water', initially=water0_initial_volume)
-    note_liquid(location=water1, name='Water', initially=water1_initial_volume)
-    note_liquid(location=water2, name='Water', initially=water2_initial_volume)
+    water0 = trough['A1']
+    water1 = trough['A2']
+    note_liquid(location=water0, name='Water', initially=water0_trough_initial_volume)
+    note_liquid(location=water1, name='Water', initially=water1_trough_initial_volume)
 
     ####################################################################################################################
     # Well & Pipettes
@@ -277,7 +276,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
                          new_tip='once',  # can reuse for all diluent dispensing since dest tubes are initially empty
                          trash=config.trash_control
                          )
-            p50.transfer(strand_dilution_water_vol, water1, [diluted_strand_b],
+            p50.transfer(strand_dilution_water_vol, water0, [diluted_strand_b],
                          new_tip='once',  # can reuse for all diluent dispensing since dest tubes are initially empty
                          trash=config.trash_control
                          )
@@ -299,6 +298,8 @@ def run(protocol_context: protocol_api.ProtocolContext):
 
         else:
             # Mostly just for fun, we put the ingredients for the master mix in a nice warm place to help them melt
+            # TODO: stop using the temp deck in protocol (just gets in way)
+            # TODO: However, we can't naively mix Eppendorf 1.5mL tubes and IDT tubes, must be careful about heights
             temp_module = modules_manager.load('tempdeck', slot=slot_temp_module)
             screwcap_rack = labware_manager.load('opentrons_24_aluminumblock_generic_2ml_screwcap', slot=slot_temp_module, label='screwcap_rack', share=True, well_geometry=IdtTubeWellGeometry)
 
@@ -346,7 +347,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
                 p50.layered_mix([master_mix], incr=2, initial_turnover=master_mix_evagreen_vol * 1.2, max_tip_cycles=config.layered_mix.max_tip_cycles_large)
 
             log('Creating Master Mix: Water')
-            p50.transfer(master_mix_common_water_vol, water2, master_mix, trash=config.trash_control)
+            p50.transfer(master_mix_common_water_vol, water0, master_mix, trash=config.trash_control)
 
             log('Creating Master Mix: Buffer')
             transfer_multiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', keep_last_tip=True)  # 'once' because we've only got water & buffer in context
@@ -390,8 +391,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
                 if not p.tip_attached:
                     p.pick_up_tip()
                 well = plate_array[row][col]
-                water = water2 if row >= 4 else water1  # 4 is empirical
-                p.transfer(volume, water, well, new_tip='never', trash=config.trash_control, full_dispense=True)
+                p.transfer(volume, water0, well, new_tip='never', trash=config.trash_control, full_dispense=True)
         p10.done_tip()
         p50.done_tip()
 
