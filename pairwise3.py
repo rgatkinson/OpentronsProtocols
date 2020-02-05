@@ -26,24 +26,23 @@ from rgatkinson.well import IdtTubeWellGeometry
 
 # Tip usage
 p50_start_tip = 'A1'
-p10_start_tip = 'E7'
+p10_start_tip = 'A1'
 config.trash_control = True
 
 # Automation control
-manually_dilute_strands = False
+manually_dilute_strands = True
 manually_make_master_mix = True
 
 # Volumes of master mix ingredients, used only when automatically making master mix. These are minimums in each tube.
 buffer_volumes = [2000, 2000]  # Fresh tubes of B9022S
 evagreen_volumes = [1000]      # Fresh tube of EvaGreen
 
-strand_a_conc = Concentration('10 uM')  # R19090907
-strand_b_conc = Concentration('10 uM')  # R19090909
+strand_a_conc = Concentration('10 uM')  # R19090909
+strand_b_conc = Concentration('10 uM')  # R19090910
 strand_a_min_vol = 700  # be conservative
 strand_b_min_vol = 700  # be conservative
 
-water0_trough_initial_volume = 12000
-water1_trough_initial_volume = 12000
+water_trough_initial_volume = 12000
 
 ########################################################################################################################
 ## Protocol Design
@@ -149,11 +148,14 @@ def run(protocol_context: protocol_api.ProtocolContext):
             strand_b_plate[row][col] = replica_group['StrandB']
 
     total_water_plate = make_empty_plate()
+
     common_water_per_well = infinity
     for row in range(num_rows):
         for col in range(num_columns):
             total_water_plate[row][col] = total_well_volume - buffer_per_well - evagreen_per_well - strand_a_plate[row][col] - strand_b_plate[row][col]
             common_water_per_well = min(common_water_per_well, total_water_plate[row][col])
+    common_water_per_well = 0  # just plate it all, keeps mm volume less than 5.0ml so fits in one tube
+
     master_mix_per_well = buffer_per_well + evagreen_per_well + common_water_per_well
     master_mix_plate = make_empty_plate()
     for row in range(num_rows):
@@ -190,8 +192,8 @@ def run(protocol_context: protocol_api.ProtocolContext):
     slot_tips300b = 4
     slot_tips300c = 7
     slot_tips10 = 2
-    slot_eppendorf_1_5 = 5
-    slot_eppendorf_5_0 = 8
+    slot_eppendorf_1_5 = 8
+    slot_eppendorf_5_0 = 5
 
     # Configure the tips
     tips300a = labware_manager.load('opentrons_96_tiprack_300ul', slot=slot_tips300a, label='tips300a')
@@ -227,12 +229,9 @@ def run(protocol_context: protocol_api.ProtocolContext):
     diluted_strand_a = eppendorf_5_0_rack['C4']
     diluted_strand_b = eppendorf_5_0_rack['C5']
 
-    master_mix0 = eppendorf_5_0_rack['A4']
-    master_mix1 = eppendorf_5_0_rack['A5']
-    water0 = trough['A1']
-    water1 = trough['A2']
-    note_liquid(location=water0, name='Water', initially=water0_trough_initial_volume)
-    note_liquid(location=water1, name='Water', initially=water1_trough_initial_volume)
+    master_mix = eppendorf_5_0_rack['A5']
+    water = trough['A1']
+    note_liquid(location=water, name='Water', initially=water_trough_initial_volume)
 
     ####################################################################################################################
     # Well & Pipettes
@@ -256,7 +255,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
             log('Diluting Strands')
             info(pretty.format('Diluted Strand A recipe: water={0:n} strandA={1:n} vol={2:n}', strand_dilution_water_vol, strand_dilution_source_vol, strand_dilution_vol))
             info(pretty.format('Diluted Strand B recipe: water={0:n} strandB={1:n} vol={2:n}', strand_dilution_water_vol, strand_dilution_source_vol, strand_dilution_vol))
-            user_prompt('Ensure diluted strands manually present and mixed')
+            user_prompt('Ensure diluted strands manually present and mixed', pause=False)
 
         else:
             assert strand_a_min_vol >= strand_dilution_source_vol + strand_a.geometry.min_aspiratable_volume
@@ -273,11 +272,11 @@ def run(protocol_context: protocol_api.ProtocolContext):
 
             # Create dilutions of strands
             log('Moving water for diluting Strands A and B')
-            p50.transfer(strand_dilution_water_vol, water0, [diluted_strand_a],
+            p50.transfer(strand_dilution_water_vol, water, [diluted_strand_a],
                          new_tip='once',  # can reuse for all diluent dispensing since dest tubes are initially empty
                          trash=config.trash_control
                          )
-            p50.transfer(strand_dilution_water_vol, water0, [diluted_strand_b],
+            p50.transfer(strand_dilution_water_vol, water, [diluted_strand_b],
                          new_tip='once',  # can reuse for all diluent dispensing since dest tubes are initially empty
                          trash=config.trash_control
                          )
@@ -291,12 +290,11 @@ def run(protocol_context: protocol_api.ProtocolContext):
 
     def createMasterMix():
         if manually_make_master_mix:
-            note_liquid(location=master_mix0, name='Master Mix', initially=master_mix_vol/2)
-            note_liquid(location=master_mix1, name='Master Mix', initially=master_mix_vol/2)
+            note_liquid(location=master_mix, name='Master Mix', initially=master_mix_vol)
 
             log('Creating Master Mix')
             info(pretty.format('Master Mix recipe: water={0:n} buffer={1:n} EvaGreen={2:n} total={3:n} (extra={4}%)', master_mix_common_water_vol, master_mix_buffer_vol, master_mix_evagreen_vol, master_mix_vol, 100.0 * (mm_overhead_factor-1)))
-            user_prompt('Ensure master mix manually present and mixed')
+            user_prompt('Ensure master mix manually present and mixed', pause=False)
 
         else:
             # Mostly just for fun, we put the ingredients for the master mix in a nice warm place to help them melt
@@ -312,7 +310,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
                 note_liquid(location=buffer[0], name='Buffer', initially=buffer[1], concentration=buffer_source_concentration)
             for evagreen in evagreens:
                 note_liquid(location=evagreen[0], name='Evagreen', initially=evagreen[1], concentration=evagreen_source_concentration)
-            note_liquid(location=master_mix0, name='Master Mix')
+            note_liquid(location=master_mix, name='Master Mix')
 
             # Buffer was just unfrozen. Mix to ensure uniformity. EvaGreen doesn't freeze, no need to mix
             p50.layered_mix([buffer for buffer, __ in buffers], incr=2)
@@ -346,17 +344,17 @@ def run(protocol_context: protocol_api.ProtocolContext):
 
             def mix_master_mix():
                 log('Mixing Master Mix')
-                p50.layered_mix([master_mix0], incr=2, initial_turnover=master_mix_evagreen_vol * 1.2, max_tip_cycles=config.layered_mix.max_tip_cycles_large)
+                p50.layered_mix([master_mix], incr=2, initial_turnover=master_mix_evagreen_vol * 1.2, max_tip_cycles=config.layered_mix.max_tip_cycles_large)
 
             log('Creating Master Mix: Water')
-            p50.transfer(master_mix_common_water_vol, water0, master_mix0, trash=config.trash_control)
+            p50.transfer(master_mix_common_water_vol, water, master_mix, trash=config.trash_control)
 
             log('Creating Master Mix: Buffer')
-            transfer_multiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix0, new_tip='once', keep_last_tip=True)  # 'once' because we've only got water & buffer in context
+            transfer_multiple('Creating Master Mix: Buffer', master_mix_buffer_vol, buffers, master_mix, new_tip='once', keep_last_tip=True)  # 'once' because we've only got water & buffer in context
             p50.done_tip()  # EvaGreen needs a new tip
 
             log('Creating Master Mix: EvaGreen')
-            transfer_multiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix0, new_tip='always', keep_last_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
+            transfer_multiple('Creating Master Mix: EvaGreen', master_mix_evagreen_vol, evagreens, master_mix, new_tip='always', keep_last_tip=True)  # 'always' to avoid contaminating the Evagreen source w/ buffer
 
             mix_master_mix()
 
@@ -374,8 +372,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
                 if not p.tip_attached:
                     p.pick_up_tip()
                 well = plate_array[row][col]
-                mm = master_mix0 if row < 8 else master_mix1
-                p.transfer(volume, mm, well,
+                p.transfer(volume, master_mix, well,
                            new_tip='never',
                            trash=config.trash_control,
                            full_dispense=True
@@ -394,7 +391,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
                 if not p.tip_attached:
                     p.pick_up_tip()
                 well = plate_array[row][col]
-                p.transfer(volume, water0, well, new_tip='never', trash=config.trash_control, full_dispense=True)
+                p.transfer(volume, water, well, new_tip='never', trash=config.trash_control, full_dispense=True)
         p10.done_tip()
         p50.done_tip()
 
@@ -456,6 +453,7 @@ def run(protocol_context: protocol_api.ProtocolContext):
 
     diluteStrands()
     createMasterMix()
+    user_prompt("About to plate everything and mix")
     plateEverythingAndMix()
 
 if metadata.get('apiLevel', '1.0') == '1.0':

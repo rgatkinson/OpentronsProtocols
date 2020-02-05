@@ -81,10 +81,11 @@ def fatal(msg: str, prefix="***********", suffix=' ***********'):
 def silent_log(msg):
     pass
 
-def user_prompt(msg: str, prefix="***********", suffix=' ***********'):
+def user_prompt(msg: str, prefix="***********", suffix=' ***********', pause=True):
     if msg:
         log(msg=msg, prefix=prefix, suffix=suffix)
-    robot.pause('Press Return to Continue :-)')
+    if pause:
+        robot.pause('Press Return to Continue :-)')
 
 #-----------------------------------------------------------------------------------------------------------------------
 
