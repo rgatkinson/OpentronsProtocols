@@ -37,8 +37,8 @@ manually_make_master_mix = True
 buffer_volumes = [2000, 2000]  # Fresh tubes of B9022S
 evagreen_volumes = [1000]      # Fresh tube of EvaGreen
 
-strand_a_conc = Concentration('10 uM')  # R19090909
-strand_b_conc = Concentration('10 uM')  # R19090910
+strand_a_conc = Concentration('8.794 uM')  # R19090911
+strand_b_conc = Concentration('8.619 uM')  # R19090913
 strand_a_min_vol = 700  # be conservative
 strand_b_min_vol = 700  # be conservative
 
