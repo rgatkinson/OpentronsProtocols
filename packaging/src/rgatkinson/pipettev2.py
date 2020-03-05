@@ -6,7 +6,7 @@ from typing import Union, Sequence, Callable
 from opentrons import types
 from opentrons.hardware_control import  Pipette as HwPipette, SHAKE_OFF_TIPS_DROP_DISTANCE
 from opentrons.protocol_api import InstrumentContext, transfers
-from opentrons.protocol_api.contexts import AdvancedLiquidHandling
+from opentrons.protocol_api.instrument_context import AdvancedLiquidHandling
 from opentrons.protocol_api.labware import Well as WellV2, quirks_from_any_parent, Well
 from opentrons.protocol_api.util import Clearances
 
